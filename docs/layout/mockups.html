@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Pioneiro-REG · Layout</title>
+<style>
+:root{
+  --bg:#EEF1F5; --card:#FFFFFF; --ink:#0F1B2D; --muted:#66748A; --line:#E3E8EF;
+  --brand:#1F4E79; --brand-2:#2E75B6; --brand-soft:#E6EFF8;
+  --ok:#1E8E5A; --ok-soft:#E3F4EC; --warn:#C98A06; --warn-soft:#FDF3DC;
+  --bad:#C0392B; --bad-soft:#FBE7E5; --credit:#7A4FC2; --credit-soft:#EFE8FA;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:#D9DEE6;color:var(--ink);padding:40px;display:flex;flex-wrap:wrap;gap:40px;justify-content:center}
+.wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+.label{font-weight:700;font-size:18px;color:#24324A}
+.label small{display:block;font-weight:500;font-size:13px;color:#5B6880;text-align:center;margin-top:2px}
+.phone{width:390px;height:844px;background:var(--bg);border-radius:44px;border:10px solid #111;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.25);display:flex;flex-direction:column}
+.status{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:14px;font-weight:600;flex-shrink:0}
+.top{padding:4px 20px 14px;flex-shrink:0}
+.top .kicker{font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.top h1{font-size:24px;font-weight:800;letter-spacing:-.02em;display:flex;justify-content:space-between;align-items:center}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--brand);color:#fff;font-size:14px;font-weight:700;display:grid;place-items:center}
+.body{flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column;gap:10px}
+.card{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 1px 2px rgba(15,27,45,.06)}
+.card h3{font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+.row{display:flex;gap:12px}
+.row>.card{flex:1}
+.big{font-size:28px;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:12px;color:var(--muted);margin-top:2px}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px}
+.ok{color:var(--ok);background:var(--ok-soft)} .warn{color:var(--warn);background:var(--warn-soft)} .bad{color:var(--bad);background:var(--bad-soft)} .cr{color:var(--credit);background:var(--credit-soft)}
+.nav{height:82px;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:flex-start;padding-top:10px;flex-shrink:0}
+.nav div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#97A3B6}
+.nav div.on{color:var(--brand)}
+.nav svg{width:24px;height:24px}
+.btn{border-radius:14px;padding:13px;font-weight:700;font-size:16px;text-align:center}
+.btn.primary{background:var(--ok);color:#fff}
+.btn.ghost{background:#fff;border:2px solid var(--line);color:var(--ink)}
+.btn.brand{background:var(--brand);color:#fff}
+.bar{height:10px;border-radius:99px;background:var(--line);position:relative;overflow:visible}
+.bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--brand-2)}
+.mk{position:absolute;top:-5px;width:2px;height:20px;background:var(--ink)}
+.mk span{position:absolute;top:22px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;white-space:nowrap;color:var(--muted)}
+.mod{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.mod:last-child{border-bottom:0}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.mod .n{flex:1;font-size:15px;font-weight:600}
+.step{display:flex;align-items:center;gap:8px}
+.step b{width:30px;height:30px;border-radius:10px;background:var(--brand-soft);color:var(--brand);display:grid;place-items:center;font-size:18px}
+.step span{min-width:48px;text-align:center;font-weight:700;font-size:15px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+.cal .h{font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding-bottom:2px}
+.cal .d{height:42px;border-radius:10px;background:#fff;padding:4px 5px;font-size:11px;font-weight:700;position:relative;border:1.5px solid transparent}
+.cal .d em{position:absolute;bottom:4px;right:5px;font-style:normal;font-size:12px;font-weight:800;color:var(--brand)}
+.cal .d.x{background:transparent}
+.cal .d.done{background:var(--ok-soft)} .cal .d.done em{color:var(--ok)}
+.cal .d.part{background:var(--warn-soft)} .cal .d.part em{color:var(--warn)}
+.cal .d.miss{background:var(--bad-soft)} .cal .d.miss em{color:var(--bad)}
+.cal .d.today{border-color:var(--brand)}
+.cal .d.off{background:#F3F5F8;color:#B0B9C7}
+.cal .d.ev{background:var(--credit-soft)}
+.chip{display:inline-flex;gap:6px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:12px;font-weight:600}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);font-size:15px}
+.kv:last-child{border-bottom:0}
+.kv b{font-size:18px}
+.seg{display:flex;background:#E1E6EE;border-radius:12px;padding:3px}
+.seg div{flex:1;text-align:center;padding:8px;font-size:13px;font-weight:700;border-radius:10px;color:var(--muted)}
+.seg div.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);font-weight:600}
+.legend span{display:flex;align-items:center;gap:4px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+</style>
+</head>
+<body>
+
+<!-- ================= 1. PAINEL ================= -->
+<div class="wrap" id="s1">
+<div class="label">1 · Painel<small>Responde em 3 s: "estou em dia?"</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">Ano de serviço 2027 · mês 2 de 12</div>
+    <h1>Olá! <span class="avatar">EU</span></h1>
+  </div>
+  <div class="body">
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:16px">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#E3E8EF" stroke-width="12"/>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#2E75B6" stroke-width="12" stroke-linecap="round" stroke-dasharray="33.5 314" transform="rotate(-90 60 60)"/>
+          <text x="60" y="58" text-anchor="middle" font-size="26" font-weight="800" fill="#0F1B2D">64</text>
+          <text x="60" y="76" text-anchor="middle" font-size="11" font-weight="600" fill="#66748A">de 600 h</text>
+        </svg>
+        <div>
+          <span class="pill ok">▲ +4,8 h adiantado</span>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45">Ritmo ideal hoje: <b style="color:var(--ink)">59,2 h</b><br>Faltam <b style="color:var(--ink)">536 h</b> em 330 dias</div>
+        </div>
+      </div>
+      <div style="margin:18px 4px 22px">
+        <div class="bar"><i style="width:10.7%"></i>
+          <div class="mk" style="left:93.3%;background:var(--warn)"><span style="transform:translateX(-110%)">560</span></div>
+          <div class="mk" style="left:99.6%"><span style="transform:translateX(-20%)">600</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="card"><h3>Outubro</h3><div class="big">9<span style="font-size:15px;color:var(--muted)"> / 50 h</span></div><div class="sub">Plano do mês: 52 h</div></div>
+      <div class="card"><h3>Precisa/mês</h3><div class="big">49,5<span style="font-size:15px;color:var(--muted)"> h</span></div><div class="sub">nos 11 meses restantes</div></div>
+    </div>
+    <div class="card">
+      <h3>Horas por mês</h3>
+      <svg width="326" height="110" viewBox="0 0 326 110">
+        <line x1="0" y1="38" x2="326" y2="38" stroke="#1E8E5A" stroke-dasharray="4 4" stroke-width="1.5"/>
+        <text x="326" y="33" text-anchor="end" font-size="10" font-weight="700" fill="#1E8E5A">50 h</text>
+        <g font-size="10" font-weight="600" fill="#97A3B6" text-anchor="middle">
+          <rect x="4" y="27" width="18" height="63" rx="4" fill="#2E75B6"/><text x="13" y="105">S</text>
+          <rect x="31" y="80" width="18" height="10" rx="4" fill="#2E75B6"/><rect x="31" y="32" width="18" height="58" rx="4" fill="none" stroke="#2E75B6" stroke-dasharray="3 3"/><text x="40" y="105" fill="#1F4E79">O</text>
+          <rect x="58" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="67" y="105">N</text>
+          <rect x="85" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="94" y="105">D</text>
+          <rect x="112" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="121" y="105">J</text>
+          <rect x="139" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="148" y="105">F</text>
+          <rect x="166" y="22" width="18" height="68" rx="4" fill="#E3E8EF"/><text x="175" y="105">M</text>
+          <rect x="193" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="202" y="105">A</text>
+          <rect x="220" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="229" y="105">M</text>
+          <rect x="247" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="256" y="105">J</text>
+          <rect x="274" y="22" width="18" height="68" rx="4" fill="#E3E8EF"/><text x="283" y="105">J</text>
+          <rect x="301" y="34" width="18" height="56" rx="4" fill="#E3E8EF"/><text x="310" y="105">A</text>
+        </g>
+      </svg>
+      <div class="legend" style="margin-top:6px"><span><i style="background:#2E75B6"></i>Realizado</span><span><i style="background:#E3E8EF"></i>Planejado</span></div>
+    </div>
+    <div class="btn brand">+ Lançar hoje (ter, 06/out)</div>
+  </div>
+  <div class="nav">
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= 2. LANÇAMENTO ================= -->
+<div class="wrap" id="s2">
+<div class="label">2 · Lançamento do dia<small>1 toque se cumpriu; ajuste por modalidade se não</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">‹ Terça-feira</div>
+    <h1>06 de outubro <span style="font-size:14px;font-weight:700;color:var(--brand)">Hoje</span></h1>
+  </div>
+  <div class="body">
+    <div class="card">
+      <h3>Planejado para hoje · 3 h</h3>
+      <div class="mod"><i class="dot" style="background:#2E75B6"></i><span class="n">Casa em Casa</span><b>2h00</b></div>
+      <div class="mod"><i class="dot" style="background:#1E8E5A"></i><span class="n">Revisita</span><b>1h00</b></div>
+    </div>
+    <div class="btn primary">✓ Cumpri o planejado</div>
+    <div class="btn ghost" style="border-color:var(--brand);color:var(--brand)">Fiz diferente ▾</div>
+    <div class="card">
+      <h3>Horas realizadas</h3>
+      <div class="mod"><i class="dot" style="background:#2E75B6"></i><span class="n">Casa em Casa</span><div class="step"><b>−</b><span>1h30</span><b>+</b></div></div>
+      <div class="mod"><i class="dot" style="background:#1E8E5A"></i><span class="n">Revisita</span><div class="step"><b>−</b><span>0h00</span><b>+</b></div></div>
+      <div class="mod"><i class="dot" style="background:#C98A06"></i><span class="n">Informal</span><div class="step"><b>−</b><span>0h30</span><b>+</b></div></div>
+      <div style="font-size:14px;font-weight:700;color:var(--brand);padding-top:10px">+ Adicionar modalidade</div>
+    </div>
+    <div class="card" style="padding:12px 16px">
+      <div class="kv" style="padding:6px 0"><span>Total do dia</span><span><b>2h00</b> <span class="pill warn">−1h vs plano</span></span></div>
+      <div style="font-size:13px;color:var(--muted);padding-top:6px">Motivo (opcional): <i>chuva forte à tarde</i></div>
+    </div>
+    <div class="btn brand">Salvar</div>
+  </div>
+  <div class="nav">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= 3. PLANEJAMENTO ================= -->
+<div class="wrap" id="s3">
+<div class="label">3 · Planejamento mensal<small>Rotina semanal preenche o mês; você ajusta exceções</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">Plano · AS 2027</div>
+    <h1>‹ Outubro 2026 ›</h1>
+  </div>
+  <div class="body">
+    <div class="card" style="padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h3 style="margin:0">Rotina semanal</h3><span style="font-size:13px;font-weight:700;color:var(--brand)">Editar</span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span class="chip">Seg · 3h Casa em Casa</span><span class="chip">Ter · 2h C.Casa + 1h Rev.</span>
+        <span class="chip">Qua · 2h TPL-Carrinho</span><span class="chip">Sex · 2h Cartas</span>
+        <span class="chip">Sáb · 3h C.Casa</span><span class="chip">Dom · 1h Informal</span>
+      </div>
+    </div>
+    <div class="card" style="padding:12px">
+      <div class="cal">
+        <div class="h">D</div><div class="h">S</div><div class="h">T</div><div class="h">Q</div><div class="h">Q</div><div class="h">S</div><div class="h">S</div>
+        <div class="d x"></div><div class="d x"></div><div class="d x"></div><div class="d x"></div>
+        <div class="d off">1</div><div class="d done">2<em>2</em></div><div class="d done">3<em>3</em></div>
+        <div class="d part">4<em>1</em></div><div class="d done">5<em>3</em></div><div class="d today">6<em>3</em></div><div class="d">7<em>2</em></div><div class="d off">8</div><div class="d">9<em>2</em></div><div class="d">10<em>3</em></div>
+        <div class="d">11<em>1</em></div><div class="d off">12</div><div class="d">13<em>3</em></div><div class="d">14<em>2</em></div><div class="d off">15</div><div class="d">16<em>2</em></div><div class="d ev">17<em style="color:var(--credit)">AS</em></div>
+        <div class="d ev">18<em style="color:var(--credit)">AS</em></div><div class="d">19<em>3</em></div><div class="d">20<em>3</em></div><div class="d">21<em>2</em></div><div class="d off">22</div><div class="d">23<em>2</em></div><div class="d">24<em>4</em></div>
+        <div class="d">25<em>1</em></div><div class="d">26<em>3</em></div><div class="d">27<em>3</em></div><div class="d">28<em>2</em></div><div class="d off">29</div><div class="d">30<em>2</em></div><div class="d">31<em>4</em></div>
+      </div>
+      <div class="legend" style="margin-top:10px"><span><i style="background:var(--ok-soft);border:1px solid var(--ok)"></i>Cumprido</span><span><i style="background:var(--warn-soft);border:1px solid var(--warn)"></i>Parcial</span><span><i style="background:var(--bad-soft);border:1px solid var(--bad)"></i>Não feito</span><span><i style="background:var(--credit-soft);border:1px solid var(--credit)"></i>Assembleia/evento</span></div>
+    </div>
+    <div class="card" style="padding:12px 16px">
+      <div class="kv" style="padding:6px 0"><span>Planejado no mês</span><b>52 h</b></div>
+      <div class="kv" style="padding:6px 0"><span>Necessário p/ ritmo</span><span><b>49,5 h</b> <span class="pill ok">folga 2,5 h</span></span></div>
+    </div>
+  </div>
+  <div class="nav">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= 4. RELATÓRIO ================= -->
+<div class="wrap" id="s4">
+<div class="label">4 · Relatório mensal<small>Pronto para o S-4 · crédito com teto de 55 h</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">Relatório · fechado em 30/09</div>
+    <h1>‹ Setembro 2026 ›</h1>
+  </div>
+  <div class="body">
+    <div class="card">
+      <h3>Para o relatório (S-4)</h3>
+      <div class="kv"><span>Horas no ministério</span><b>47h</b></div>
+      <div class="kv"><span>Estudos bíblicos</span><b>3</b></div>
+      <div class="kv"><span>Crédito (Observações)</span><b style="color:var(--credit)">8h</b></div>
+      <div style="font-size:12px;color:var(--muted);padding-top:8px">Obs.: 8h crédito — apoio LDC (13 e 14/09)</div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">Teto mensal 55 h</h3><span class="pill cr">55 / 55 h</span></div>
+      <div class="bar" style="margin-top:12px;height:14px;display:flex;overflow:hidden">
+        <i style="position:static;width:85.5%;border-radius:0;background:var(--brand-2)"></i><i style="position:static;width:14.5%;border-radius:0;background:var(--credit)"></i>
+      </div>
+      <div style="font-size:12px;color:var(--bad);font-weight:600;margin-top:8px">⚠ 2h de crédito excedente descartadas (não transfere)</div>
+    </div>
+    <div class="card">
+      <h3>Por modalidade</h3>
+      <div style="display:flex;height:14px;border-radius:99px;overflow:hidden;margin-bottom:10px">
+        <i style="width:43%;background:#2E75B6"></i><i style="width:17%;background:#1E8E5A"></i><i style="width:13%;background:#0E9AA7"></i><i style="width:11%;background:#C98A06"></i><i style="width:9%;background:#D35D8C"></i><i style="width:7%;background:#97A3B6"></i>
+      </div>
+      <div class="legend" style="font-size:12px;gap:8px 14px">
+        <span><i style="background:#2E75B6"></i>Casa em Casa 20h</span><span><i style="background:#1E8E5A"></i>Revisita 8h</span><span><i style="background:#0E9AA7"></i>TPL-Carrinho 6h</span><span><i style="background:#C98A06"></i>Cartas 5h</span><span><i style="background:#D35D8C"></i>Estudo 4h</span><span><i style="background:#97A3B6"></i>Outros 4h</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px">Cumprimento do plano: <b style="color:var(--ink)">88%</b> dos dias</div>
+    </div>
+    <div class="row" style="gap:10px">
+      <div class="btn brand" style="flex:1;font-size:14px">Copiar relatório</div>
+      <div class="btn ghost" style="flex:1;font-size:14px">Exportar Excel</div>
+    </div>
+  </div>
+  <div class="nav">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= 5. CASAL ================= -->
+<div class="wrap" id="s5">
+<div class="label">5 · Visão do casal<small>Cada um edita o seu; vê o do outro (somente leitura)</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">AS 2027 · até 06/out</div>
+    <h1>Nós dois</h1>
+  </div>
+  <div class="body">
+    <div class="seg"><div class="on">Ano</div><div>Mês</div><div>Semana</div></div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="avatar">EU</span><div style="flex:1"><b>Você</b><div class="sub">64 h · ritmo 59,2 h</div></div><span class="pill ok">+4,8 h</span></div>
+      <div class="bar"><i style="width:10.7%"></i></div>
+      <div style="height:18px"></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="avatar" style="background:#D35D8C">CJ</span><div style="flex:1"><b>Cônjuge</b><div class="sub">54 h · ritmo 59,2 h</div></div><span class="pill warn">−5,2 h</span></div>
+      <div class="bar"><i style="width:9%;background:#D35D8C"></i></div>
+    </div>
+    <div class="card">
+      <h3>Status vs. meta</h3>
+      <div class="kv"><span>Você</span><span class="pill ok">No ritmo de 600 h</span></div>
+      <div class="kv"><span>Cônjuge</span><span class="pill warn">Entre 560 e 600 h</span></div>
+      <div style="font-size:12px;color:var(--muted);padding-top:8px">Precisa/mês: Você 49,5 h · Cônjuge 50,5 h</div>
+    </div>
+    <div class="card">
+      <h3>Esta semana</h3>
+      <svg width="326" height="96" viewBox="0 0 326 96">
+        <g font-size="10" font-weight="600" fill="#97A3B6" text-anchor="middle">
+          <rect x="14" y="40" width="14" height="36" rx="3" fill="#2E75B6"/><rect x="30" y="40" width="14" height="36" rx="3" fill="#D35D8C"/><text x="29" y="91">Dom</text>
+          <rect x="60" y="22" width="14" height="54" rx="3" fill="#2E75B6"/><rect x="76" y="40" width="14" height="36" rx="3" fill="#D35D8C"/><text x="75" y="91">Seg</text>
+          <rect x="106" y="58" width="14" height="18" rx="3" fill="#2E75B6"/><rect x="122" y="22" width="14" height="54" rx="3" fill="#D35D8C"/><text x="121" y="91">Ter</text>
+          <rect x="152" y="74" width="14" height="2" fill="#E3E8EF"/><rect x="168" y="74" width="14" height="2" fill="#E3E8EF"/><text x="167" y="91">Qua</text>
+          <rect x="198" y="74" width="14" height="2" fill="#E3E8EF"/><rect x="214" y="74" width="14" height="2" fill="#E3E8EF"/><text x="213" y="91">Qui</text>
+          <rect x="244" y="74" width="14" height="2" fill="#E3E8EF"/><rect x="260" y="74" width="14" height="2" fill="#E3E8EF"/><text x="259" y="91">Sex</text>
+          <rect x="290" y="74" width="14" height="2" fill="#E3E8EF"/><rect x="306" y="74" width="14" height="2" fill="#E3E8EF"/><text x="305" y="91">Sáb</text>
+        </g>
+      </svg>
+      <div class="legend"><span><i style="background:#2E75B6"></i>Você</span><span><i style="background:#D35D8C"></i>Cônjuge</span></div>
+    </div>
+  </div>
+  <div class="nav">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+<!-- ================= 6. CONFIG / MODALIDADES / CRÉDITO ================= -->
+<div class="wrap" id="s6">
+<div class="label">6 · Modalidades e créditos<small>Cadastro editável · lançamento de crédito</small></div>
+<div class="phone">
+  <div class="status"><span>9:41</span><span>●●● 5G ▮</span></div>
+  <div class="top">
+    <div class="kicker">Configurações</div>
+    <h1>Modalidades</h1>
+  </div>
+  <div class="body">
+    <div class="card" style="padding:6px 16px">
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#C98A06"></i><span class="n" style="font-size:14px">Cartas</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#7A4FC2"></i><span class="n" style="font-size:14px">TPE · Display</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#9B72D6"></i><span class="n" style="font-size:14px">TPE · Carrinho</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#0E9AA7"></i><span class="n" style="font-size:14px">TPL · Display</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#3FB8C2"></i><span class="n" style="font-size:14px">TPL · Carrinho</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#2E75B6"></i><span class="n" style="font-size:14px">Casa em Casa</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#5B6880"></i><span class="n" style="font-size:14px">Telefone</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#D35D8C"></i><span class="n" style="font-size:14px">Estudo</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#1E8E5A"></i><span class="n" style="font-size:14px">Revisita</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#E07B39"></i><span class="n" style="font-size:14px">Informal</span><span class="pill ok">ativa</span></div>
+      <div class="mod" style="padding:6px 0"><i class="dot" style="background:#97A3B6"></i><span class="n" style="font-size:14px">Outros</span><span class="pill ok">ativa</span></div>
+      <div style="font-size:14px;font-weight:700;color:var(--brand);padding:10px 0">+ Nova modalidade</div>
+    </div>
+    <div class="card" style="border:2px solid var(--credit-soft)">
+      <h3 style="color:var(--credit)">+ Lançar crédito de horas</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <span class="chip">LDC / Construção</span><span class="chip">Assembleia/Congresso</span><span class="chip">Escola teocrática</span><span class="chip">Betel</span><span class="chip">COLIH / GVP</span><span class="chip">Outro aprovado</span>
+      </div>
+    </div>
+  </div>
+  <div class="nav">
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Painel</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Lançar</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Plano</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7"/></svg>Relatório</div>
+    <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.5"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5"/></svg>Casal</div>
+  </div>
+</div>
+</div>
+
+</body>
+</html>
