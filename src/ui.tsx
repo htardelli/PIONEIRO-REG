@@ -119,7 +119,7 @@ export function Ring({ value, max, label, sub, color = '#2E75B6', size = 104 }: 
   )
 }
 
-export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: number; minGoal: number; color?: string }) {
+export function GoalBar({ total, goal, minGoal, color, pace }: { total: number; goal: number; minGoal: number; color?: string; pace?: number }) {
   const scale = Math.max(goal, total) || 1
   const pos = (v: number) => `${Math.min(100, (v / scale) * 100)}%`
   return (
@@ -128,9 +128,11 @@ export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: 
         <i style={{ width: pos(total), background: color }} />
         <b className="gdot" style={{ left: pos(minGoal), background: 'var(--warn)' }} title={`Mínimo ${fmtHours(minGoal)}`} />
         <b className="gdot" style={{ left: pos(goal), background: 'var(--ink)' }} title={`Meta ${fmtHours(goal)}`} />
+        {pace !== undefined && <b className="gdot" style={{ left: pos(pace), background: 'var(--credit)' }} title={`Ritmo ideal hoje ${fmtHours(pace)}`} />}
       </div>
       <div className="legend" style={{ marginTop: 10 }}>
         <span><i style={{ background: color ?? 'var(--brand-2)', borderRadius: '50%' }} />Realizado {fmtHours(total)}</span>
+        {pace !== undefined && <span><i style={{ background: 'var(--credit)', borderRadius: '50%' }} />Ideal hoje {fmtHours(pace)}</span>}
         <span><i style={{ background: 'var(--warn)', borderRadius: '50%' }} />Mínimo {fmtHours(minGoal)}</span>
         <span><i style={{ background: 'var(--ink)', borderRadius: '50%' }} />Meta {fmtHours(goal)}</span>
       </div>

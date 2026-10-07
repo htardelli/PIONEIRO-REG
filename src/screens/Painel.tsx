@@ -51,7 +51,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
             </div>
           </div>
         </div>
-        <GoalBar total={ys.total} goal={ys.goal} minGoal={ys.minGoal} color={color} />
+        <GoalBar total={ys.total} goal={ys.goal} minGoal={ys.minGoal} color={color} pace={ys.pace} />
       </div>
 
       {cur && (
