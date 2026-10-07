@@ -68,6 +68,7 @@ export function Config({ data, reload, toast, onBack }: {
 
         <button className="btn danger" onClick={() => api.signOut()}>Sair da conta</button>
         {api.demo && <div className="sub" style={{ textAlign: 'center' }}>Modo demonstração: "Sair" restaura os dados de exemplo.</div>}
+        <div className="sub" style={{ textAlign: 'center' }}>Versão {__APP_VERSION__}</div>
       </div>
     </>
   )

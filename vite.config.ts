@@ -3,12 +3,17 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // Publicado em https://htardelli.github.io/PIONEIRO-REG/
+// Versão exibida em Configurações: commit publicado (no GitHub Actions) + data do build
+const version = `${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)} · ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`
+
 export default defineConfig({
   base: '/PIONEIRO-REG/',
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      workbox: { cleanupOutdatedCaches: true, clientsClaim: true, skipWaiting: true },
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Pioneiro-REG',
