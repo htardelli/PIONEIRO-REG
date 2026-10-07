@@ -14,7 +14,9 @@ App: https://htardelli.github.io/PIONEIRO-REG/ · Demonstração: https://htarde
 
 ## Configuração (uma vez)
 
-1. **Banco** — Supabase → *SQL Editor* → cole `supabase/schema.sql` → *Run*.
+1. **Banco** — automático: cada push em `main` aplica `supabase/schema.sql` (idempotente, em transação) antes de publicar.
+   Requer o segredo `SUPABASE_DB_URL` no GitHub (*Settings → Secrets and variables → Actions → New repository secret*)
+   com a URI do **Session pooler** (Supabase → botão *Connect*). Sem o segredo, a etapa é ignorada com aviso.
 2. **Chave** — a URL e a *anon public key* já estão em `src/config.ts` (são públicas; a proteção é o RLS).
 3. **Publicação** — automática: cada push em `main` testa, compila e publica no branch `gh-pages` (GitHub Pages).
 4. (Opcional) Supabase → *Authentication → Sign In / Providers → Email* → desligar *Confirm email*

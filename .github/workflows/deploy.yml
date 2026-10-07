@@ -1,7 +1,9 @@
 name: Publicar no GitHub Pages
 
-# O site é servido a partir do branch gh-pages. A cada push em main,
-# o app é testado, compilado e o resultado é gravado em gh-pages.
+# A cada push em main:
+#   1) aplica supabase/schema.sql no banco (idempotente, numa única transação)
+#   2) testa, compila e grava o app no branch gh-pages (servido pelo GitHub Pages)
+# Se a etapa do banco falhar, o app novo NÃO é publicado.
 on:
   push:
     branches: [main]
@@ -12,10 +14,28 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  banco:
+    name: Atualizar banco (Supabase)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Aplicar supabase/schema.sql
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::warning::Segredo SUPABASE_DB_URL não configurado — atualização do banco ignorada."
+            exit 0
+          fi
+          psql "$SUPABASE_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -q -f supabase/schema.sql
+          echo "Banco atualizado."
+
+  publicar:
+    name: Testar, compilar e publicar
+    needs: banco
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
