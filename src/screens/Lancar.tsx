@@ -62,6 +62,32 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
     setDate(isoDate(x))
   }
 
+  /** Falta: se houver atividade conjunta que o participante ainda não lançou, pergunta se ele(a) também faltou. */
+  async function confirmAbsence() {
+    const note = absenceNote()
+    const joint = partner ? toBlocks(plan).filter((b) => b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id)) : []
+    const partnerLogged = !!partner && (partner.data.entries.some((e) => e.date === date) || partner.data.notes.some((n) => n.date === date))
+    if (partner && joint.length && !partnerLogged) {
+      const desc = joint.map((b) => `${data.modalities.find((m) => m.id === b.modality_id)?.name ?? ''} ${b.start}–${b.end}`).join('\n')
+      const r = await choice.ask<'both' | 'me'>(
+        `${pFirst} também faltou?`,
+        [{ label: 'Sim, os dois faltamos', value: 'both', kind: 'danger' }, { label: 'Só eu faltei', value: 'me', kind: 'outline' }],
+        `Atividade conjunta neste dia:\n${desc}\n\nSe sim, a falta (com o mesmo motivo) também é lançada para ${pFirst}.`,
+      )
+      if (!r) return
+      if (r === 'both') {
+        try {
+          await api.rpc('partner_absence_add', { p_partner: partner.id, p_date: date, p_note: `${note} — atividade conjunta` })
+        } catch (e) {
+          return toast((e as Error).message)
+        }
+        await save([], note)
+        return toast(`Falta lançada para você e ${pFirst}`)
+      }
+    }
+    await save([], note)
+  }
+
   async function save(items: TimeBlock[], noteText: string) {
     const nameOfMod = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
     const blocks = items.map((b) => (partner && b.with?.includes(partner.id) && !b.group_id ? { ...b, group_id: crypto.randomUUID() } : b))
@@ -173,7 +199,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
                 <div className="row" style={{ gap: 10 }}>
                   <button className="btn ghost small" onClick={() => setAbsent(false)}>Cancelar</button>
                   <button className="btn small" style={{ background: 'var(--bad)', color: '#fff' }} disabled={busy}
-                    onClick={() => save([], absenceNote())}>Confirmar falta</button>
+                    onClick={confirmAbsence}>Confirmar falta</button>
                 </div>
               </div>
             )}

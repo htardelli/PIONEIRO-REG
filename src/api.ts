@@ -213,6 +213,11 @@ function localApi(): Api {
         save()
         return n as T
       }
+      if (fn === 'partner_absence_add') {
+        const has = db.entries.some((x) => x.user_id === partner && x.date === args.p_date) || db.day_notes.some((x) => x.user_id === partner && x.date === args.p_date)
+        if (!has) { db.day_notes.push({ user_id: partner, date: args.p_date, note: args.p_note }); save() }
+        return !has as T
+      }
       if (fn === 'partner_plan_delete') {
         const groups = args.p_groups as string[]
         db.plan_items = db.plan_items.filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) &&

@@ -333,3 +333,22 @@ grant execute on function public.partner_entries_add(uuid, jsonb) to authenticat
 -- ============ v0.6: meta do mês opcional ============
 -- 0 = mês sem meta (o alvo vira o rateio). Antes o padrão era 50 h.
 alter table public.month_records alter column goal_min set default 0;
+
+-- ============ v0.7: falta em atividade conjunta ============
+-- Lança a falta do participante no dia (nota "Faltei…"), só se ele(a) ainda não lançou nada nesse dia.
+create or replace function public.partner_absence_add(p_partner uuid, p_date date, p_note text) returns boolean
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para lançar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  if exists (select 1 from public.entries where user_id = p_partner and date = p_date)
+     or exists (select 1 from public.day_notes where user_id = p_partner and date = p_date) then
+    return false; -- já lançou algo nesse dia: não sobrescreve
+  end if;
+  insert into public.day_notes (user_id, date, note) values (p_partner, p_date, coalesce(p_note, 'Faltei'));
+  return true;
+end $$;
+
+revoke all on function public.partner_absence_add(uuid, date, text) from public, anon;
+grant execute on function public.partner_absence_add(uuid, date, text) to authenticated;
