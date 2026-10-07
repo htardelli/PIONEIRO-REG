@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, fmtH, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, type TimeBlock } from '../domain'
-import { partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
+import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, useChoice } from '../ui'
 import type { DayItem } from '../types'
 
@@ -41,6 +41,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [picking, setPicking] = useState(false)
   const [absent, setAbsent] = useState(false)
   const [reason, setReason] = useState('')
   const [absText, setAbsText] = useState('')
@@ -122,7 +123,9 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
         <div className="title">
           <span className="nav-arrows">
             <button className="arrow" onClick={() => shift(-1)} disabled={date <= from}>‹</button>
-            {d.getDate()} de {MONTH_NAME[d.getMonth()].toLowerCase()}
+            <button className="date-pick" onClick={() => setPicking(true)} aria-label="Escolher data no calendário">
+              {d.getDate()} de {MONTH_NAME[d.getMonth()].toLowerCase()} <span className="caret">▾</span>
+            </button>
             <button className="arrow" onClick={() => shift(1)} disabled={date >= todayIso}>›</button>
           </span>
           {date === todayIso ? <span className="link">Hoje</span> : <button className="link" onClick={() => setDate(todayIso)}>Ir p/ hoje</button>}
@@ -207,7 +210,70 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
           </>
         )}
       </div>
+      {picking && (
+        <DatePickerSheet data={data} today={today} value={date} min={from} max={todayIso}
+          onPick={(dt) => { setDate(dt); setPicking(false) }} onClose={() => setPicking(false)} />
+      )}
       {choice.node}
     </>
+  )
+}
+
+/** Calendário para escolher o dia a lançar; as cores mostram o que já foi lançado. */
+function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
+  data: YearData; today: Date; value: string; min: string; max: string; onPick: (d: string) => void; onClose: () => void
+}) {
+  const [month, setMonth] = useState(value.slice(0, 7))
+  const [y, m] = month.split('-').map(Number)
+  const firstDow = new Date(y, m - 1, 1).getDay()
+  const nDays = new Date(y, m, 0).getDate()
+  const shiftMonth = (n: number) => {
+    const x = new Date(y, m - 1 + n, 1)
+    setMonth(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}`)
+  }
+  const prevOk = `${month}-01` > min
+  const nextOk = `${month}-31` < max
+  let pending = 0
+  const cells = Array.from({ length: nDays }, (_, i) => {
+    const dt = `${month}-${String(i + 1).padStart(2, '0')}`
+    const disabled = dt < min || dt > max
+    const st = dayState(data, dt, today)
+    // pendente: dia passado com plano e sem nenhum lançamento
+    const cls = disabled ? 'off' : st.state === 'done' ? 'done' : st.state === 'part' ? 'part'
+      : st.state === 'miss' ? (st.logged ? 'miss' : 'pend') : st.logged ? 'done' : ''
+    if (cls === 'pend') pending++
+    return { dt, day: i + 1, disabled, cls, done: st.done }
+  })
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="card dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="card-head">
+          <span className="nav-arrows" style={{ fontWeight: 800, fontSize: 18 }}>
+            <button className="arrow" onClick={() => shiftMonth(-1)} disabled={!prevOk}>‹</button>
+            {MONTH_NAME[m - 1]} {y}
+            <button className="arrow" onClick={() => shiftMonth(1)} disabled={!nextOk}>›</button>
+          </span>
+          <button className="link" onClick={onClose}>Fechar</button>
+        </div>
+        <div className="cal">
+          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((h, i) => <div className="h" key={i}>{h}</div>)}
+          {Array.from({ length: firstDow }, (_, i) => <div className="d x" key={'x' + i} />)}
+          {cells.map((c) => (
+            <button key={c.dt} disabled={c.disabled} onClick={() => onPick(c.dt)}
+              className={`d ${c.cls} ${c.dt === value ? 'sel' : ''} ${c.dt === max ? 'today' : ''}`}>
+              {c.day}
+              {c.done > 0 && <em>{(Math.round(c.done / 6) / 10).toLocaleString('pt-BR')}</em>}
+            </button>
+          ))}
+        </div>
+        <div className="legend">
+          <span><i style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)' }} />Lançado</span>
+          <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
+          <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Faltei</span>
+          <span><i style={{ background: '#fff', border: '1.5px dashed var(--muted)' }} />Planejado, não lançado</span>
+        </div>
+        {pending > 0 && <div className="sub" style={{ marginTop: 8 }}>{pending} dia{pending > 1 ? 's' : ''} planejado{pending > 1 ? 's' : ''} sem lançamento neste mês.</div>}
+      </div>
+    </div>
   )
 }

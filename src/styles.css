@@ -130,3 +130,7 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .block { border: 1.5px solid var(--line); border-radius: 14px; padding: 10px; margin-bottom: 8px; }
 .overlay { position: fixed; inset: 0; background: rgba(15, 27, 45, .45); display: grid; place-items: end center; z-index: 30; padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); }
 .dialog { width: 100%; max-width: 480px; }
+.date-pick { font: inherit; font-weight: 800; color: inherit; display: inline-flex; align-items: baseline; gap: 6px; }
+.date-pick .caret { font-size: 14px; color: var(--brand); }
+.cal .d.pend { background: #fff; border: 1.5px dashed var(--muted); }
+.cal .d.off, .cal .d:disabled { background: transparent; color: #C3CBD7; }
