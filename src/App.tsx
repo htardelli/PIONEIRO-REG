@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api'
-import { DEFAULT_MODALITIES, isoDate, monthKey, MONTH_NAME, parseIso, serviceYearOf } from './domain'
+import { DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, MONTH_NAME, parseIso, serviceYearOf } from './domain'
 import { useYear, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
 import { Avatar, Header, Loading, TabBar, useToast, type Tab } from './ui'
@@ -62,6 +62,15 @@ function Main({ user }: { user: AuthUser }) {
       seeded.current = true
       void api.insert('modalities', DEFAULT_MODALITIES.map((m, i) => ({ user_id: user.id, name: m.name, color: m.color, active: true, sort: i })))
         .then(me.reload)
+    }
+  }, [me.data, me.reload, user.id])
+  // Primeiro acesso: tipos de evento padrão (editáveis em Configurações)
+  const seededEv = useRef(false)
+  useEffect(() => {
+    if (me.data && me.data.eventTypes.length === 0 && !seededEv.current) {
+      seededEv.current = true
+      void api.insert('event_types', DEFAULT_EVENT_TYPES.map((name, i) => ({ user_id: user.id, name, sort: i })))
+        .then(me.reload).catch(() => {})
     }
   }, [me.data, me.reload, user.id])
 

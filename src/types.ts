@@ -56,6 +56,13 @@ export interface DayEvent {
   group_id?: string | null
 }
 
+export interface EventType {
+  id: string
+  user_id: string
+  name: string
+  sort: number
+}
+
 export interface Credit {
   id: string
   user_id: string

@@ -280,3 +280,19 @@ export function useChoice() {
   ) : null
   return { ask, node }
 }
+
+/** Legenda única dos calendários. */
+export function CalLegend({ pending }: { pending?: boolean }) {
+  return (
+    <>
+      <span><i style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)' }} />Feito</span>
+      <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
+      <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Faltou</span>
+      {pending
+        ? <span><i style={{ background: '#fff', border: '1.5px dashed var(--muted)' }} />Plano sem lançamento</span>
+        : <span><i style={{ background: '#F7F9FB', border: '1px solid var(--line)' }} />Plano</span>}
+      <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
+      <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
+    </>
+  )
+}

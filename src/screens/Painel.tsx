@@ -77,17 +77,14 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
               <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.planned)}</div></div>
               <div><div className="sub">Realizado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.done)}</div></div>
               <div style={{ textAlign: 'right' }}>
-                <div className="sub">Cumprimento</div>
-                <div className="big" style={{ fontSize: 24, color: pvd.pct === null ? undefined : pvd.pct >= 1 ? 'var(--ok)' : pvd.pct >= 0.8 ? 'var(--warn)' : 'var(--bad)' }}>
-                  {pvd.pct === null ? '—' : `${Math.round(pvd.pct * 100)}%`}
+                <div className="sub">{diff < 0 ? 'Faltam' : diff > 0 ? 'Acima' : 'Coberto'}</div>
+                <div className="big" style={{ fontSize: 24, color: diff < 0 ? 'var(--bad)' : 'var(--ok)' }}>
+                  {diff < 0 ? fmtH(-diff) : diff > 0 ? `+${fmtH(diff)}` : '✓'}
                 </div>
               </div>
             </div>
             <div className="bar" style={{ marginTop: 12, height: 12 }}>
               <i style={{ width: `${Math.min(100, (pvd.done / Math.max(pvd.planned, pvd.done, 1)) * 100)}%`, background: color }} />
-            </div>
-            <div className="sub" style={{ marginTop: 6 }}>
-              {diff === 0 ? 'Exatamente o planejado.' : diff > 0 ? `${fmtH(diff)} acima do planejado.` : `${fmtH(-diff)} abaixo do planejado.`}
             </div>
             <div className="chips" style={{ marginTop: 10 }}>
               <span className="pill ok">✓ {pvd.days.done} cumprido{pvd.days.done === 1 ? '' : 's'}</span>

@@ -438,3 +438,18 @@ revoke all on function public.partner_plan_delete_dates(uuid, uuid[], date[]) fr
 grant execute on function public.partner_events_add(uuid, jsonb) to authenticated;
 grant execute on function public.partner_events_delete(uuid, uuid[], date[]) to authenticated;
 grant execute on function public.partner_plan_delete_dates(uuid, uuid[], date[]) to authenticated;
+
+-- ============ v0.10: tipos de evento (cadastro em Configurações) ============
+create table if not exists public.event_types (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name text not null,
+  sort int not null default 0
+);
+create index if not exists event_types_user on public.event_types (user_id);
+grant select, insert, update, delete on public.event_types to authenticated;
+alter table public.event_types enable row level security;
+drop policy if exists read_own_or_shared on public.event_types;
+drop policy if exists write_own on public.event_types;
+create policy read_own_or_shared on public.event_types for select using (public.can_read(user_id));
+create policy write_own on public.event_types for all using (user_id = auth.uid()) with check (user_id = auth.uid());

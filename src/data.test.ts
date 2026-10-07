@@ -8,7 +8,7 @@ const goal = (month: string, h: number): MonthRecord => ({ user_id: 'u', month, 
 let n = 0
 const item = (date: string, h: number): DayItem => ({ id: String(++n), user_id: 'u', date, modality_id: 'm', minutes: h * H })
 const data = (p: Partial<YearData>): YearData => ({
-  userId: 'u', sy: 2027, profile: null, modalities: [], notes: [], events: [], credits: [], records: [], plan: [], entries: [], ...p,
+  userId: 'u', sy: 2027, profile: null, modalities: [], notes: [], events: [], eventTypes: [], credits: [], records: [], plan: [], entries: [], ...p,
 })
 const month = (d: YearData, m: string) => yearStats(d, today).months.find((x) => x.month === m)!
 

@@ -297,5 +297,7 @@ export function holidayOf(date: string): Holiday | undefined {
 export const HOLIDAY_LABEL: Record<HolidayKind, string> = { nacional: 'feriado nacional', estadual: 'feriado estadual', facultativo: 'ponto facultativo' }
 
 // ---------- Eventos do dia (congresso, assembleia…) ----------
-export const EVENT_KINDS = ['Congresso', 'Assembleia', 'Visita do SC', 'Celebração', 'Outro'] as const
+/** Tipos padrão (cadastrados no primeiro acesso; editáveis em Configurações). "Outro" é sempre oferecido. */
+export const DEFAULT_EVENT_TYPES = ['Congresso', 'Assembleia', 'Visita do SC', 'Celebração']
+export const EVENT_OTHER = 'Outro'
 export const eventName = (ev: { kind: string; title: string }) => (ev.title ? (ev.kind === 'Outro' ? ev.title : `${ev.kind} · ${ev.title}`) : ev.kind)

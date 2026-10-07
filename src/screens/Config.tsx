@@ -64,6 +64,8 @@ export function Config({ data, reload, toast, onBack }: {
           <div className="sub" style={{ marginTop: 8 }}>Modalidades desativadas somem do lançamento, mas o histórico é mantido.</div>
         </div>
 
+        <EventTypes data={data} reload={reload} toast={toast} />
+
         {p?.is_admin && <AdminCreateUser toast={toast} />}
 
         <button className="btn danger" onClick={() => api.signOut()}>Sair da conta</button>
@@ -71,6 +73,44 @@ export function Config({ data, reload, toast, onBack }: {
         <div className="sub" style={{ textAlign: 'center' }}>Versão {__APP_VERSION__}</div>
       </div>
     </>
+  )
+}
+
+/** Cadastro dos tipos de evento (Congresso, Assembleia…) usados em "Marcar evento". */
+function EventTypes({ data, reload, toast }: { data: YearData; reload: () => Promise<void>; toast: (m: string) => void }) {
+  const [novo, setNovo] = useState('')
+  const types = data.eventTypes
+  async function add() {
+    const name = novo.trim()
+    if (!name) return
+    if (types.some((t) => t.name.toLowerCase() === name.toLowerCase())) return toast('Esse tipo já existe')
+    await api.insert('event_types', [{ user_id: data.userId, name, sort: types.length }])
+    setNovo('')
+    await reload()
+  }
+  async function remove(id: string, name: string) {
+    if (types.length <= 1) return toast('Mantenha pelo menos um tipo')
+    if (!confirm(`Excluir o tipo "${name}"? Os eventos já marcados continuam no calendário.`)) return
+    await api.remove('event_types', { eq: { id } })
+    await reload()
+  }
+  return (
+    <div className="card">
+      <h3>Tipos de evento</h3>
+      {types.map((t) => (
+        <div className="mod" key={t.id}>
+          <i className="dot" style={{ background: 'var(--credit)' }} />
+          <input className="n input" style={{ padding: 8, border: 0 }} defaultValue={t.name}
+            onBlur={async (e) => { const v = e.target.value.trim(); if (v && v !== t.name) { await api.update('event_types', { id: t.id }, { name: v }); await reload(); toast('Tipo renomeado') } }} />
+          <button className="link" style={{ color: 'var(--bad)' }} onClick={() => remove(t.id, t.name)} aria-label={`Excluir ${t.name}`}>✕</button>
+        </div>
+      ))}
+      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+        <input className="input" placeholder="Novo tipo (ex.: Escola de pioneiros)" value={novo} onChange={(e) => setNovo(e.target.value)} />
+        <button className="btn brand small" style={{ width: 'auto', padding: '0 16px' }} onClick={add}>+</button>
+      </div>
+      <div className="sub" style={{ marginTop: 8 }}>Aparecem em "Marcar evento" no Plano. "Outro" fica sempre disponível para casos avulsos.</div>
+    </div>
   )
 }
 

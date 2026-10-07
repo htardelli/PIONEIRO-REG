@@ -6,7 +6,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config'
 import type { AuthUser } from './types'
 import { buildDemoData, DEMO_ME } from './demo'
 
-export type Table = 'profiles' | 'shares' | 'modalities' | 'month_records' | 'plan_items' | 'entries' | 'day_notes' | 'day_events' | 'credits'
+export type Table = 'profiles' | 'shares' | 'modalities' | 'month_records' | 'plan_items' | 'entries' | 'day_notes' | 'day_events' | 'event_types' | 'credits'
 export type Row = Record<string, unknown>
 
 export interface Query {
@@ -122,7 +122,7 @@ function supabaseApi(): Api {
 }
 
 // ---------- Local / demonstração ----------
-const LS_KEY = 'pioneiro-reg-demo-v6'
+const LS_KEY = 'pioneiro-reg-demo-v7'
 
 function localApi(): Api {
   type Db = Record<Table, Row[]>

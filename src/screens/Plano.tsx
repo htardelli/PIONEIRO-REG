@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, EVENT_KINDS, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
+  blockErrors, blockMinutes, DEFAULT_EVENT_TYPES, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock, mondayIndex, WEEK_HEAD,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
-import { BlocksEditor, Header, MonthNav, useChoice } from '../ui'
+import { BlocksEditor, CalLegend, Header, MonthNav, useChoice } from '../ui'
 import type { DayEvent } from '../types'
 
 type Scope = 'all' | 'me'
@@ -35,6 +35,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const [multi, setMulti] = useState(false) // modo seleção de vários dias
   const [picked, setPicked] = useState<string[]>([])
   const [evDates, setEvDates] = useState<string[] | null>(null) // formulário de evento aberto para estas datas
+  const [evRange, setEvRange] = useState(false) // formulário com período (data inicial e final)
 
   useEffect(() => { setGoalH(ms.goal ? fmtH(ms.goal) : ''); setSel(null) }, [month, ms.goal])
   useEffect(() => { setPicked([]); setEvDates(null) }, [month])
@@ -232,7 +233,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
       if (group_id && partner) await api.rpc('partner_events_add', { p_partner: partner.id, p_items: dates.map((date) => ({ date, kind, title, group_id })) })
       await reload()
       toast(`${kind} marcado em ${dates.length} ${dates.length === 1 ? 'dia' : 'dias'}${group_id ? ` · também para ${pFirst}` : ''}${dropPlan ? ' · plano excluído' : ''}`)
-      setEvDates(null); setPicked([]); setMulti(false)
+      setEvDates(null); setEvRange(false); setPicked([]); setMulti(false)
     } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
   }
 
@@ -275,8 +276,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
       } />
       <div className="main">
         <div className="card" style={{ padding: 12 }}>
-          <div className="card-head" style={{ marginBottom: 8 }}>
-            <span className="sub" style={{ fontWeight: 700 }}>{multi ? 'Toque nos dias para selecionar' : 'Toque num dia para planejar'}</span>
+          <div className="card-head" style={{ marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+            {multi ? <span className="sub" style={{ fontWeight: 700 }}>Toque nos dias para selecionar</span> : (
+              <button className="link" style={{ color: 'var(--credit)' }} onClick={() => { setSel(null); setEvRange(true); setEvDates([]) }}>📌 Marcar evento</button>
+            )}
             <button className="link" onClick={() => { setMulti(!multi); setPicked([]); setSel(null); setEvDates(null) }}>
               {multi ? 'Cancelar seleção' : '☐ Selecionar vários dias'}
             </button>
@@ -292,7 +295,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               const evs = eventsOn(date)
               return (
                 <button key={date} title={[hol?.name, ...evs.map(eventName)].filter(Boolean).join(' · ') || undefined}
-                  className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol && hol.kind !== 'facultativo' ? 'holday' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
+                  className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
                   {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
@@ -302,13 +305,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             })}
           </div>
           <div className="legend">
-            <span><i style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)' }} />Cumprido</span>
-            <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
-            <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Não feito</span>
-            <span><i style={{ background: '#F7F9FB', border: '1px solid var(--line)' }} />Planejado</span>
-            <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
-            <span><i className="hol facultativo" style={{ borderRadius: '50%' }} />Ponto facultativo</span>
-            <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
+            <CalLegend />
           </div>
         </div>
 
@@ -318,15 +315,17 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             <button className="btn small" style={{ background: '#fff', color: 'var(--bad)' }} disabled={busy || planDates(picked).length === 0} onClick={deletePicked}>
               Excluir plano{planDates(picked).length ? ` (${planDates(picked).length})` : ''}
             </button>
-            <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || picked.length === 0} onClick={() => setEvDates(picked)}>
+            <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || picked.length === 0} onClick={() => { setEvRange(false); setEvDates(picked) }}>
               Marcar evento
             </button>
           </div>
         )}
 
         {evDates && (
-          <EventForm dates={evDates} partnerName={partner ? pFirst : ''} busy={busy} onCancel={() => setEvDates(null)}
-            onSave={(k, t, both) => addEvent(evDates, k, t, both)} />
+          <EventForm dates={evDates} partnerName={partner ? pFirst : ''} busy={busy} onCancel={() => { setEvDates(null); setEvRange(false) }}
+            types={data.eventTypes.length ? data.eventTypes.map((t) => t.name) : DEFAULT_EVENT_TYPES}
+            range={evRange ? { start: month === todayIso.slice(0, 7) ? todayIso : `${month}-01`, min: months[0] + '-01', max: `${months[11]}-31` } : undefined}
+            onSave={(k, t, both, dates) => addEvent(dates, k, t, both)} />
         )}
 
         {sel ? (
@@ -343,7 +342,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                   <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(ev)}>Remover</button>
                 </div>
               ))}
-              {!evDates && <button className="link" style={{ alignSelf: 'flex-start', color: 'var(--credit)' }} onClick={() => setEvDates([sel])}>+ Marcar evento neste dia (congresso, assembleia…)</button>}
+              {!evDates && <button className="link" style={{ alignSelf: 'flex-start', color: 'var(--credit)' }} onClick={() => { setEvRange(false); setEvDates([sel]) }}>+ Marcar evento neste dia (congresso, assembleia…)</button>}
             </div>
             <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
               partners={partner ? [{ id: partner.id, name: partner.name }] : []} />
@@ -445,22 +444,34 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
-function EventForm({ dates, partnerName, busy, onCancel, onSave }: {
-  dates: string[]; partnerName: string; busy: boolean; onCancel: () => void; onSave: (kind: string, title: string, both: boolean) => void
+function EventForm({ dates, types, range, partnerName, busy, onCancel, onSave }: {
+  dates: string[]; types: string[]; range?: { start: string; min: string; max: string }; partnerName: string; busy: boolean
+  onCancel: () => void; onSave: (kind: string, title: string, both: boolean, dates: string[]) => void
 }) {
-  const [kind, setKind] = useState<string>(EVENT_KINDS[0])
+  const kinds = [...types, EVENT_OTHER]
+  const [kind, setKind] = useState<string>(kinds[0])
   const [title, setTitle] = useState('')
   const [both, setBoth] = useState(!!partnerName)
+  const [from, setFrom] = useState(range?.start ?? '')
+  const [to, setTo] = useState(range?.start ?? '')
   const fmt = (d: string) => d.slice(8) + '/' + d.slice(5, 7)
-  const invalid = kind === 'Outro' && !title.trim()
+  const list = range ? datesBetween(from, to) : dates
+  const invalid = (kind === EVENT_OTHER && !title.trim()) || list.length === 0 || list.length > 31
   return (
     <div className="card form">
-      <h3 style={{ margin: 0 }}>Marcar evento · {dates.length === 1 ? fmt(dates[0]) : `${dates.length} dias`}</h3>
-      {dates.length > 1 && <div className="sub">{dates.slice(0, 10).map(fmt).join(', ')}{dates.length > 10 ? '…' : ''}</div>}
+      <h3 style={{ margin: 0 }}>Marcar evento{!range && ` · ${dates.length === 1 ? fmt(dates[0]) : `${dates.length} dias`}`}</h3>
+      {range && (
+        <div className="row" style={{ gap: 10 }}>
+          <label className="field">De<input type="date" value={from} min={range.min} max={range.max} onChange={(e) => { setFrom(e.target.value); if (e.target.value > to) setTo(e.target.value) }} /></label>
+          <label className="field">Até<input type="date" value={to} min={from || range.min} max={range.max} onChange={(e) => setTo(e.target.value)} /></label>
+        </div>
+      )}
+      {list.length > 1 && <div className="sub">{list.length} dias: {list.slice(0, 10).map(fmt).join(', ')}{list.length > 10 ? '…' : ''}</div>}
+      {list.length > 31 && <div className="error">Período longo demais (máx. 31 dias).</div>}
       <div className="chips">
-        {EVENT_KINDS.map((k) => <button key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{k}</button>)}
+        {kinds.map((k) => <button key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{k}</button>)}
       </div>
-      <input className="input" placeholder={kind === 'Outro' ? 'Qual evento? (obrigatório)' : 'Detalhe (opcional, ex.: local)'} value={title} onChange={(e) => setTitle(e.target.value)} />
+      <input className="input" placeholder={kind === EVENT_OTHER ? 'Qual evento? (obrigatório)' : 'Detalhe (opcional, ex.: local)'} value={title} onChange={(e) => setTitle(e.target.value)} />
       {partnerName && (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, fontWeight: 600 }}>
           <input type="checkbox" checked={both} onChange={(e) => setBoth(e.target.checked)} /> Também para {partnerName}
@@ -469,8 +480,15 @@ function EventForm({ dates, partnerName, busy, onCancel, onSave }: {
       <div className="row" style={{ gap: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Cancelar</button>
         <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || invalid}
-          onClick={() => onSave(kind, title.trim(), both)}>Salvar evento</button>
+          onClick={() => onSave(kind, title.trim(), both, list)}>Salvar evento</button>
       </div>
     </div>
   )
+}
+
+function datesBetween(from: string, to: string): string[] {
+  if (!from || !to || to < from) return []
+  const out: string[] = []
+  for (let d = parseIso(from); isoDate(d) <= to && out.length <= 31; d.setDate(d.getDate() + 1)) out.push(isoDate(d))
+  return out
 }

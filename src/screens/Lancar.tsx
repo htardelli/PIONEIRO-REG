@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
 import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
-import { BlocksEditor, useChoice } from '../ui'
+import { BlocksEditor, CalLegend, useChoice } from '../ui'
 import type { DayItem } from '../types'
 
 const sumMin = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
@@ -319,12 +319,7 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
           ))}
         </div>
         <div className="legend">
-          <span><i style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)' }} />Lançado</span>
-          <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
-          <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Faltei</span>
-          <span><i style={{ background: '#fff', border: '1.5px dashed var(--muted)' }} />Planejado, não lançado</span>
-          <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
-          <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
+          <CalLegend pending />
         </div>
         {pending > 0 && <div className="sub" style={{ marginTop: 8 }}>{pending} dia{pending > 1 ? 's' : ''} planejado{pending > 1 ? 's' : ''} sem lançamento neste mês.</div>}
       </div>

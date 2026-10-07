@@ -89,12 +89,13 @@ button { cursor: pointer; border: 0; background: none; }
 
 .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
 .cal .h { font-size: 11px; font-weight: 700; color: var(--muted); text-align: center; }
-.cal .d { height: 48px; border-radius: 10px; background: #F7F9FB; padding: 4px 5px; font-size: 11px; font-weight: 700; position: relative; border: 1.5px solid transparent; text-align: left; }
+.cal .d { height: 48px; border-radius: 10px; background: #F7F9FB; padding: 4px 6px; font-size: 11px; font-weight: 700; position: relative; border: 1.5px solid transparent; text-align: left; display: flex; flex-direction: column; justify-content: flex-start; align-items: flex-start; line-height: 1.2; }
 .cal .d em { position: absolute; bottom: 4px; right: 5px; font-style: normal; font-size: 12px; font-weight: 800; color: var(--brand); }
 .cal .d.x { background: transparent; }
 .cal .d.done { background: var(--ok-soft); } .cal .d.done em { color: var(--ok); }
 .cal .d.part { background: var(--warn-soft); } .cal .d.part em { color: var(--warn); }
 .cal .d.miss { background: var(--bad-soft); } .cal .d.miss em { color: var(--bad); }
+.cal .d.lanc { border-color: #5B6B82; }
 .cal .d.today { border-color: var(--brand); }
 .cal .d.sel { box-shadow: 0 0 0 2px var(--brand-2) inset; }
 
@@ -172,7 +173,6 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .cal .d.evday:not(.done):not(.part):not(.miss):not(.msel) { background: var(--credit-soft); }
 .dmk .hol, .legend .hol { background: var(--bad); border-radius: 50%; }
 .dmk .ev { border-radius: 50%; }
-.dmk .hol.facultativo, .legend .hol.facultativo { background: #fff; border: 1.5px solid var(--bad); }
 .dmk .ev, .legend .ev { background: var(--credit); }
 .cal .d.holday { color: var(--bad); }
 .cal .d.msel { background: var(--brand-2); color: #fff; }

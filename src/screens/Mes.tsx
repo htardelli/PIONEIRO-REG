@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabel, mondayIndex, serviceYearMonths, WEEK_HEAD, WEEKDAY } from '../domain'
 import { dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
-import { Header, MonthNav } from '../ui'
+import { CalLegend, Header, MonthNav } from '../ui'
 import { byStart } from './Lancar'
 
 /** Realizado dia a dia: calendário do mês e, ao tocar num dia, o detalhe das atividades logo abaixo. */
@@ -52,7 +52,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
               const cls = future ? '' : st.state === 'plan' ? '' : st.state
               return (
                 <button key={date} onClick={() => pick(date)}
-                  className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol && hol.kind !== 'facultativo' ? 'holday' : ''} ${ev ? 'evday' : ''}`}>
+                  className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${ev ? 'evday' : ''}`}>
                   {i + 1}
                   {(hol || ev) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span>}
                   {st.done > 0 && <em>{fmtH(st.done)}</em>}
@@ -61,11 +61,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
             })}
           </div>
           <div className="legend">
-            <span><i style={{ background: 'var(--ok-soft)', border: '1px solid var(--ok)' }} />Cumpriu o plano</span>
-            <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
-            <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Não feito</span>
-            <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
-            <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
+            <CalLegend />
           </div>
         </div>
 

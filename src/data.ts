@@ -3,7 +3,7 @@ import { api } from './api'
 import {
   fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, serviceYearMonths, type MonthStatus,
 } from './domain'
-import type { Credit, DayEvent, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
+import type { Credit, DayEvent, EventType, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
 
 export interface YearData {
@@ -16,6 +16,7 @@ export interface YearData {
   entries: DayItem[]
   notes: DayNote[]
   events: DayEvent[]
+  eventTypes: EventType[]
   credits: Credit[]
 }
 
@@ -27,7 +28,7 @@ export async function loadYear(userId: string, sy: number): Promise<YearData> {
   const [from, to] = yearRange(sy)
   const months = serviceYearMonths(sy)
   const eq = { user_id: userId }
-  const [profiles, modalities, records, plan, entries, notes, events, credits] = await Promise.all([
+  const [profiles, modalities, records, plan, entries, notes, events, eventTypes, credits] = await Promise.all([
     api.select<Profile>('profiles', { eq: { id: userId } }),
     api.select<Modality>('modalities', { eq }),
     api.select<MonthRecord>('month_records', { eq, in: ['month', months] }),
@@ -35,10 +36,11 @@ export async function loadYear(userId: string, sy: number): Promise<YearData> {
     api.select<DayItem>('entries', { eq, range: ['date', from, to] }),
     api.select<DayNote>('day_notes', { eq, range: ['date', from, to] }),
     api.select<DayEvent>('day_events', { eq, range: ['date', from, to] }).catch(() => [] as DayEvent[]),
+    api.select<EventType>('event_types', { eq }).catch(() => [] as EventType[]),
     api.select<Credit>('credits', { eq, in: ['month', months] }),
   ])
   modalities.sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name))
-  return { userId, sy, profile: profiles[0] ?? null, modalities, records, plan, entries, notes, events, credits }
+  return { userId, sy, profile: profiles[0] ?? null, modalities, records, plan, entries, notes, events, eventTypes: eventTypes.sort((a, b) => a.sort - b.sort || a.name.localeCompare(b.name)), credits }
 }
 
 export function useYear(userId: string | null, sy: number) {
