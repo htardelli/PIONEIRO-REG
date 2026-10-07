@@ -130,36 +130,6 @@ export function MonthGrid({ months, onPick }: { months: MonthStats[]; onPick?: (
   )
 }
 
-/** Editor de minutos por modalidade (usado no lançamento e no planejamento). */
-export function ItemsEditor({ modalities, value, onChange }: {
-  modalities: Modality[]; value: Record<string, number>; onChange: (v: Record<string, number>) => void
-}) {
-  const shown = Object.keys(value)
-  const available = modalities.filter((m) => m.active && !shown.includes(m.id))
-  return (
-    <div>
-      {shown.length === 0 && <div className="empty">Nenhuma modalidade. Adicione abaixo.</div>}
-      {shown.map((id) => {
-        const m = modalities.find((x) => x.id === id)
-        return (
-          <div className="mod" key={id}>
-            <i className="dot" style={{ background: m?.color ?? '#999' }} />
-            <span className="n">{m?.name ?? '—'}</span>
-            <Stepper value={value[id]} onChange={(v) => onChange({ ...value, [id]: v })} />
-          </div>
-        )
-      })}
-      {available.length > 0 && (
-        <select className="input" style={{ marginTop: 10, color: 'var(--brand)', fontWeight: 700, fontSize: 15 }} value=""
-          onChange={(e) => e.target.value && onChange({ ...value, [e.target.value]: 60 })}>
-          <option value="">+ Adicionar modalidade</option>
-          {available.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-      )}
-    </div>
-  )
-}
-
 export function useToast() {
   const [msg, setMsg] = useState<string | null>(null)
   useEffect(() => {

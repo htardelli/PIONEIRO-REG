@@ -105,6 +105,12 @@ create table if not exists public.entries (
   minutes int not null check (minutes >= 0)
 );
 create index if not exists entries_user_date on public.entries (user_id, date);
+-- Horário real de início/fim (v0.3)
+alter table public.entries add column if not exists start_time time;
+alter table public.entries add column if not exists end_time time;
+alter table public.entries drop constraint if exists entries_time_order;
+alter table public.entries add constraint entries_time_order
+  check (start_time is null or end_time is null or end_time > start_time);
 
 -- Observação do dia (ex.: motivo de não cumprir) e marca de "dia lançado"
 create table if not exists public.day_notes (

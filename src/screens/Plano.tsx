@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, daysInMonth, deleteRange, fmtH, fmtHours, fromMinutes, isoDate, monthLabel, parseIso, repeatDates,
-  serviceYearMonths, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
+  blockErrors, blockMinutes, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, monthLabel, parseIso, repeatDates,
+  serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
 } from '../domain'
 import { dayState, monthStats, yearStats, type YearData } from '../data'
 import { BlocksEditor, Header, MonthNav } from '../ui'
@@ -21,6 +21,7 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [delScope, setDelScope] = useState<DeleteScope>('day')
   const [delPast, setDelPast] = useState(false)
+  const [differ, setDiffer] = useState<string[] | null>(null) // dias de destino com plano diferente (aguardando decisão)
   const [scope, setScope] = useState<'day' | 'month' | 'year'>('day')
   const [goalH, setGoalH] = useState(String(ms.goal / 60))
   const [busy, setBusy] = useState(false)
@@ -28,16 +29,8 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
   useEffect(() => { setGoalH(String(ms.goal / 60)); setSel(null) }, [month, ms.goal])
   useEffect(() => {
     if (!sel) return
-    // Itens antigos sem horário recebem horários em sequência a partir das 08:00 para ajuste
-    let clock = 8 * 60
-    const items = data.plan.filter((x) => x.date === sel)
-      .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
-    setBlocks(items.map((p) => {
-      const start = p.start_time?.slice(0, 5) ?? fromMinutes(clock)
-      const end = p.end_time?.slice(0, 5) ?? fromMinutes(clock + p.minutes)
-      clock = Math.max(clock, Number(end.slice(0, 2)) * 60 + Number(end.slice(3)))
-      return { modality_id: p.modality_id, start, end }
-    }))
+    setBlocks(toBlocks(data.plan.filter((x) => x.date === sel)))
+    setDiffer(null)
     setScope('day')
     setDelScope('day')
     setDelPast(false)
@@ -55,11 +48,25 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
     toast('Meta do mês salva')
   }
 
-  async function savePlan() {
+  /** Primeiro passo: se algum dia de destino já tem plano diferente, pergunta antes de substituir. */
+  function requestSave() {
     if (!sel) return
+    const sig = blocksSignature(blocks)
+    const conflicting = repeatDates(sel, scope).filter((dt) => {
+      if (dt === sel) return false
+      const items = data.plan.filter((p) => p.date === dt)
+      return items.length > 0 && blocksSignature(toBlocks(items)) !== sig
+    })
+    if (conflicting.length) setDiffer(conflicting)
+    else void savePlan([])
+  }
+
+  async function savePlan(skip: string[]) {
+    if (!sel) return
+    setDiffer(null)
     setBusy(true)
     try {
-      const dates = repeatDates(sel, scope)
+      const dates = repeatDates(sel, scope).filter((dt) => !skip.includes(dt))
       await api.remove('plan_items', { eq: { user_id: data.userId }, in: ['date', dates] })
       const rows = dates.flatMap((date) => blocks.map((b) => ({
         user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
@@ -150,13 +157,28 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
             </div>
             {scope !== 'day' && (
               <div className="sub" style={{ marginTop: 8 }}>
-                Substitui o plano de {repeatDates(sel, scope).length} dias ({scope === 'year' ? 'desta data até 31/ago' : 'neste mês'}). Total do dia: {fmtH(dayTotal)}.
+                Aplica em {repeatDates(sel, scope).length} dias ({scope === 'year' ? 'desta data até 31/ago' : 'neste mês'}). Total do dia: {fmtH(dayTotal)}.
               </div>
             )}
             {hasErrors && <div className="error" style={{ marginTop: 10 }}>Corrija os horários em vermelho para salvar.</div>}
-            <button className="btn brand" style={{ marginTop: 12 }} disabled={busy || hasErrors} onClick={savePlan}>
-              {busy ? 'Salvando…' : `Salvar plano (${fmtH(dayTotal)})`}
-            </button>
+            {differ ? (
+              <div className="alert" style={{ marginTop: 12 }}>
+                <div style={{ marginBottom: 6 }}>
+                  ⚠ {differ.length} {differ.length === 1 ? 'dia já tem' : 'dias já têm'} um plano diferente:{' '}
+                  {differ.slice(0, 6).map((dt) => dt.slice(8) + '/' + dt.slice(5, 7)).join(', ')}{differ.length > 6 ? '…' : ''}.
+                  O que fazer com {differ.length === 1 ? 'ele' : 'eles'}?
+                </div>
+                <div className="form" style={{ gap: 8 }}>
+                  <button className="btn brand small" onClick={() => savePlan([])}>Substituir pelo novo plano</button>
+                  <button className="btn outline small" onClick={() => savePlan(differ)}>Pular esses dias (manter o plano deles)</button>
+                  <button className="btn ghost small" onClick={() => setDiffer(null)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <button className="btn brand" style={{ marginTop: 12 }} disabled={busy || hasErrors} onClick={requestSave}>
+                {busy ? 'Salvando…' : `Salvar plano (${fmtH(dayTotal)})`}
+              </button>
+            )}
 
             <div style={{ borderTop: '1px solid var(--line)', marginTop: 16, paddingTop: 12 }}>
               <div className="sub" style={{ fontWeight: 700, marginBottom: 6 }}>EXCLUIR PLANEJAMENTO</div>

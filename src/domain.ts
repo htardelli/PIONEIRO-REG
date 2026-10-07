@@ -215,3 +215,21 @@ export function deleteRange(date: string, scope: DeleteScope, today: string, inc
   if (!includePast && today > from) from = today
   return [from, to]
 }
+
+/** Converte itens (plano/realizado) em blocos de horário; itens antigos sem horário ganham horários em sequência a partir das 08:00. */
+export function toBlocks(items: { modality_id: string; minutes: number; start_time?: string | null; end_time?: string | null }[]): TimeBlock[] {
+  let clock = 8 * 60
+  return [...items]
+    .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
+    .map((p) => {
+      const start = p.start_time?.slice(0, 5) ?? fromMinutes(clock)
+      const end = p.end_time?.slice(0, 5) ?? fromMinutes(toMinutes(start) + p.minutes)
+      clock = Math.max(clock, toMinutes(end))
+      return { modality_id: p.modality_id, start, end }
+    })
+}
+
+/** Assinatura de um dia (para comparar planos): "mod|início|fim" ordenados. */
+export function blocksSignature(blocks: TimeBlock[]): string {
+  return blocks.map((b) => `${b.modality_id}|${b.start}|${b.end}`).sort().join(';')
+}

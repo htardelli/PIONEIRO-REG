@@ -116,7 +116,7 @@ function supabaseApi(): Api {
 }
 
 // ---------- Local / demonstração ----------
-const LS_KEY = 'pioneiro-reg-demo-v2'
+const LS_KEY = 'pioneiro-reg-demo-v3'
 
 function localApi(): Api {
   type Db = Record<Table, Row[]>

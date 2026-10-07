@@ -63,7 +63,11 @@ export function buildDemoData(today: Date) {
           const r = (n * 37 + (user === DEMO_ME ? 0 : 11)) % 10
           const done = r === 0 ? 0 : r === 1 ? min / 2 : r === 2 ? min + 30 : min
           const m2 = Math.round((done * factor) / 15) * 15
-          db.entries.push({ id: id(), user_id: user, date, modality_id: mod[name], minutes: m2 })
+          const st = clock - min
+          if (m2 > 0) db.entries.push({
+            id: id(), user_id: user, date, modality_id: mod[name], minutes: m2,
+            start_time: fromMinutes(st), end_time: fromMinutes(st + m2),
+          })
         }
       }
     }

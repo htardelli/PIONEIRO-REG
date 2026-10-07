@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  blockErrors, countedMinutes, deleteRange, idealPace, weekDates, type TimeBlock, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours,
+  blockErrors, blocksSignature, toBlocks, countedMinutes, deleteRange, idealPace, weekDates, type TimeBlock, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours,
 } from './domain'
 
 const H = 60
@@ -100,5 +100,22 @@ describe('exclusão do plano', () => {
   it('mês e dia', () => {
     expect(deleteRange('2026-11-15', 'month', '2026-10-07', false)).toEqual(['2026-11-01', '2026-11-30'])
     expect(deleteRange('2026-10-01', 'day', '2026-10-07', false)).toEqual(['2026-10-01', '2026-10-01'])
+  })
+})
+
+describe('blocos a partir de itens', () => {
+  it('itens antigos sem horário ganham sequência a partir de 08:00', () => {
+    expect(toBlocks([{ modality_id: 'a', minutes: 90 }, { modality_id: 'b', minutes: 60 }])).toEqual([
+      { modality_id: 'a', start: '08:00', end: '09:30' }, { modality_id: 'b', start: '09:30', end: '10:30' },
+    ])
+  })
+  it('usa os horários gravados (HH:MM:SS do banco)', () => {
+    expect(toBlocks([{ modality_id: 'a', minutes: 60, start_time: '14:00:00', end_time: '15:00:00' }])).toEqual([
+      { modality_id: 'a', start: '14:00', end: '15:00' },
+    ])
+  })
+  it('assinatura independe da ordem', () => {
+    const x = { modality_id: 'a', start: '08:00', end: '09:00' }, y = { modality_id: 'b', start: '09:00', end: '10:00' }
+    expect(blocksSignature([x, y])).toBe(blocksSignature([y, x]))
   })
 })
