@@ -12,8 +12,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
   const curLeft = cur ? Math.max(0, cur.target - cur.counted) : 0
   const pvd = planVsDone(data, monthKey(today), today)
-  const [monthsOpen, setMonthsOpen] = useState(() => { try { return localStorage.getItem('painel-meses') !== 'fechado' } catch { return true } })
-  const toggleMonths = () => setMonthsOpen((o) => { try { localStorage.setItem('painel-meses', o ? 'fechado' : 'aberto') } catch { /* sem armazenamento */ } return !o })
+  const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
+  const toggleMonths = () => setMonthsOpen((o) => !o)
   const diff = pvd.done - pvd.planned
   const actsTotal = pvd.acts.done + pvd.acts.part + pvd.acts.miss + pvd.acts.pending // atividades planejadas até hoje
   const needJustification = ys.level !== 'ok' && cur && !cur.justification
@@ -23,7 +23,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
       <div className="card" style={{ padding: 12 }}>
         <button className="card-head expander" onClick={toggleMonths} aria-expanded={monthsOpen}>
           <h3>Meses do ano de serviço</h3>
-          <span className="sub" style={{ fontWeight: 700 }}>{monthsOpen && 'realizado / alvo '}<span className={`chev ${monthsOpen ? 'open' : ''}`}>▾</span></span>
+          <span className="xbtn">{monthsOpen ? 'Ocultar' : 'Ver meses'}<span className={`chev ${monthsOpen ? 'open' : ''}`}>▾</span></span>
         </button>
         {monthsOpen && <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />}
         <div className="ytotal">
