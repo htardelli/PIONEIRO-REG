@@ -40,6 +40,7 @@ jobs:
         if: steps.mudou.outputs.sim == '1'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_POOLER_HOST: aws-1-ca-central-1.pooler.supabase.com
         run: |
           if [ -z "$SUPABASE_DB_URL" ]; then
             echo "::warning::Segredo SUPABASE_DB_URL não configurado — atualização do banco ignorada."
@@ -48,6 +49,11 @@ jobs:
           # Nunca exibir a senha: valida o formato sem imprimir o valor e mascara a senha no log.
           # Remove espaços/quebras de linha nas pontas (comuns ao copiar pelo celular).
           SUPABASE_DB_URL=$(printf '%s' "$SUPABASE_DB_URL" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          # Converte a "Direct connection" (db.<ref>.supabase.co, só IPv6) para o Session pooler (IPv4).
+          if printf '%s' "$SUPABASE_DB_URL" | grep -Eq '@db\.[a-z0-9]+\.supabase\.co'; then
+            SUPABASE_DB_URL=$(printf '%s' "$SUPABASE_DB_URL" | sed -E "s#^(postgres(ql)?://)postgres:([^@]*)@db\.([a-z0-9]+)\.supabase\.co(:[0-9]+)?#\1postgres.\4:\3@${SUPABASE_POOLER_HOST}:5432#")
+            echo "Endereço 'Direct connection' convertido automaticamente para o Session pooler."
+          fi
           problemas=""
           case "$SUPABASE_DB_URL" in postgresql://*|postgres://*) ;; *) problemas="$problemas\n- não começa com postgresql:// (copie o endereço inteiro)";; esac
           ats=$(printf '%s' "$SUPABASE_DB_URL" | tr -cd '@' | wc -c)
