@@ -30,7 +30,20 @@ jobs:
             echo "::warning::Segredo SUPABASE_DB_URL não configurado — atualização do banco ignorada."
             exit 0
           fi
-          psql "$SUPABASE_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -q -f supabase/schema.sql
+          # Nunca exibir a senha: valida o formato sem imprimir o valor e mascara a senha no log.
+          ats=$(printf '%s' "$SUPABASE_DB_URL" | tr -cd '@' | wc -c)
+          if [ "$ats" -ne 1 ] || printf '%s' "$SUPABASE_DB_URL" | grep -q '[][ ]'; then
+            echo "::error::SUPABASE_DB_URL inválido. A senha não pode conter @, colchetes ou espaços: redefina a senha do banco só com letras e números e atualize o segredo."
+            exit 1
+          fi
+          pw=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.urlsplit(sys.argv[1]).password or "")' "$SUPABASE_DB_URL")
+          [ -n "$pw" ] && echo "::add-mask::$pw"
+          if ! psql "$SUPABASE_DB_URL" --single-transaction -v ON_ERROR_STOP=1 -q -f supabase/schema.sql 2> erro.txt; then
+            sed -E 's#"[^"]*"#"<oculto>"#g; s#postgres(ql)?://[^ ]*#<url oculta>#g; s#[^ ]*pooler\.supabase\.com[^ ]*#<oculto>#g' erro.txt
+            echo "::error::Falha ao atualizar o banco (detalhes acima, sem dados sensíveis). O app NÃO foi publicado."
+            exit 1
+          fi
+          cat erro.txt | grep -v NOTICE || true
           echo "Banco atualizado."
 
   publicar:
