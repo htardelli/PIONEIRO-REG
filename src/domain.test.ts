@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  countedMinutes, idealPace, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours,
+  blockErrors, countedMinutes, deleteRange, idealPace, weekDates, type TimeBlock, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours,
 } from './domain'
 
 const H = 60
@@ -73,4 +73,32 @@ describe('formatação', () => {
     expect(fmtH(-60)).toBe('−1h00')
   })
   it('fmtHours', () => expect(fmtHours(49.5 * H)).toBe('49,5'))
+})
+
+describe('horários do plano', () => {
+  const b = (start: string, end: string, m = 'x'): TimeBlock => ({ modality_id: m, start, end })
+  it('sem conflito quando encostam', () => {
+    expect(blockErrors([b('08:00', '10:00'), b('10:00', '11:00')])).toEqual({})
+  })
+  it('detecta sobreposição nos dois blocos', () => {
+    const e = blockErrors([b('08:00', '10:00'), b('09:30', '11:00')])
+    expect(Object.keys(e)).toEqual(['0', '1'])
+  })
+  it('fim antes do início', () => {
+    expect(blockErrors([b('10:00', '09:00')])[0]).toMatch(/fim/)
+  })
+})
+
+describe('exclusão do plano', () => {
+  it('semana de domingo a sábado', () => {
+    expect(weekDates('2026-10-07')).toEqual(['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10'])
+  })
+  it('ano preserva passado por padrão', () => {
+    expect(deleteRange('2026-10-20', 'year', '2026-10-07', false)).toEqual(['2026-10-07', '2027-08-31'])
+    expect(deleteRange('2026-10-20', 'year', '2026-10-07', true)).toEqual(['2026-09-01', '2027-08-31'])
+  })
+  it('mês e dia', () => {
+    expect(deleteRange('2026-11-15', 'month', '2026-10-07', false)).toEqual(['2026-11-01', '2026-11-30'])
+    expect(deleteRange('2026-10-01', 'day', '2026-10-07', false)).toEqual(['2026-10-01', '2026-10-01'])
+  })
 })

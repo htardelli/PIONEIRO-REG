@@ -4,7 +4,7 @@ Registro e acompanhamento das horas do pioneiro regular, por **ano de serviço (
 
 - Meta anual (600 h) e mínimo tolerável (560 h) configuráveis
 - 12 cards de meses no painel (verde = concluído · vermelho = encerrado abaixo · amarelo = em andamento · cinza = a vir)
-- Planejamento por dia, com repetição no mês ou no ano de serviço
+- Planejamento por dia com horário de início/fim (bloqueia conflitos), repetição no mês ou no ano e exclusão por dia, semana, mês ou ano
 - Lançamento diário: "Cumpri o planejado" em 1 toque ou ajuste por modalidade
 - Créditos de horas com o teto de **55 h/mês** (ministério + crédito) e sem transferência (S-236 §10–11)
 - Relatório mensal (horas, estudos, crédito em Observações), exportação para Excel (CSV)

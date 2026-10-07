@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { fmtH, fmtHours, MONTH_ABBR } from './domain'
+import { blockMinutes, fmtH, fmtHours, fromMinutes, MONTH_ABBR, toMinutes, type TimeBlock } from './domain'
 import type { MonthStats } from './data'
 import type { Modality } from './types'
 
@@ -176,4 +176,48 @@ export function Loading({ error }: { error?: string | null }) {
 
 export function DiffPill({ diff, level }: { diff: number; level: 'ok' | 'warn' | 'bad' }) {
   return <span className={`pill ${level}`}>{diff >= 0 ? '▲ +' : '▼ −'}{fmtHours(Math.abs(diff))} h {diff >= 0 ? 'adiantado' : 'atrasado'}</span>
+}
+
+/** Editor do plano do dia: atividades com modalidade, início e fim. Mostra conflitos de horário. */
+export function BlocksEditor({ modalities, value, onChange, errors }: {
+  modalities: Modality[]; value: TimeBlock[]; onChange: (v: TimeBlock[]) => void; errors: Record<number, string>
+}) {
+  const active = modalities.filter((m) => m.active)
+  const set = (i: number, patch: Partial<TimeBlock>) => onChange(value.map((b, j) => (j === i ? { ...b, ...patch } : b)))
+  function add() {
+    const last = value.reduce((a, b) => Math.max(a, b.end ? toMinutes(b.end) : 0), 0)
+    const start = last || 8 * 60
+    onChange([...value, { modality_id: active[0]?.id ?? '', start: fromMinutes(start), end: fromMinutes(start + 60) }])
+  }
+  return (
+    <div>
+      {value.length === 0 && <div className="empty">Nenhuma atividade planejada neste dia.</div>}
+      {value.map((b, i) => {
+        const m = modalities.find((x) => x.id === b.modality_id)
+        const err = errors[i]
+        return (
+          <div key={i} className="block" style={{ borderColor: err ? 'var(--bad)' : undefined }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <i className="dot" style={{ background: m?.color ?? '#999' }} />
+              <select className="input" style={{ padding: 8, fontSize: 15, fontWeight: 600 }} value={b.modality_id}
+                onChange={(e) => set(i, { modality_id: e.target.value })}>
+                {!m && <option value="">Escolha…</option>}
+                {modalities.filter((x) => x.active || x.id === b.modality_id).map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+              </select>
+              <button className="link" style={{ color: 'var(--bad)', fontSize: 18, padding: '0 4px' }} aria-label="Remover"
+                onClick={() => onChange(value.filter((_, j) => j !== i))}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+              <input className="input" type="time" step={300} style={{ padding: 8, flex: 1, minWidth: 0 }} value={b.start} onChange={(e) => set(i, { start: e.target.value })} aria-label="Início" />
+              <span className="muted">às</span>
+              <input className="input" type="time" step={300} style={{ padding: 8, flex: 1, minWidth: 0 }} value={b.end} onChange={(e) => set(i, { end: e.target.value })} aria-label="Fim" />
+              <b style={{ flexShrink: 0, fontSize: 14 }}>{fmtH(blockMinutes(b))}</b>
+            </div>
+            {err && <div style={{ color: 'var(--bad)', fontSize: 12, fontWeight: 700, marginTop: 6 }}>⚠ {err}</div>}
+          </div>
+        )
+      })}
+      <button className="btn outline small" style={{ marginTop: 10 }} onClick={add} disabled={active.length === 0}>+ Adicionar atividade</button>
+    </div>
+  )
 }

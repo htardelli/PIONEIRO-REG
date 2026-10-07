@@ -89,6 +89,12 @@ create table if not exists public.plan_items (
   minutes int not null check (minutes >= 0)
 );
 create index if not exists plan_items_user_date on public.plan_items (user_id, date);
+-- Horário de início/fim de cada atividade planejada (v0.2)
+alter table public.plan_items add column if not exists start_time time;
+alter table public.plan_items add column if not exists end_time time;
+alter table public.plan_items drop constraint if exists plan_items_time_order;
+alter table public.plan_items add constraint plan_items_time_order
+  check (start_time is null or end_time is null or end_time > start_time);
 
 -- Realizado: horas por modalidade em cada dia
 create table if not exists public.entries (

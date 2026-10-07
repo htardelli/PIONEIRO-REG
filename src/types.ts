@@ -31,6 +31,8 @@ export interface DayItem {
   date: string // YYYY-MM-DD
   modality_id: string
   minutes: number
+  start_time?: string | null // HH:MM[:SS] (somente no planejamento)
+  end_time?: string | null
 }
 
 export interface DayNote {

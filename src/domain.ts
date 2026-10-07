@@ -145,3 +145,73 @@ export const CREDIT_TYPES = [
   'Ajuda humanitária',
   'Outra atividade aprovada',
 ]
+
+// ---------- Horários do planejamento ----------
+export interface TimeBlock {
+  modality_id: string
+  start: string // HH:MM
+  end: string // HH:MM
+}
+
+export function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number)
+  return h * 60 + m
+}
+
+export function fromMinutes(min: number): string {
+  const c = Math.max(0, Math.min(23 * 60 + 59, min))
+  return `${String(Math.floor(c / 60)).padStart(2, '0')}:${String(c % 60).padStart(2, '0')}`
+}
+
+export function blockMinutes(b: TimeBlock): number {
+  return Math.max(0, toMinutes(b.end) - toMinutes(b.start))
+}
+
+/** Erros por bloco (índice → mensagem): fim antes do início ou sobreposição com outro bloco do mesmo dia. */
+export function blockErrors(blocks: TimeBlock[], nameOf: (id: string) => string = () => ''): Record<number, string> {
+  const errs: Record<number, string> = {}
+  blocks.forEach((b, i) => {
+    if (!b.modality_id) errs[i] = 'Escolha a modalidade'
+    else if (!b.start || !b.end) errs[i] = 'Informe início e fim'
+    else if (toMinutes(b.end) <= toMinutes(b.start)) errs[i] = 'O fim deve ser depois do início'
+  })
+  const valid = blocks.map((_, i) => !errs[i])
+  blocks.forEach((a, i) => {
+    if (!valid[i]) return
+    blocks.forEach((b, j) => {
+      if (i === j || !valid[j] || errs[i]) return
+      if (toMinutes(a.start) < toMinutes(b.end) && toMinutes(b.start) < toMinutes(a.end))
+        errs[i] = `Conflita com ${nameOf(b.modality_id) || 'outra atividade'} (${b.start}–${b.end})`
+    })
+  })
+  return errs
+}
+
+/** Datas (domingo a sábado) da semana do dia. */
+export function weekDates(date: string): string[] {
+  const d = parseIso(date)
+  const start = new Date(d)
+  start.setDate(d.getDate() - d.getDay())
+  return Array.from({ length: 7 }, (_, i) => {
+    const x = new Date(start)
+    x.setDate(start.getDate() + i)
+    return isoDate(x)
+  })
+}
+
+export type DeleteScope = 'day' | 'week' | 'month' | 'year'
+
+/** Intervalo [de, até] a excluir; dias passados só entram se `includePast` (o dia escolhido sempre entra). */
+export function deleteRange(date: string, scope: DeleteScope, today: string, includePast: boolean): [string, string] {
+  if (scope === 'day') return [date, date]
+  let from: string, to: string
+  if (scope === 'week') {
+    const w = weekDates(date); from = w[0]; to = w[6]
+  } else if (scope === 'month') {
+    from = `${date.slice(0, 7)}-01`; to = `${date.slice(0, 7)}-${String(daysInMonth(date.slice(0, 7))).padStart(2, '0')}`
+  } else {
+    const sy = serviceYearOf(parseIso(date)); from = `${sy - 1}-09-01`; to = `${sy}-08-31`
+  }
+  if (!includePast && today > from) from = today
+  return [from, to]
+}

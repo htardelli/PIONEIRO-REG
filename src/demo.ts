@@ -1,5 +1,5 @@
 // Dados de exemplo para o modo demonstração (?demo). Nada aqui vai para o servidor.
-import { DEFAULT_MODALITIES, isoDate, serviceYearMonths, serviceYearOf } from './domain'
+import { DEFAULT_MODALITIES, fromMinutes, isoDate, serviceYearMonths, serviceYearOf } from './domain'
 
 export const DEMO_ME = 'demo-eu'
 export const DEMO_PARTNER = 'demo-conjuge'
@@ -50,8 +50,13 @@ export function buildDemoData(today: Date) {
     let n = 0
     for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
       const date = isoDate(d)
+      let clock = 8 * 60 // atividades em sequência a partir das 08:00
       for (const [name, min] of routine[d.getDay()]) {
-        db.plan_items.push({ id: id(), user_id: user, date, modality_id: mod[name], minutes: min })
+        db.plan_items.push({
+          id: id(), user_id: user, date, modality_id: mod[name], minutes: min,
+          start_time: fromMinutes(clock), end_time: fromMinutes(clock + min),
+        })
+        clock += min
         if (d < today && !(d.getMonth() === today.getMonth() && d.getDate() === today.getDate())) {
           n++
           // Variação determinística: alguns dias parciais/perdidos

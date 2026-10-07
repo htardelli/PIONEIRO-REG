@@ -90,9 +90,15 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
           <>
             <div className="card">
               <h3>Planejado para o dia · {fmtH(planTotal)}</h3>
-              {Object.entries(planMap).map(([id, min]) => {
-                const m = data.modalities.find((x) => x.id === id)
-                return <div className="mod" key={id}><i className="dot" style={{ background: m?.color }} /><span className="n">{m?.name}</span><b>{fmtH(min)}</b></div>
+              {[...plan].sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? '')).map((p) => {
+                const m = data.modalities.find((x) => x.id === p.modality_id)
+                return (
+                  <div className="mod" key={p.id}>
+                    <i className="dot" style={{ background: m?.color }} />
+                    <span className="n">{m?.name}{p.start_time && <span className="sub"> · {p.start_time.slice(0, 5)}–{p.end_time?.slice(0, 5)}</span>}</span>
+                    <b>{fmtH(p.minutes)}</b>
+                  </div>
+                )
               })}
             </div>
             {!editing && (
