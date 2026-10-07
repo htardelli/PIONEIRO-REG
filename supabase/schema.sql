@@ -352,3 +352,30 @@ end $$;
 
 revoke all on function public.partner_absence_add(uuid, date, text) from public, anon;
 grant execute on function public.partner_absence_add(uuid, date, text) to authenticated;
+
+-- ============ v0.8: falta por atividade (não pelo dia inteiro) ============
+-- Um lançamento "absent" registra que a atividade (conjunta) não foi feita: 0 min, com o motivo em note.
+alter table public.entries add column if not exists absent boolean not null default false;
+alter table public.entries add column if not exists note text not null default '';
+
+drop function if exists public.partner_absence_add(uuid, date, text);
+-- Lança a falta do participante SÓ nas atividades conjuntas informadas (p_groups) daquele dia.
+-- Ignora as atividades que ele(a) já lançou; não toca nas demais atividades do dia.
+create or replace function public.partner_absence_add(p_partner uuid, p_date date, p_groups uuid[], p_note text) returns int
+language plpgsql security definer set search_path = public as $$
+declare n int;
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para lançar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  insert into public.entries (user_id, date, modality_id, minutes, start_time, end_time, group_id, absent, note)
+  select p.user_id, p.date, p.modality_id, 0, p.start_time, p.end_time, p.group_id, true, coalesce(p_note, 'Faltei')
+    from public.plan_items p
+   where p.user_id = p_partner and p.date = p_date and p.group_id = any(p_groups)
+     and not exists (select 1 from public.entries e where e.user_id = p_partner and e.date = p_date and e.group_id = p.group_id);
+  get diagnostics n = row_count;
+  return n;
+end $$;
+
+revoke all on function public.partner_absence_add(uuid, date, uuid[], text) from public, anon;
+grant execute on function public.partner_absence_add(uuid, date, uuid[], text) to authenticated;

@@ -36,6 +36,8 @@ export interface DayItem {
   start_time?: string | null // HH:MM[:SS] (somente no planejamento)
   end_time?: string | null
   group_id?: string | null // atividade conjunta (mesmo id nos participantes)
+  absent?: boolean // falta registrada nesta atividade (0 min)
+  note?: string // motivo da falta
 }
 
 export interface DayNote {

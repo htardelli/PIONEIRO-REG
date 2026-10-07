@@ -13,7 +13,7 @@ function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
     <div className="mod">
       <i className="dot" style={{ background: m?.color }} />
       <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{item.group_id && <span className="sub"> · 👥</span>}</span>
-      <b>{fmtH(item.minutes)}</b>
+      {item.absent ? <span className="pill bad">✗ falta</span> : <b>{fmtH(item.minutes)}</b>}
     </div>
   )
 }
@@ -33,10 +33,14 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const withPartner = (bs: TimeBlock[]): TimeBlock[] => bs.map((b) =>
     partner && b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id) && !partnerHasGroup(partner.data.entries, date, b.group_id)
       ? { ...b, with: [partner.id] } : b)
-  const plan = data.plan.filter((p) => p.date === date).sort(byStart)
-  const done = data.entries.filter((e) => e.date === date).sort(byStart)
+  const planAll = data.plan.filter((p) => p.date === date).sort(byStart)
+  const dayEntries = data.entries.filter((e) => e.date === date).sort(byStart)
+  const absences = dayEntries.filter((e) => e.absent) // faltas por atividade (conjunta)
+  const done = dayEntries.filter((e) => !e.absent)
+  const absentGroups = new Set(absences.map((e) => e.group_id))
+  const plan = planAll.filter((p) => !(p.group_id && absentGroups.has(p.group_id))) // o que ainda falta lançar
   const note = data.notes.find((n) => n.date === date)
-  const logged = done.length > 0 || !!note
+  const logged = done.length > 0 || !!note || (absences.length > 0 && plan.length === 0)
   const [editing, setEditing] = useState(false)
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [text, setText] = useState('')
@@ -65,19 +69,20 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   /** Falta: se houver atividade conjunta que o participante ainda não lançou, pergunta se ele(a) também faltou. */
   async function confirmAbsence() {
     const note = absenceNote()
-    const joint = partner ? toBlocks(plan).filter((b) => b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id)) : []
-    const partnerLogged = !!partner && (partner.data.entries.some((e) => e.date === date) || partner.data.notes.some((n) => n.date === date))
-    if (partner && joint.length && !partnerLogged) {
+    // só as atividades conjuntas que o participante ainda não lançou
+    const joint = partner ? toBlocks(plan).filter((b) => b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id)
+      && !partnerHasGroup(partner.data.entries, date, b.group_id)) : []
+    if (partner && joint.length) {
       const desc = joint.map((b) => `${data.modalities.find((m) => m.id === b.modality_id)?.name ?? ''} ${b.start}–${b.end}`).join('\n')
       const r = await choice.ask<'both' | 'me'>(
         `${pFirst} também faltou?`,
         [{ label: 'Sim, os dois faltamos', value: 'both', kind: 'danger' }, { label: 'Só eu faltei', value: 'me', kind: 'outline' }],
-        `Atividade conjunta neste dia:\n${desc}\n\nSe sim, a falta (com o mesmo motivo) também é lançada para ${pFirst}.`,
+        `Atividade conjunta neste dia:\n${desc}\n\nSe sim, a falta (com o mesmo motivo) é lançada para ${pFirst} só nessa atividade — as outras atividades dele(a) no dia continuam para ele(a) lançar.`,
       )
       if (!r) return
       if (r === 'both') {
         try {
-          await api.rpc('partner_absence_add', { p_partner: partner.id, p_date: date, p_note: `${note} — atividade conjunta` })
+          await api.rpc('partner_absence_add', { p_partner: partner.id, p_date: date, p_groups: joint.map((b) => b.group_id), p_note: `${note} — atividade conjunta` })
         } catch (e) {
           return toast((e as Error).message)
         }
@@ -99,7 +104,10 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
           .map((b) => ({ date, group_id: b.group_id, modality: nameOfMod(b.modality_id), start: b.start, end: b.end }))
         if (pItems.length) shared = Number(await api.rpc('partner_entries_add', { p_partner: partner.id, p_items: pItems })) || 0
       }
-      await api.remove('entries', { eq: { user_id: data.userId, date } })
+      // mantém as faltas por atividade, exceto das atividades que agora foram lançadas
+      await api.remove('entries', { eq: { user_id: data.userId, date, absent: false } })
+      const relaunched = blocks.map((b) => b.group_id).filter((g): g is string => !!g && absentGroups.has(g))
+      if (relaunched.length) await api.remove('entries', { eq: { user_id: data.userId, date, absent: true }, in: ['group_id', relaunched] })
       await api.insert('entries', blocks.filter((b) => blockMinutes(b) > 0).map((b) => ({
         user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
         group_id: b.group_id ?? null,
@@ -167,9 +175,17 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
                 : <span className={`pill ${doneTotal >= planTotal ? 'ok' : 'warn'}`}>{planTotal ? `plano ${fmtH(planTotal)}` : 'sem plano'}</span>}
             </div>
             {done.length === 0 && !isAbsence && <div className="empty">Nenhuma hora neste dia.</div>}
-            {done.map((e) => <ItemRow key={e.id} item={e} data={data} />)}
+            {[...done, ...absences].sort(byStart).map((e) => <ItemRow key={e.id} item={e} data={data} />)}
             {note?.note && <div className="sub" style={{ marginTop: 8, fontSize: 14 }}>{isAbsence ? note.note : `Obs.: ${note.note}`}</div>}
             <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => setEditing(true)}>Editar lançamento</button>
+          </div>
+        )}
+
+        {!logged && absences.length > 0 && (
+          <div className="card">
+            <h3>Falta registrada</h3>
+            {absences.map((e) => <ItemRow key={e.id} item={e} data={data} />)}
+            {absences[0]?.note && <div className="sub" style={{ marginTop: 6 }}>{absences[0].note}</div>}
           </div>
         )}
 

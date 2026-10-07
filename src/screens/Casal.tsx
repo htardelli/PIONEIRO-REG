@@ -80,7 +80,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
                 <div key={i} style={{ marginBottom: i === 0 ? 18 : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                     <Avatar name={name} color={color} />
-                    <div style={{ flex: 1 }}><b>{name}</b><div className="sub">{fmtHours(ys.total)} h · ritmo {fmtHours(ys.pace)} h</div></div>
+                    <div style={{ flex: 1 }}><b>{name}</b><div className="sub">{fmtHours(ys.total)} · ritmo {fmtHours(ys.pace)}</div></div>
                     <DiffPill diff={ys.diff} level={ys.level} />
                   </div>
                   <div className="bar"><i style={{ width: `${(ys.total / ys.goal) * 100}%`, background: color }} /></div>
@@ -93,7 +93,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
                 const m = ys.months.find((x) => x.month === cur)
                 return (
                   <div className="kv" key={i}>
-                    <span>{name}<div className="sub">Mês: {fmtHours(m?.counted ?? 0)}/{fmtHours(m?.target ?? 0)} h · precisa {fmtHours(ys.needed)} h/mês</div></span>
+                    <span>{name}<div className="sub">Mês: {fmtHours(m?.counted ?? 0)}/{fmtHours(m?.target ?? 0)} · precisa {fmtHours(ys.needed)}/mês</div></span>
                     <span className={`pill ${ys.level}`}>{LEVEL_TXT[ys.level]}</span>
                   </div>
                 )

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, monthLabel, parseIso, repeatDates,
+  blockErrors, blockMinutes, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
@@ -29,10 +29,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const [delPast, setDelPast] = useState(false)
   const [differ, setDiffer] = useState<string[] | null>(null) // dias de destino com plano diferente (aguardando decisão)
   const [scope, setScope] = useState<'day' | 'month' | 'year'>('day')
-  const [goalH, setGoalH] = useState(ms.goal ? String(ms.goal / 60) : '')
+  const [goalH, setGoalH] = useState(ms.goal ? fmtH(ms.goal) : '')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { setGoalH(ms.goal ? String(ms.goal / 60) : ''); setSel(null) }, [month, ms.goal])
+  useEffect(() => { setGoalH(ms.goal ? fmtH(ms.goal) : ''); setSel(null) }, [month, ms.goal])
   useEffect(() => {
     if (!sel) return
     const loaded = toBlocks(data.plan.filter((x) => x.date === sel)).map((b) =>
@@ -50,9 +50,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const nDays = daysInMonth(month)
 
   async function saveGoal() {
-    const h = goalH.trim() === '' ? 0 : Number(goalH.replace(',', '.')) // vazio = sem meta
-    if (!Number.isFinite(h) || h < 0) return toast('Meta inválida')
-    await api.upsert('month_records', [{ user_id: data.userId, month, goal_min: Math.round(h * 60) }], 'user_id,month')
+    const min = parseHM(goalH) // vazio = sem meta
+    if (min === null) return toast('Meta inválida: use hh:mm (ex.: 50:00)')
+    const h = min
+    await api.upsert('month_records', [{ user_id: data.userId, month, goal_min: min }], 'user_id,month')
     await reload()
     toast(h ? 'Meta do mês salva' : 'Meta do mês removida')
   }
@@ -275,18 +276,18 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
           <div className="kv">
             <span>Meta do mês</span>
             <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input className="input" style={{ width: 70, padding: 8, textAlign: 'right' }} inputMode="decimal" value={goalH}
-                onChange={(e) => setGoalH(e.target.value)} placeholder="—" onBlur={() => (goalH.trim() === '' ? 0 : Number(goalH.replace(',', '.')) * 60) !== ms.goal && saveGoal()} />
+              <input className="input" style={{ width: 86, padding: 8, textAlign: 'right' }} inputMode="numeric" value={goalH}
+                onChange={(e) => setGoalH(e.target.value)} placeholder="hh:mm" onBlur={() => parseHM(goalH) !== ms.goal && saveGoal()} />
               <b>h</b>
             </span>
           </div>
           {ym && (
             <div className="kv"><span>Alvo do mês<div className="sub">{ym.targetKind === 'plano' ? 'o plano substitui a meta' : ym.targetKind === 'meta' ? 'meta (mês sem plano)' : 'rateio: falta p/ a meta anual ÷ meses sem plano e sem meta'}</div></span>
-              <b>{fmtHours(ym.target)} h</b></div>
+              <b>{fmtHours(ym.target)}</b></div>
           )}
-          <div className="kv"><span>Planejado no mês</span><span><b>{fmtHours(ms.planned)} h</b>{' '}
-            <span className={`pill ${slack >= 0 ? 'ok' : 'warn'}`}>{slack >= 0 ? `folga ${fmtHours(slack)} h` : `faltam ${fmtHours(-slack)} h`}</span></span></div>
-          <div className="kv"><span>Planejamento anual</span><span><b>{fmtHours(ys.plannedSum)} h</b>{' '}
+          <div className="kv"><span>Planejado no mês</span><span><b>{fmtHours(ms.planned)}</b>{' '}
+            <span className={`pill ${slack >= 0 ? 'ok' : 'warn'}`}>{slack >= 0 ? `folga ${fmtHours(slack)}` : `faltam ${fmtHours(-slack)}`}</span></span></div>
+          <div className="kv"><span>Planejamento anual</span><span><b>{fmtHours(ys.plannedSum)}</b>{' '}
             <span className={`pill ${ys.plannedSum >= ys.goal ? 'ok' : 'warn'}`}>{ys.plannedSum >= ys.goal ? 'cobre a meta' : `faltam ${fmtHours(ys.goal - ys.plannedSum)}`}</span></span></div>
           <div className="sub" style={{ paddingBottom: 8 }}>O plano do mês substitui a meta; a meta só vale nos meses sem plano.</div>
         </div>

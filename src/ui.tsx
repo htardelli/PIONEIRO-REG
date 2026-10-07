@@ -127,7 +127,7 @@ export function MonthGrid({ months, today, needed, onPick }: {
               <span className="mtitle">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</span>
               <span className="mnum">
                 <b className={future ? 'muted' : ''}>{future ? '–' : fmtHours(m.counted)}</b>
-                {c.target > 0 ? <span className="muted"> / {fmtHours(c.target)} h</span> : <span className="muted"> h</span>}
+                {c.target > 0 && <span className="muted"> / {fmtHours(c.target)}</span>}
               </span>
               <span className="bar"><i style={{ width: `${pct}%`, background: future ? '#C3CBD7' : STATUS_COLOR[c.status] }} /></span>
               <span className="mnote" style={{ color: c.note ? noteColor : 'var(--muted)' }}>
@@ -163,7 +163,7 @@ export function Loading({ error }: { error?: string | null }) {
 }
 
 export function DiffPill({ diff, level }: { diff: number; level: 'ok' | 'warn' | 'bad' }) {
-  return <span className={`pill ${level}`}>{diff >= 0 ? '▲ +' : '▼ −'}{fmtHours(Math.abs(diff))} h {diff >= 0 ? 'adiantado' : 'atrasado'}</span>
+  return <span className={`pill ${level}`}>{diff >= 0 ? '▲ +' : '▼ −'}{fmtHours(Math.abs(diff))} {diff >= 0 ? 'adiantado' : 'atrasado'}</span>
 }
 
 /** Editor do plano do dia: atividades com modalidade, início e fim. Mostra conflitos de horário. */

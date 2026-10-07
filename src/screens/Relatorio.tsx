@@ -37,7 +37,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
     `Relatório de ${MONTH_NAME[mo - 1]} — ${name}`,
     `Horas: ${fmtHours(ms.ministry)}`,
     `Estudos bíblicos: ${ms.studies}`,
-    ms.credit > 0 ? `Observações: ${fmtHours(ms.creditUsed)} h de crédito (${credits.map((c) => c.type).join(', ')})` : '',
+    ms.credit > 0 ? `Observações: ${fmtHours(ms.creditUsed)} de crédito (${credits.map((c) => c.type).join(', ')})` : '',
   ].filter(Boolean).join('\n')
 
   async function copy() {
@@ -70,7 +70,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
       <div className="main">
         <div className="card">
           <h3>Para o relatório (S-4)</h3>
-          <div className="kv"><span>Horas no ministério</span><b>{fmtHours(ms.ministry)} h</b></div>
+          <div className="kv"><span>Horas no ministério</span><b>{fmtHours(ms.ministry)}</b></div>
           <div className="kv"><span>Estudos bíblicos</span>
             <div className="step">
               <button onClick={() => upsertRecord({ bible_studies: Math.max(0, ms.studies - 1) })}>−</button>
@@ -78,7 +78,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
               <button onClick={() => upsertRecord({ bible_studies: ms.studies + 1 })}>+</button>
             </div>
           </div>
-          <div className="kv"><span>Crédito (Observações)</span><b style={{ color: 'var(--credit)' }}>{fmtHours(ms.creditUsed)} h</b></div>
+          <div className="kv"><span>Crédito (Observações)</span><b style={{ color: 'var(--credit)' }}>{fmtHours(ms.creditUsed)}</b></div>
           <div className="row" style={{ gap: 10, marginTop: 12 }}>
             <button className="btn brand small" onClick={copy}>Copiar relatório</button>
             <button className="btn ghost small" onClick={exportCsv}>Exportar Excel</button>
@@ -86,7 +86,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
         </div>
 
         <div className="card">
-          <div className="card-head"><h3>Teto mensal 55 h</h3><span className="pill cr">{fmtHours(ms.ministry + ms.creditUsed)} / 55 h</span></div>
+          <div className="card-head"><h3>Teto mensal 55:00</h3><span className="pill cr">{fmtHours(ms.ministry + ms.creditUsed)} / 55:00</span></div>
           <div className="stack">
             <i style={{ width: capPct(ms.ministry), background: 'var(--brand-2)' }} />
             <i style={{ width: capPct(ms.creditUsed), background: 'var(--credit)' }} />
@@ -121,7 +121,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
           {mods.length === 0 ? <div className="empty">Sem horas lançadas neste mês.</div> : (
             <>
               <div className="stack">{mods.map((x) => <i key={x.modality?.id} style={{ width: `${(x.minutes / ms.ministry) * 100}%`, background: x.modality?.color }} />)}</div>
-              <div className="legend" style={{ fontSize: 12 }}>{mods.map((x) => <span key={x.modality?.id}><i style={{ background: x.modality?.color }} />{x.modality?.name} {fmtHours(x.minutes)}h</span>)}</div>
+              <div className="legend" style={{ fontSize: 12 }}>{mods.map((x) => <span key={x.modality?.id}><i style={{ background: x.modality?.color }} />{x.modality?.name} {fmtHours(x.minutes)}</span>)}</div>
             </>
           )}
         </div>
@@ -139,4 +139,4 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
   )
 }
 
-const h = (min: number) => (min / 60).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
+const h = (min: number) => fmtH(min) // hh:mm (sem horas decimais)

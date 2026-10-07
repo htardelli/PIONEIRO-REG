@@ -152,9 +152,14 @@ export function yearStats(d: YearData, today: Date): YearStats {
 export type DayState = 'done' | 'part' | 'miss' | 'plan' | 'none'
 
 export function dayState(d: YearData, date: string, today: Date) {
-  const planned = sum(d.plan.filter((p) => p.date === date))
-  const done = sum(d.entries.filter((e) => e.date === date))
-  const logged = done > 0 || d.notes.some((n) => n.date === date)
+  const dayPlan = d.plan.filter((p) => p.date === date)
+  const dayEntries = d.entries.filter((e) => e.date === date)
+  const planned = sum(dayPlan)
+  const done = sum(dayEntries)
+  // Faltas por atividade (conjunta): o dia só conta como lançado se TODAS as atividades planejadas foram cobertas
+  const absentGroups = new Set(dayEntries.filter((e) => e.absent && e.group_id).map((e) => e.group_id))
+  const allAbsent = absentGroups.size > 0 && dayPlan.every((p) => p.group_id && absentGroups.has(p.group_id))
+  const logged = done > 0 || allAbsent || d.notes.some((n) => n.date === date)
   const past = date < isoDate(today)
   let state: DayState = 'none'
   if (done > 0 && done >= planned) state = 'done'

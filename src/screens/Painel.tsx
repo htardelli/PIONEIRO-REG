@@ -22,13 +22,13 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         <div className="ytotal">
           <div className="ytop">
             <span>Planejamento anual</span>
-            <span><b>{fmtHours(ys.plannedSum)}</b><span className="muted"> / {fmtHours(ys.goal)} h</span></span>
+            <span><b>{fmtHours(ys.plannedSum)}</b><span className="muted"> / {fmtHours(ys.goal)}</span></span>
           </div>
           <span className="bar"><i style={{ width: `${Math.min(100, (ys.plannedSum / ys.goal) * 100)}%`, background: ys.plannedSum >= ys.goal ? 'var(--ok)' : 'var(--brand-2)' }} /></span>
           <div className="ybot">
             <span>{ys.plannedMonths} de 12 meses planejados</span>
             {ys.plannedSum < ys.goal
-              ? <span>faltam planejar <b style={{ color: 'var(--bad)' }}>{fmtHours(ys.goal - ys.plannedSum)} h</b></span>
+              ? <span>faltam planejar <b style={{ color: 'var(--bad)' }}>{fmtHours(ys.goal - ys.plannedSum)}</b></span>
               : <span style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ cobre a meta anual</span>}
           </div>
         </div>
@@ -36,12 +36,12 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
 
       <div className="card">
         <div className="ring-wrap">
-          <Ring value={ys.total} max={ys.goal} label={fmtHours(ys.total)} sub={`de ${fmtHours(ys.goal)} h`} color={color} />
+          <Ring value={ys.total} max={ys.goal} label={fmtHours(ys.total)} sub={`de ${fmtHours(ys.goal)}`} color={color} />
           <div>
             <DiffPill diff={ys.diff} level={ys.level} />
             <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-              Ritmo ideal hoje: <b style={{ color: 'var(--ink)' }}>{fmtHours(ys.pace)} h</b><br />
-              Faltam <b style={{ color: 'var(--ink)' }}>{fmtHours(Math.max(0, ys.goal - ys.total))} h</b> em {daysLeft} dias
+              Ritmo ideal hoje: <b style={{ color: 'var(--ink)' }}>{fmtHours(ys.pace)}</b><br />
+              Faltam <b style={{ color: 'var(--ink)' }}>{fmtHours(Math.max(0, ys.goal - ys.total))}</b> em {daysLeft} dias
             </div>
           </div>
         </div>
@@ -52,13 +52,13 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         <div className="row">
           <div className="card">
             <h3>{MONTH_NAME[today.getMonth()]}</h3>
-            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)} h</small></div>
+            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
             <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
-            <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} h em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
+            <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
           </div>
           <div className="card">
             <h3>Precisa/mês</h3>
-            <div className="big">{fmtHours(ys.needed)}<small> h</small></div>
+            <div className="big">{fmtHours(ys.needed)}</div>
             <div className="sub">média nos meses restantes</div>
           </div>
         </div>
@@ -74,8 +74,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         ) : (
           <>
             <div className="row" style={{ alignItems: 'flex-end' }}>
-              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.planned)}<small> h</small></div></div>
-              <div><div className="sub">Realizado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.done)}<small> h</small></div></div>
+              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.planned)}</div></div>
+              <div><div className="sub">Realizado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.done)}</div></div>
               <div style={{ textAlign: 'right' }}>
                 <div className="sub">Cumprimento</div>
                 <div className="big" style={{ fontSize: 24, color: pvd.pct === null ? undefined : pvd.pct >= 1 ? 'var(--ok)' : pvd.pct >= 0.8 ? 'var(--warn)' : 'var(--bad)' }}>
@@ -97,7 +97,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
             </div>
             {pvd.days.pending > 0 && (
               <div className="sub" style={{ marginTop: 8 }}>
-                Inclui {fmtHours(pvd.pendingPlanned)} h planejadas em dias ainda não lançados (contam como 0 até você lançar).
+                Inclui {fmtHours(pvd.pendingPlanned)} planejadas em dias ainda não lançados (contam como 0 até você lançar).
               </div>
             )}
             {pvd.days.pending > 0 && onPickDate && (
@@ -110,7 +110,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
       </div>
 
       {ys.freeMonths === 0 && ys.committed < ys.goal && (
-        <div className="alert">⚠ Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} h — menos que a meta anual de {fmtHours(ys.goal)} h. Ajuste no Plano.</div>
+        <div className="alert">⚠ Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} — menos que a meta anual de {fmtHours(ys.goal)}. Ajuste no Plano.</div>
       )}
       {needJustification && onLaunch && (
         <div className="alert">

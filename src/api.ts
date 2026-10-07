@@ -137,7 +137,7 @@ function localApi(): Api {
   }
   save()
   const match = (r: Row, q?: Query) =>
-    (!q?.eq || Object.entries(q.eq).every(([k, v]) => r[k] === v)) &&
+    (!q?.eq || Object.entries(q.eq).every(([k, v]) => r[k] === v || (v === false && r[k] == null))) &&
     (!q?.in || q.in[1].includes(r[q.in[0]])) &&
     (!q?.range || (String(r[q.range[0]]) >= q.range[1] && String(r[q.range[0]]) <= q.range[2]))
   let logged = true
@@ -214,9 +214,16 @@ function localApi(): Api {
         return n as T
       }
       if (fn === 'partner_absence_add') {
-        const has = db.entries.some((x) => x.user_id === partner && x.date === args.p_date) || db.day_notes.some((x) => x.user_id === partner && x.date === args.p_date)
-        if (!has) { db.day_notes.push({ user_id: partner, date: args.p_date, note: args.p_note }); save() }
-        return !has as T
+        const groups = args.p_groups as string[]
+        let n = 0
+        for (const p of db.plan_items.filter((x) => x.user_id === partner && x.date === args.p_date && groups.includes(String(x.group_id)))) {
+          if (db.entries.some((e) => e.user_id === partner && e.date === p.date && e.group_id === p.group_id)) continue
+          db.entries.push({ id: crypto.randomUUID(), user_id: partner, date: p.date, modality_id: p.modality_id, minutes: 0,
+            start_time: p.start_time, end_time: p.end_time, group_id: p.group_id, absent: true, note: args.p_note })
+          n++
+        }
+        save()
+        return n as T
       }
       if (fn === 'partner_plan_delete') {
         const groups = args.p_groups as string[]

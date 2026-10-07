@@ -50,11 +50,11 @@ describe('alvo do mês: plano > meta > rateio', () => {
 describe('card do mês', () => {
   it('mês atual abaixo do plano: ▼ faltam', () => {
     const d = data({ plan: [item('2026-10-13', 52)], entries: [item('2026-10-02', 4.5)] })
-    expect(monthCard(month(d, '2026-10'), today)).toEqual({ status: 'now', target: 52 * H, kind: 'plano', note: '▼ faltam 47,5' })
+    expect(monthCard(month(d, '2026-10'), today)).toEqual({ status: 'now', target: 52 * H, kind: 'plano', note: '▼ faltam 47:30' })
   })
   it('mês encerrado acima do plano: ▲ e verde', () => {
     const d = data({ plan: [item('2026-09-13', 50)], entries: [item('2026-09-02', 55)] })
-    expect(monthCard(month(d, '2026-09'), today)).toMatchObject({ status: 'ok', note: '▲ +5' })
+    expect(monthCard(month(d, '2026-09'), today)).toMatchObject({ status: 'ok', note: '▲ +05:00' })
   })
   it('mês encerrado abaixo do plano: vermelho', () => {
     const d = data({ plan: [item('2026-09-13', 50)], entries: [item('2026-09-02', 40)] })
@@ -69,7 +69,27 @@ describe('card do mês', () => {
 describe('ícones', () => {
   it('coberto, acima e abaixo', () => {
     expect(planDelta(52 * H, 52 * H)).toBe('✓ coberto')
-    expect(planDelta(55 * H, 52 * H)).toBe('▲ +3')
-    expect(planDelta(8 * H, 52 * H)).toBe('▼ faltam 44')
+    expect(planDelta(55 * H, 52 * H)).toBe('▲ +03:00')
+    expect(planDelta(8 * H, 52 * H)).toBe('▼ faltam 44:00')
+  })
+})
+
+import { dayState } from './data'
+
+describe('falta só na atividade conjunta', () => {
+  const plan: DayItem[] = [
+    { id: 'a', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 2 * H, group_id: 'g1' },
+    { id: 'b', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 1 * H },
+  ]
+  const absent: DayItem = { id: 'x', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 0, group_id: 'g1', absent: true }
+  it('dia com outra atividade ainda pendente não conta como lançado', () => {
+    expect(dayState(data({ plan, entries: [absent] }), '2026-10-05', today)).toMatchObject({ logged: false, state: 'miss' })
+  })
+  it('dia só com a atividade conjunta faltada conta como lançado (falta)', () => {
+    expect(dayState(data({ plan: [plan[0]], entries: [absent] }), '2026-10-05', today)).toMatchObject({ logged: true, state: 'miss' })
+  })
+  it('lançando a outra atividade o dia fica parcial', () => {
+    const e: DayItem = { id: 'y', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 1 * H }
+    expect(dayState(data({ plan, entries: [absent, e] }), '2026-10-05', today)).toMatchObject({ logged: true, state: 'part' })
   })
 })

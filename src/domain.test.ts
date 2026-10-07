@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  blockErrors, blocksSignature, toBlocks, countedMinutes, deleteRange, idealPace, weekDates, type TimeBlock, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours,
+  blockErrors, blocksSignature, toBlocks, countedMinutes, deleteRange, idealPace, weekDates, type TimeBlock, monthStatus, neededPerMonth, repeatDates, serviceYearMonths, serviceYearOf, fmtH, fmtHours, parseHM,
 } from './domain'
 
 const H = 60
@@ -69,10 +69,12 @@ describe('repetição', () => {
 
 describe('formatação', () => {
   it('fmtH', () => {
-    expect(fmtH(90)).toBe('1h30')
-    expect(fmtH(-60)).toBe('−1h00')
+    expect(fmtH(90)).toBe('01:30')
+    expect(fmtH(-60)).toBe('−01:00')
+    expect(fmtH(600 * 60)).toBe('600:00')
   })
-  it('fmtHours', () => expect(fmtHours(49.5 * H)).toBe('49,5'))
+  it('fmtHours em hh:mm', () => expect(fmtHours(49.5 * H)).toBe('49:30'))
+  it('parseHM', () => { expect(parseHM('50')).toBe(3000); expect(parseHM('7:05')).toBe(425); expect(parseHM('')).toBe(0); expect(parseHM('7,5')).toBe(null) })
 })
 
 describe('horários do plano', () => {

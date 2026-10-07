@@ -83,17 +83,23 @@ export function neededPerMonth(goalMin: number, doneMin: number, sy: number, tod
 }
 
 /** "2h30", "0h45" */
+/** Horas no formato hh:mm — "07:30", "55:48", "−01:00" (minutos arredondados). */
 export function fmtH(min: number): string {
   const sign = min < 0 ? '−' : ''
   const a = Math.round(Math.abs(min))
-  return `${sign}${Math.floor(a / 60)}h${String(a % 60).padStart(2, '0')}`
+  return `${sign}${String(Math.floor(a / 60)).padStart(2, '0')}:${String(a % 60).padStart(2, '0')}`
 }
 
-/** "49,5" (horas com 1 casa decimal, sem zeros inúteis) */
-export function fmtHours(min: number): string {
-  const h = Math.round((min / 60) * 10) / 10
-  return h.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+/** Lê "50", "50:30" ou "7:05" → minutos (null se inválido; vazio → 0). */
+export function parseHM(txt: string): number | null {
+  const t = txt.trim()
+  if (!t) return 0
+  const m = /^(\d{1,3})(?::([0-5]\d))?$/.exec(t)
+  return m ? Number(m[1]) * 60 + Number(m[2] ?? 0) : null
 }
+
+/** Totais de horas — mesmo formato hh:mm (sem horas decimais). */
+export const fmtHours = fmtH
 
 /** Datas do mesmo dia da semana: no mês do dia, ou no ano de serviço inteiro (a partir do dia). */
 export function repeatDates(date: string, scope: 'day' | 'month' | 'year'): string[] {
