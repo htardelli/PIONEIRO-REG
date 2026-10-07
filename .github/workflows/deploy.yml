@@ -46,9 +46,21 @@ jobs:
             exit 0
           fi
           # Nunca exibir a senha: valida o formato sem imprimir o valor e mascara a senha no log.
+          # Remove espaços/quebras de linha nas pontas (comuns ao copiar pelo celular).
+          SUPABASE_DB_URL=$(printf '%s' "$SUPABASE_DB_URL" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          problemas=""
+          case "$SUPABASE_DB_URL" in postgresql://*|postgres://*) ;; *) problemas="$problemas\n- não começa com postgresql:// (copie o endereço inteiro)";; esac
           ats=$(printf '%s' "$SUPABASE_DB_URL" | tr -cd '@' | wc -c)
-          if [ "$ats" -ne 1 ] || printf '%s' "$SUPABASE_DB_URL" | grep -q '[][ ]'; then
-            echo "::error::SUPABASE_DB_URL inválido. A senha não pode conter @, colchetes ou espaços: redefina a senha do banco só com letras e números e atualize o segredo."
+          [ "$ats" -eq 0 ] && problemas="$problemas\n- não tem @ (endereço incompleto)"
+          [ "$ats" -gt 1 ] && problemas="$problemas\n- tem $ats símbolos @ (deve ter 1): a senha contém @"
+          printf '%s' "$SUPABASE_DB_URL" | grep -q '[][]' && problemas="$problemas\n- tem colchetes [ ]: troque [YOUR-PASSWORD] inteiro (com colchetes) pela senha"
+          printf '%s' "$SUPABASE_DB_URL" | grep -q 'YOUR-PASSWORD' && problemas="$problemas\n- ainda contém YOUR-PASSWORD: a senha não foi colocada"
+          printf '%s' "$SUPABASE_DB_URL" | grep -q '[[:space:]]' && problemas="$problemas\n- tem espaço no meio do endereço"
+          printf '%s' "$SUPABASE_DB_URL" | grep -q 'pooler.supabase.com:5432/postgres$' || problemas="$problemas\n- não termina em pooler.supabase.com:5432/postgres (use Connect > Direct > Session pooler)"
+          if [ -n "$problemas" ]; then
+            printf "::error::SUPABASE_DB_URL inválido (o valor não é exibido). Problemas encontrados:%b\n" "$problemas" | tr '\n' ' '
+            echo
+            printf "Problemas encontrados no SUPABASE_DB_URL:%b\n" "$problemas"
             exit 1
           fi
           pw=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.urlsplit(sys.argv[1]).password or "")' "$SUPABASE_DB_URL")
