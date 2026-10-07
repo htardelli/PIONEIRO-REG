@@ -56,7 +56,12 @@ jobs:
           printf '%s' "$SUPABASE_DB_URL" | grep -q '[][]' && problemas="$problemas\n- tem colchetes [ ]: troque [YOUR-PASSWORD] inteiro (com colchetes) pela senha"
           printf '%s' "$SUPABASE_DB_URL" | grep -q 'YOUR-PASSWORD' && problemas="$problemas\n- ainda contém YOUR-PASSWORD: a senha não foi colocada"
           printf '%s' "$SUPABASE_DB_URL" | grep -q '[[:space:]]' && problemas="$problemas\n- tem espaço no meio do endereço"
-          printf '%s' "$SUPABASE_DB_URL" | grep -q 'pooler.supabase.com:5432/postgres$' || problemas="$problemas\n- não termina em pooler.supabase.com:5432/postgres (use Connect > Direct > Session pooler)"
+          host_part=$(printf '%s' "$SUPABASE_DB_URL" | sed -E 's#^[^@]*@##')
+          case "$host_part" in
+            *pooler.supabase.com*) ;;
+            db.*supabase.co*) problemas="$problemas\n- é a 'Direct connection' (db....supabase.co), que o GitHub não alcança: use Connect > Direct > Session pooler";;
+            *) problemas="$problemas\n- o servidor não é do Supabase pooler (esperado ...pooler.supabase.com): use Connect > Direct > Session pooler";;
+          esac
           if [ -n "$problemas" ]; then
             printf "::error::SUPABASE_DB_URL inválido (o valor não é exibido). Problemas encontrados:%b\n" "$problemas" | tr '\n' ' '
             echo
