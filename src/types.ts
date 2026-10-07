@@ -46,6 +46,16 @@ export interface DayNote {
   note: string
 }
 
+/** Evento do dia (congresso, assembleia…): explica a ausência de plano. */
+export interface DayEvent {
+  id: string
+  user_id: string
+  date: string
+  kind: string
+  title: string
+  group_id?: string | null
+}
+
 export interface Credit {
   id: string
   user_id: string

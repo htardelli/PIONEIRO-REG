@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
+  blockErrors, blockMinutes, EVENT_KINDS, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, Header, MonthNav, useChoice } from '../ui'
+import type { DayEvent } from '../types'
 
 type Scope = 'all' | 'me'
 
@@ -31,8 +32,12 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const [scope, setScope] = useState<'day' | 'month' | 'year'>('day')
   const [goalH, setGoalH] = useState(ms.goal ? fmtH(ms.goal) : '')
   const [busy, setBusy] = useState(false)
+  const [multi, setMulti] = useState(false) // modo seleção de vários dias
+  const [picked, setPicked] = useState<string[]>([])
+  const [evDates, setEvDates] = useState<string[] | null>(null) // formulário de evento aberto para estas datas
 
   useEffect(() => { setGoalH(ms.goal ? fmtH(ms.goal) : ''); setSel(null) }, [month, ms.goal])
+  useEffect(() => { setPicked([]); setEvDates(null) }, [month])
   useEffect(() => {
     if (!sel) return
     const loaded = toBlocks(data.plan.filter((x) => x.date === sel)).map((b) =>
@@ -172,6 +177,90 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
     }
   }
 
+  const fmtD = (d: string) => d.slice(8) + '/' + d.slice(5, 7)
+  const eventsOn = (date: string) => data.events.filter((e) => e.date === date)
+  const planDates = (dates: string[]) => dates.filter((dt) => data.plan.some((p) => p.date === dt))
+
+  /** Exclui o plano das datas informadas (seleção de vários dias). Pergunta o alcance se houver atividade conjunta. */
+  async function deleteDates(dates: string[], confirmFirst = true): Promise<boolean> {
+    const withPlan = planDates(dates)
+    if (!withPlan.length) return true
+    const jointGroups = partner ? [...new Set(data.plan
+      .filter((p) => withPlan.includes(p.date) && p.group_id && partnerHasGroup(partner.data.plan, p.date, p.group_id))
+      .map((p) => p.group_id!))] : []
+    const n = withPlan.length
+    const what = `${n} ${n === 1 ? 'dia' : 'dias'} (${withPlan.slice(0, 6).map(fmtD).join(', ')}${n > 6 ? '…' : ''})`
+    let alsoPartner = false
+    if (jointGroups.length) {
+      const r = await choice.ask<Scope>(`Excluir o planejamento de ${what}?`,
+        [{ label: 'Para todos os participantes', value: 'all', kind: 'danger' }, { label: 'Só para mim', value: 'me', kind: 'outline' }],
+        `Há atividades feitas com ${pFirst} nesses dias. Excluir também do plano dele(a)?\nOs lançamentos (horas realizadas) não são afetados.`)
+      if (!r) return false
+      alsoPartner = r === 'all'
+    } else if (confirmFirst && !confirm(`Excluir o planejamento de ${what}? Os lançamentos (horas realizadas) não são afetados.`)) return false
+    if (alsoPartner && partner) await api.rpc('partner_plan_delete_dates', { p_partner: partner.id, p_groups: jointGroups, p_dates: withPlan })
+    await api.remove('plan_items', { eq: { user_id: data.userId }, in: ['date', withPlan] })
+    return true
+  }
+
+  async function deletePicked() {
+    setBusy(true)
+    try {
+      const n = planDates(picked).length
+      if (!(await deleteDates(picked))) return
+      await reload()
+      toast(`Planejamento excluído (${n} ${n === 1 ? 'dia' : 'dias'})`)
+      setPicked([]); setMulti(false)
+    } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
+  }
+
+  async function addEvent(dates: string[], kind: string, title: string, both: boolean) {
+    const withPlan = planDates(dates)
+    let dropPlan = false
+    if (withPlan.length) {
+      const r = await choice.ask<'keep' | 'drop'>('Já existe plano nesses dias',
+        [{ label: 'Excluir o plano', value: 'drop', kind: 'danger' }, { label: 'Manter o plano', value: 'keep', kind: 'outline' }],
+        `${withPlan.length === 1 ? 'O dia' : 'Os dias'} ${withPlan.slice(0, 6).map(fmtD).join(', ')}${withPlan.length > 6 ? '…' : ''} já ${withPlan.length === 1 ? 'tem' : 'têm'} atividades planejadas. O que fazer com elas?`)
+      if (!r) return
+      dropPlan = r === 'drop'
+    }
+    setBusy(true)
+    try {
+      if (dropPlan && !(await deleteDates(withPlan, false))) return
+      const group_id = both && partner ? crypto.randomUUID() : null
+      await api.insert('day_events', dates.map((date) => ({ user_id: data.userId, date, kind, title, group_id })))
+      if (group_id && partner) await api.rpc('partner_events_add', { p_partner: partner.id, p_items: dates.map((date) => ({ date, kind, title, group_id })) })
+      await reload()
+      toast(`${kind} marcado em ${dates.length} ${dates.length === 1 ? 'dia' : 'dias'}${group_id ? ` · também para ${pFirst}` : ''}${dropPlan ? ' · plano excluído' : ''}`)
+      setEvDates(null); setPicked([]); setMulti(false)
+    } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
+  }
+
+  async function removeEvent(ev: DayEvent) {
+    const shared = !!(partner && ev.group_id && partner.data.events.some((x) => x.date === ev.date && x.group_id === ev.group_id))
+    let alsoPartner = false
+    if (shared) {
+      const r = await choice.ask<Scope>(`Remover "${eventName(ev)}" de ${fmtD(ev.date)}?`,
+        [{ label: 'Para todos os participantes', value: 'all', kind: 'danger' }, { label: 'Só para mim', value: 'me', kind: 'outline' }],
+        `Este evento também está no calendário de ${pFirst}.`)
+      if (!r) return
+      alsoPartner = r === 'all'
+    } else if (!confirm(`Remover "${eventName(ev)}" de ${fmtD(ev.date)}?`)) return
+    try {
+      if (alsoPartner && partner) await api.rpc('partner_events_delete', { p_partner: partner.id, p_groups: [ev.group_id], p_dates: [ev.date] })
+      await api.remove('day_events', { eq: { id: ev.id } })
+      await reload()
+      toast('Evento removido')
+    } catch (e) { toast((e as Error).message) }
+  }
+
+  const togglePick = (date: string) => setPicked((xs) => (xs.includes(date) ? xs.filter((x) => x !== date) : [...xs, date].sort()))
+  const monthMarks = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)
+    .flatMap((date) => [
+      ...(holidayOf(date) ? [{ date, hol: holidayOf(date)!, ev: null as DayEvent | null }] : []),
+      ...eventsOn(date).map((ev) => ({ date, hol: null, ev })),
+    ])
+
   const selDow = sel ? parseIso(sel).getDay() : 0
   const ym = ys.months.find((x) => x.month === month)
   const slack = ms.planned - (ms.goal || ym?.target || 0)
@@ -184,6 +273,12 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
       } />
       <div className="main">
         <div className="card" style={{ padding: 12 }}>
+          <div className="card-head" style={{ marginBottom: 8 }}>
+            <span className="sub" style={{ fontWeight: 700 }}>{multi ? 'Toque nos dias para selecionar' : 'Toque num dia para planejar'}</span>
+            <button className="link" onClick={() => { setMulti(!multi); setPicked([]); setSel(null); setEvDates(null) }}>
+              {multi ? 'Cancelar seleção' : '☐ Selecionar vários dias'}
+            </button>
+          </div>
           <div className="cal">
             {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((h, i) => <div className="h" key={i}>{h}</div>)}
             {Array.from({ length: firstDow }, (_, i) => <div className="d x" key={'x' + i} />)}
@@ -191,9 +286,14 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               const date = `${month}-${String(i + 1).padStart(2, '0')}`
               const st = dayState(data, date, today)
               const shown = st.done > 0 ? st.done : st.planned
+              const hol = holidayOf(date)
+              const evs = eventsOn(date)
               return (
-                <button key={date} className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''}`} onClick={() => setSel(date)}>
+                <button key={date} title={[hol?.name, ...evs.map(eventName)].filter(Boolean).join(' · ') || undefined}
+                  className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol && hol.kind !== 'facultativo' ? 'holday' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
+                  onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
+                  {(hol || evs.length > 0) && <span className="mk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
                   {shown > 0 && <em>{fmtHours(shown)}</em>}
                 </button>
               )
@@ -204,14 +304,44 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
             <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Não feito</span>
             <span><i style={{ background: '#F7F9FB', border: '1px solid var(--line)' }} />Planejado</span>
+            <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
+            <span><i className="hol facultativo" style={{ borderRadius: '50%' }} />Ponto facultativo</span>
+            <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
           </div>
         </div>
+
+        {multi && (
+          <div className="selbar">
+            <b>{picked.length} {picked.length === 1 ? 'dia selecionado' : 'dias selecionados'}</b>
+            <button className="btn small" style={{ background: '#fff', color: 'var(--bad)' }} disabled={busy || planDates(picked).length === 0} onClick={deletePicked}>
+              Excluir plano{planDates(picked).length ? ` (${planDates(picked).length})` : ''}
+            </button>
+            <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || picked.length === 0} onClick={() => setEvDates(picked)}>
+              Marcar evento
+            </button>
+          </div>
+        )}
+
+        {evDates && (
+          <EventForm dates={evDates} partnerName={partner ? pFirst : ''} busy={busy} onCancel={() => setEvDates(null)}
+            onSave={(k, t, both) => addEvent(evDates, k, t, both)} />
+        )}
 
         {sel ? (
           <div className="card">
             <div className="card-head">
               <h3>Planejar {WEEKDAY_SHORT[selDow]}, {sel.slice(8)}/{sel.slice(5, 7)}</h3>
               <button className="link" onClick={() => setSel(null)}>Fechar</button>
+            </div>
+            <div className="daytags">
+              {holidayOf(sel) && <div className="daytag hol"><span className="grow">🇧🇷 {holidayOf(sel)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(sel)!.kind]}</span></div>}
+              {eventsOn(sel).map((ev) => (
+                <div className="daytag ev" key={ev.id}>
+                  <span className="grow">📌 {eventName(ev)}{ev.group_id ? ` · com ${pFirst || 'cônjuge'}` : ''}</span>
+                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(ev)}>Remover</button>
+                </div>
+              ))}
+              {!evDates && <button className="link" style={{ alignSelf: 'flex-start', color: 'var(--credit)' }} onClick={() => setEvDates([sel])}>+ Marcar evento neste dia (congresso, assembleia…)</button>}
             </div>
             <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
               partners={partner ? [{ id: partner.id, name: partner.name }] : []} />
@@ -268,8 +398,22 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               </button>
             </div>
           </div>
-        ) : (
-          <div className="info">Toque num dia para planejar (com horário de início e fim) ou excluir o planejamento do dia, da semana, do mês ou do ano.</div>
+        ) : !multi && (
+          <div className="info">Toque num dia para planejar (com horário de início e fim), marcar um evento ou excluir o planejamento. Para excluir ou marcar vários dias de uma vez, use "Selecionar vários dias".</div>
+        )}
+
+        {monthMarks.length > 0 && (
+          <div className="card">
+            <h3>Feriados e eventos do mês</h3>
+            <div className="daytags" style={{ marginBottom: 0 }}>
+              {monthMarks.map((m) => m.hol ? (
+                <div className="daytag hol" key={m.date + 'h'}><span className="grow">{fmtD(m.date)} · {m.hol.name}</span><span className="sub">{HOLIDAY_LABEL[m.hol.kind]}</span></div>
+              ) : (
+                <div className="daytag ev" key={m.ev!.id}><span className="grow">{fmtD(m.date)} · {eventName(m.ev!)}</span>
+                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(m.ev!)}>Remover</button></div>
+              ))}
+            </div>
+          </div>
         )}
 
         <div className="card" style={{ padding: '8px 16px' }}>
@@ -298,3 +442,33 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
 }
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
+
+function EventForm({ dates, partnerName, busy, onCancel, onSave }: {
+  dates: string[]; partnerName: string; busy: boolean; onCancel: () => void; onSave: (kind: string, title: string, both: boolean) => void
+}) {
+  const [kind, setKind] = useState<string>(EVENT_KINDS[0])
+  const [title, setTitle] = useState('')
+  const [both, setBoth] = useState(!!partnerName)
+  const fmt = (d: string) => d.slice(8) + '/' + d.slice(5, 7)
+  const invalid = kind === 'Outro' && !title.trim()
+  return (
+    <div className="card form">
+      <h3 style={{ margin: 0 }}>Marcar evento · {dates.length === 1 ? fmt(dates[0]) : `${dates.length} dias`}</h3>
+      {dates.length > 1 && <div className="sub">{dates.slice(0, 10).map(fmt).join(', ')}{dates.length > 10 ? '…' : ''}</div>}
+      <div className="chips">
+        {EVENT_KINDS.map((k) => <button key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{k}</button>)}
+      </div>
+      <input className="input" placeholder={kind === 'Outro' ? 'Qual evento? (obrigatório)' : 'Detalhe (opcional, ex.: local)'} value={title} onChange={(e) => setTitle(e.target.value)} />
+      {partnerName && (
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, fontWeight: 600 }}>
+          <input type="checkbox" checked={both} onChange={(e) => setBoth(e.target.checked)} /> Também para {partnerName}
+        </label>
+      )}
+      <div className="row" style={{ gap: 10 }}>
+        <button className="btn ghost small" onClick={onCancel}>Cancelar</button>
+        <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || invalid}
+          onClick={() => onSave(kind, title.trim(), both)}>Salvar evento</button>
+      </div>
+    </div>
+  )
+}

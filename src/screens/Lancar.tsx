@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { blockErrors, blockMinutes, fmtH, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, type TimeBlock } from '../domain'
+import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, type TimeBlock } from '../domain'
 import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, useChoice } from '../ui'
 import type { DayItem } from '../types'
@@ -166,6 +166,12 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
         </div>
       </header>
       <div className="main">
+        {(holidayOf(date) || data.events.some((e) => e.date === date)) && (
+          <div className="daytags" style={{ marginBottom: 0 }}>
+            {holidayOf(date) && <div className="daytag hol"><span className="grow">🇧🇷 {holidayOf(date)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(date)!.kind]}</span></div>}
+            {data.events.filter((e) => e.date === date).map((e) => <div className="daytag ev" key={e.id}>📌 {eventName(e)}</div>)}
+          </div>
+        )}
         {logged && !editing && (
           <div className="card">
             <div className="card-head">
@@ -284,7 +290,10 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
     const cls = disabled ? 'off' : st.state === 'done' ? 'done' : st.state === 'part' ? 'part'
       : st.state === 'miss' ? (st.logged ? 'miss' : 'pend') : st.logged ? 'done' : ''
     if (cls === 'pend') pending++
-    return { dt, day: i + 1, disabled, cls, done: st.done }
+    const hol = holidayOf(dt)
+    const ev = data.events.some((e) => e.date === dt)
+    const mark = (hol || ev) ? <span className="mk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span> : null
+    return { dt, day: i + 1, disabled, cls, done: st.done, mark }
   })
   return (
     <div className="overlay" onClick={onClose}>
@@ -304,7 +313,8 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
             <button key={c.dt} disabled={c.disabled} onClick={() => onPick(c.dt)}
               className={`d ${c.cls} ${c.dt === value ? 'sel' : ''} ${c.dt === max ? 'today' : ''}`}>
               {c.day}
-              {c.done > 0 && <em>{(Math.round(c.done / 6) / 10).toLocaleString('pt-BR')}</em>}
+              {c.mark}
+              {c.done > 0 && <em>{fmtH(c.done)}</em>}
             </button>
           ))}
         </div>
@@ -313,6 +323,8 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
           <span><i style={{ background: 'var(--warn-soft)', border: '1px solid var(--warn)' }} />Parcial</span>
           <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Faltei</span>
           <span><i style={{ background: '#fff', border: '1.5px dashed var(--muted)' }} />Planejado, não lançado</span>
+          <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
+          <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
         </div>
         {pending > 0 && <div className="sub" style={{ marginTop: 8 }}>{pending} dia{pending > 1 ? 's' : ''} planejado{pending > 1 ? 's' : ''} sem lançamento neste mês.</div>}
       </div>

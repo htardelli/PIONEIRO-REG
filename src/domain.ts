@@ -241,3 +241,57 @@ export function toBlocks(items: { modality_id: string; minutes: number; start_ti
 export function blocksSignature(blocks: TimeBlock[]): string {
   return blocks.map((b) => `${b.modality_id}|${b.start}|${b.end}`).sort().join(';')
 }
+
+// ---------- Feriados (nacionais + Ceará) ----------
+export type HolidayKind = 'nacional' | 'estadual' | 'facultativo'
+export interface Holiday { date: string; name: string; kind: HolidayKind }
+
+/** Domingo de Páscoa (algoritmo de Meeus/Jones/Butcher). */
+export function easter(year: number): Date {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3)
+  const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451)
+  const month = Math.floor((h + l - 7 * m + 114) / 31), day = ((h + l - 7 * m + 114) % 31) + 1
+  return new Date(year, month - 1, day)
+}
+
+const holidayCache = new Map<number, Map<string, Holiday>>()
+
+export function holidaysOf(year: number): Map<string, Holiday> {
+  const hit = holidayCache.get(year)
+  if (hit) return hit
+  const p = easter(year)
+  const rel = (n: number) => isoDate(new Date(p.getFullYear(), p.getMonth(), p.getDate() + n))
+  const fixed = (md: string) => `${year}-${md}`
+  const list: Holiday[] = [
+    { date: fixed('01-01'), name: 'Confraternização Universal', kind: 'nacional' },
+    { date: rel(-48), name: 'Carnaval', kind: 'facultativo' },
+    { date: rel(-47), name: 'Carnaval', kind: 'facultativo' },
+    { date: fixed('03-19'), name: 'São José (CE)', kind: 'estadual' },
+    { date: fixed('03-25'), name: 'Data Magna do Ceará', kind: 'estadual' },
+    { date: rel(-2), name: 'Sexta-feira Santa', kind: 'nacional' },
+    { date: fixed('04-21'), name: 'Tiradentes', kind: 'nacional' },
+    { date: fixed('05-01'), name: 'Dia do Trabalho', kind: 'nacional' },
+    { date: rel(60), name: 'Corpus Christi', kind: 'facultativo' },
+    { date: fixed('09-07'), name: 'Independência do Brasil', kind: 'nacional' },
+    { date: fixed('10-12'), name: 'Nossa Senhora Aparecida', kind: 'nacional' },
+    { date: fixed('11-02'), name: 'Finados', kind: 'nacional' },
+    { date: fixed('11-15'), name: 'Proclamação da República', kind: 'nacional' },
+    { date: fixed('11-20'), name: 'Consciência Negra', kind: 'nacional' },
+    { date: fixed('12-25'), name: 'Natal', kind: 'nacional' },
+  ]
+  const map = new Map(list.map((h) => [h.date, h]))
+  holidayCache.set(year, map)
+  return map
+}
+
+export function holidayOf(date: string): Holiday | undefined {
+  return holidaysOf(Number(date.slice(0, 4))).get(date)
+}
+
+export const HOLIDAY_LABEL: Record<HolidayKind, string> = { nacional: 'feriado nacional', estadual: 'feriado estadual', facultativo: 'ponto facultativo' }
+
+// ---------- Eventos do dia (congresso, assembleia…) ----------
+export const EVENT_KINDS = ['Congresso', 'Assembleia', 'Visita do SC', 'Celebração', 'Outro'] as const
+export const eventName = (ev: { kind: string; title: string }) => (ev.title ? (ev.kind === 'Outro' ? ev.title : `${ev.kind} · ${ev.title}`) : ev.kind)

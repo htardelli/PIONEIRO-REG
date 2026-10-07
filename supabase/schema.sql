@@ -379,3 +379,62 @@ end $$;
 
 revoke all on function public.partner_absence_add(uuid, date, uuid[], text) from public, anon;
 grant execute on function public.partner_absence_add(uuid, date, uuid[], text) to authenticated;
+
+-- ============ v0.9: eventos do dia (congresso, assembleia…) ============
+-- Explica por que um dia não tem plano. group_id liga o mesmo evento no casal.
+create table if not exists public.day_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  date date not null,
+  kind text not null,
+  title text not null default '',
+  group_id uuid
+);
+create index if not exists day_events_user_date on public.day_events (user_id, date);
+grant select, insert, update, delete on public.day_events to authenticated;
+alter table public.day_events enable row level security;
+drop policy if exists read_own_or_shared on public.day_events;
+drop policy if exists write_own on public.day_events;
+create policy read_own_or_shared on public.day_events for select using (public.can_read(user_id));
+create policy write_own on public.day_events for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- Grava o evento também para o cônjuge (substitui o mesmo grupo no mesmo dia)
+create or replace function public.partner_events_add(p_partner uuid, p_items jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare it jsonb;
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para marcar eventos juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    delete from public.day_events where user_id = p_partner and date = (it->>'date')::date and group_id = (it->>'group_id')::uuid;
+    insert into public.day_events (user_id, date, kind, title, group_id)
+    values (p_partner, (it->>'date')::date, it->>'kind', coalesce(it->>'title', ''), (it->>'group_id')::uuid);
+  end loop;
+end $$;
+
+create or replace function public.partner_events_delete(p_partner uuid, p_groups uuid[], p_dates date[]) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para alterar eventos do participante, os dois precisam ter compartilhado um com o outro.';
+  end if;
+  delete from public.day_events where user_id = p_partner and group_id = any(p_groups) and date = any(p_dates);
+end $$;
+
+-- Remove atividades conjuntas do plano do participante só nas datas informadas (seleção de vários dias)
+create or replace function public.partner_plan_delete_dates(p_partner uuid, p_groups uuid[], p_dates date[]) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para alterar o plano do participante, os dois precisam ter compartilhado um com o outro.';
+  end if;
+  delete from public.plan_items where user_id = p_partner and group_id = any(p_groups) and date = any(p_dates);
+end $$;
+
+revoke all on function public.partner_events_add(uuid, jsonb) from public, anon;
+revoke all on function public.partner_events_delete(uuid, uuid[], date[]) from public, anon;
+revoke all on function public.partner_plan_delete_dates(uuid, uuid[], date[]) from public, anon;
+grant execute on function public.partner_events_add(uuid, jsonb) to authenticated;
+grant execute on function public.partner_events_delete(uuid, uuid[], date[]) to authenticated;
+grant execute on function public.partner_plan_delete_dates(uuid, uuid[], date[]) to authenticated;

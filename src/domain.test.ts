@@ -121,3 +121,20 @@ describe('blocos a partir de itens', () => {
     expect(blocksSignature([x, y])).toBe(blocksSignature([y, x]))
   })
 })
+
+import { easter, holidayOf, isoDate as iso } from './domain'
+
+describe('feriados', () => {
+  it('Páscoa e móveis', () => {
+    expect(iso(easter(2027))).toBe('2027-03-28')
+    expect(holidayOf('2027-03-26')).toMatchObject({ name: 'Sexta-feira Santa', kind: 'nacional' })
+    expect(holidayOf('2027-02-09')).toMatchObject({ name: 'Carnaval', kind: 'facultativo' })
+    expect(holidayOf('2027-05-27')).toMatchObject({ name: 'Corpus Christi', kind: 'facultativo' })
+  })
+  it('fixos nacionais e do Ceará', () => {
+    expect(holidayOf('2026-10-12')?.name).toBe('Nossa Senhora Aparecida')
+    expect(holidayOf('2026-11-20')?.kind).toBe('nacional')
+    expect(holidayOf('2027-03-25')).toMatchObject({ name: 'Data Magna do Ceará', kind: 'estadual' })
+    expect(holidayOf('2026-10-13')).toBeUndefined()
+  })
+})

@@ -6,7 +6,7 @@ import { SUPABASE_ANON_KEY, SUPABASE_URL } from './config'
 import type { AuthUser } from './types'
 import { buildDemoData, DEMO_ME } from './demo'
 
-export type Table = 'profiles' | 'shares' | 'modalities' | 'month_records' | 'plan_items' | 'entries' | 'day_notes' | 'credits'
+export type Table = 'profiles' | 'shares' | 'modalities' | 'month_records' | 'plan_items' | 'entries' | 'day_notes' | 'day_events' | 'credits'
 export type Row = Record<string, unknown>
 
 export interface Query {
@@ -122,7 +122,7 @@ function supabaseApi(): Api {
 }
 
 // ---------- Local / demonstração ----------
-const LS_KEY = 'pioneiro-reg-demo-v5'
+const LS_KEY = 'pioneiro-reg-demo-v6'
 
 function localApi(): Api {
   type Db = Record<Table, Row[]>
@@ -224,6 +224,19 @@ function localApi(): Api {
         }
         save()
         return n as T
+      }
+      if (fn === 'partner_events_add') {
+        for (const it of args.p_items as Row[]) {
+          db.day_events = db.day_events.filter((x) => !(x.user_id === partner && x.date === it.date && x.group_id === it.group_id))
+          db.day_events.push({ id: crypto.randomUUID(), user_id: partner, date: it.date, kind: it.kind, title: it.title ?? '', group_id: it.group_id })
+        }
+        save()
+      }
+      if (fn === 'partner_events_delete' || fn === 'partner_plan_delete_dates') {
+        const groups = args.p_groups as string[], dates = args.p_dates as string[]
+        const t = fn === 'partner_events_delete' ? 'day_events' : 'plan_items'
+        db[t] = db[t].filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) && dates.includes(String(x.date))))
+        save()
       }
       if (fn === 'partner_plan_delete') {
         const groups = args.p_groups as string[]

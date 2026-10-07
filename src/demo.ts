@@ -22,6 +22,7 @@ export function buildDemoData(today: Date) {
     plan_items: [] as Record<string, unknown>[],
     entries: [] as Record<string, unknown>[],
     day_notes: [] as Record<string, unknown>[],
+    day_events: [] as Record<string, unknown>[],
     credits: [] as Record<string, unknown>[],
   }
 
