@@ -197,29 +197,29 @@ export function partnerHasGroup(items: DayItem[], date: string, groupId: string 
 
 export interface MonthCard {
   status: MonthStatus
-  lines: [string, string, string] // rótulo, valor, complemento (abaixo do realizado)
+  target: number // minutos: plano, média necessária ou meta
+  kind: 'plano' | 'precisa' | 'meta'
+  note: string // linha abaixo da barra: "▲ +2,5", "▼ faltam 44", "✓ coberto", "sem plano"…
 }
 
-/**
- * Card do mês: com plano → "plano" / X / "falta Y" (ou "✓ coberto") e a cor compara com o plano.
- * Sem plano → mês atual/futuro: "precisa" / média mensal necessária para fechar o ano;
- * mês encerrado: "sem plano" e a cor compara com a meta do mês.
- */
-/** ✓ coberto (igual ao plano) · ▲ +X (acima) · ▼ X (abaixo: quanto falta). */
+/** ✓ coberto (igual ao plano) · ▲ +X (acima) · ▼ faltam X (abaixo). */
 export function planDelta(done: number, planned: number): string {
   const d = done - planned
   if (Math.abs(d) < 3) return '✓ coberto' // tolerância de arredondamento (< 3 min)
-  return d > 0 ? `▲ +${fmtHours(d)}` : `▼ ${fmtHours(-d)}`
+  return d > 0 ? `▲ +${fmtHours(d)}` : `▼ faltam ${fmtHours(-d)}`
 }
 
+/**
+ * Linha do mês: com plano → compara com o plano (✓/▲/▼; meses futuros só mostram o plano).
+ * Sem plano → atual/futuro compara com a média mensal necessária; encerrado compara com a meta do mês.
+ */
 export function monthCard(m: MonthStats, today: Date, needed: number): MonthCard {
   const cur = monthKey(today)
   if (m.planned > 0) {
-    return {
-      status: monthStatus(m.month, today, m.counted, m.planned),
-      lines: ['plano', fmtHours(m.planned), m.month > cur ? '' : planDelta(m.counted, m.planned)],
-    }
+    return { status: monthStatus(m.month, today, m.counted, m.planned), target: m.planned, kind: 'plano',
+      note: m.month > cur ? '' : planDelta(m.counted, m.planned) }
   }
-  if (m.month < cur) return { status: monthStatus(m.month, today, m.counted, m.goal), lines: ['sem', 'plano', ''] }
-  return { status: monthStatus(m.month, today, m.counted, needed), lines: ['precisa', fmtHours(needed), ''] }
+  if (m.month < cur) return { status: monthStatus(m.month, today, m.counted, m.goal), target: m.goal, kind: 'meta', note: 'sem plano' }
+  return { status: monthStatus(m.month, today, m.counted, needed), target: needed, kind: 'precisa',
+    note: m.month === cur ? 'sem plano · média necessária' : '' }
 }

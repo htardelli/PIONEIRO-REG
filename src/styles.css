@@ -134,3 +134,15 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .date-pick .caret { font-size: 14px; color: var(--brand); }
 .cal .d.pend { background: #fff; border: 1.5px dashed var(--muted); }
 .cal .d.off, .cal .d:disabled { background: transparent; color: #C3CBD7; }
+
+/* Meses do ano: lista com barras */
+.mlist { display: flex; flex-direction: column; }
+.mrow { display: grid; grid-template-columns: 46px 1fr 100px; align-items: center; gap: 10px; padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: left; width: 100%; }
+.mrow:last-child { border-bottom: 0; }
+.mrow.s-now { background: linear-gradient(90deg, var(--warn-soft), transparent); border-radius: 8px; }
+.mname { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; }
+.mname i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.mmid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mmid .bar { height: 7px; display: block; }
+.mnote { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.mval { font-size: 13px; white-space: nowrap; text-align: right; }

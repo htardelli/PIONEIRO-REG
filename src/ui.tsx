@@ -108,37 +108,42 @@ export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: 
   )
 }
 
+const STATUS_COLOR: Record<string, string> = { ok: 'var(--ok)', bad: 'var(--bad)', now: 'var(--now)', future: 'var(--future)' }
+
+/** Meses do ano de serviço: um mês por linha, com barra de progresso até o alvo (plano ou média necessária). */
 export function MonthGrid({ months, today, needed, onPick }: {
   months: MonthStats[]; today: Date; needed: number; onPick?: (m: string) => void
 }) {
   return (
     <>
-      <div className="months">
+      <div className="mlist">
         {months.map((m) => {
           const c = monthCard(m, today, needed)
+          const pct = c.target > 0 ? Math.min(100, (m.counted / c.target) * 100) : 0
+          const noteColor = c.note.startsWith('▼') ? 'var(--bad)' : /^[▲✓]/.test(c.note) ? 'var(--ok)' : 'var(--muted)'
           return (
-            <button key={m.month} className={`m s-${c.status}`} onClick={() => onPick?.(m.month)}>
-              <div className="t">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</div>
-              <div className="r">{c.status === 'future' ? '–' : fmtHours(m.counted)}</div>
-              <div className="g">{c.lines[0]}</div>
-              <div className="g" style={{ fontWeight: 800 }}>{c.lines[1]}</div>
-              <div className="g">{c.lines[2] || '\u00a0'}</div>
+            <button key={m.month} className={`mrow s-${c.status}`} onClick={() => onPick?.(m.month)}>
+              <span className="mname"><i style={{ background: STATUS_COLOR[c.status] }} />{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</span>
+              <span className="mmid">
+                <span className="bar"><i style={{ width: `${pct}%`, background: c.status === 'future' ? '#C3CBD7' : STATUS_COLOR[c.status] }} /></span>
+                {c.note && <span className="mnote" style={{ color: noteColor }}>{c.note}</span>}
+              </span>
+              <span className="mval">
+                {c.status === 'future'
+                  ? <span className="muted">{c.kind} {fmtHours(c.target)}</span>
+                  : <><b>{fmtHours(m.counted)}</b><span className="muted"> / {fmtHours(c.target)}</span></>}
+              </span>
             </button>
           )
         })}
       </div>
       <div className="legend">
-        <span><i style={{ background: 'var(--ok)' }} />Plano coberto</span>
-        <span><i style={{ background: 'var(--bad)' }} />Abaixo do plano</span>
+        <span><i style={{ background: 'var(--ok)' }} />Coberto</span>
+        <span><i style={{ background: 'var(--bad)' }} />Abaixo</span>
         <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
         <span><i style={{ background: 'var(--future)' }} />A vir</span>
       </div>
-      <div className="legend" style={{ marginTop: 6 }}>
-        <span><b style={{ color: 'var(--ok)' }}>✓</b> coberto</span>
-        <span><b style={{ color: 'var(--ok)' }}>▲</b> acima do plano</span>
-        <span><b style={{ color: 'var(--bad)' }}>▼</b> quanto falta</span>
-      </div>
-      <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Mês sem plano mostra a média mensal necessária para fechar o ano.</div>
+      <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Realizado / plano do mês. Sem plano: média mensal necessária para fechar o ano.</div>
     </>
   )
 }

@@ -8,25 +8,28 @@ const ms = (month: string, counted: number, planned: number, goal = 50 * H): Mon
   status: 'now', studies: 0, justification: '',
 })
 
-describe('card do mês', () => {
-  it('mês atual com plano: plano e falta', () => {
-    expect(monthCard(ms('2026-10', 4.5 * H, 52 * H), today, 54.5 * H)).toEqual({ status: 'now', lines: ['plano', '52', '▼ 47,5'] })
+describe('linha do mês', () => {
+  it('mês atual com plano: faltam', () => {
+    expect(monthCard(ms('2026-10', 4.5 * H, 52 * H), today, 54.5 * H)).toEqual({ status: 'now', target: 52 * H, kind: 'plano', note: '▼ faltam 47,5' })
   })
   it('plano coberto fica verde', () => {
-    expect(monthCard(ms('2026-10', 52 * H, 52 * H), today, 54.5 * H)).toEqual({ status: 'ok', lines: ['plano', '52', '✓ coberto'] })
+    expect(monthCard(ms('2026-10', 52 * H, 52 * H), today, 54.5 * H)).toMatchObject({ status: 'ok', note: '✓ coberto' })
   })
   it('mês encerrado abaixo do plano fica vermelho', () => {
     expect(monthCard(ms('2026-09', 40 * H, 50 * H), today, 54.5 * H).status).toBe('bad')
   })
+  it('mês encerrado acima do plano: ▲', () => {
+    expect(monthCard(ms('2026-09', 55 * H, 50 * H), today, 54.5 * H)).toMatchObject({ status: 'ok', note: '▲ +5' })
+  })
   it('mês futuro com plano mostra só o plano', () => {
-    expect(monthCard(ms('2026-11', 0, 48 * H), today, 54.5 * H)).toEqual({ status: 'future', lines: ['plano', '48', ''] })
+    expect(monthCard(ms('2026-11', 0, 48 * H), today, 54.5 * H)).toEqual({ status: 'future', target: 48 * H, kind: 'plano', note: '' })
   })
-  it('sem plano (atual/futuro) mostra a média necessária', () => {
-    expect(monthCard(ms('2026-12', 0, 0), today, 54.5 * H)).toEqual({ status: 'future', lines: ['precisa', '54,5', ''] })
-    expect(monthCard(ms('2026-10', 4.3 * H, 0), today, 54.5 * H)).toEqual({ status: 'now', lines: ['precisa', '54,5', ''] })
+  it('sem plano (atual/futuro): média necessária', () => {
+    expect(monthCard(ms('2026-12', 0, 0), today, 54.5 * H)).toMatchObject({ status: 'future', kind: 'precisa', target: 54.5 * H })
+    expect(monthCard(ms('2026-10', 4.3 * H, 0), today, 54.5 * H)).toMatchObject({ status: 'now', kind: 'precisa' })
   })
-  it('mês encerrado sem plano', () => {
-    expect(monthCard(ms('2026-09', 15 * H, 0), today, 54.5 * H)).toEqual({ status: 'bad', lines: ['sem', 'plano', ''] })
+  it('mês encerrado sem plano compara com a meta', () => {
+    expect(monthCard(ms('2026-09', 15 * H, 0), today, 54.5 * H)).toEqual({ status: 'bad', target: 50 * H, kind: 'meta', note: 'sem plano' })
   })
 })
 
@@ -34,9 +37,6 @@ describe('ícones do plano', () => {
   it('coberto, acima e abaixo', () => {
     expect(planDelta(52 * H, 52 * H)).toBe('✓ coberto')
     expect(planDelta(55 * H, 52 * H)).toBe('▲ +3')
-    expect(planDelta(8 * H, 52 * H)).toBe('▼ 44')
-  })
-  it('mês encerrado acima do plano fica verde com ▲', () => {
-    expect(monthCard(ms('2026-09', 55 * H, 50 * H), today, 54.5 * H)).toEqual({ status: 'ok', lines: ['plano', '50', '▲ +5'] })
+    expect(planDelta(8 * H, 52 * H)).toBe('▼ faltam 44')
   })
 })
