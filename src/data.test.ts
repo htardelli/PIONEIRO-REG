@@ -93,3 +93,15 @@ describe('falta só na atividade conjunta', () => {
     expect(dayState(data({ plan, entries: [absent, e] }), '2026-10-05', today)).toMatchObject({ logged: true, state: 'part' })
   })
 })
+
+import { pairDay } from './data'
+
+describe('detalhe do dia: plano × realizado na mesma linha', () => {
+  const it_ = (id: string, mod: string, min: number, start: string, extra: Partial<DayItem> = {}): DayItem =>
+    ({ id, user_id: 'u', date: '2026-10-06', modality_id: mod, minutes: min, start_time: start, ...extra })
+  it('pareia por atividade conjunta e por modalidade; sobras ficam sozinhas', () => {
+    const plan = [it_('p1', 'casa', 90, '08:30'), it_('p2', 'tpl', 120, '18:15', { group_id: 'g' }), it_('p3', 'carta', 60, '14:00')]
+    const done = [it_('e2', 'tpl', 105, '18:15', { group_id: 'g' }), it_('e1', 'casa', 60, '08:30'), it_('e4', 'inf', 30, '12:00')]
+    expect(pairDay(plan, done).map((r) => `${r.plan?.id ?? '-'}/${r.done?.id ?? '-'}`)).toEqual(['p1/e1', '-/e4', 'p3/-', 'p2/e2'])
+  })
+})

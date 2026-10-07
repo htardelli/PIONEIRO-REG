@@ -248,3 +248,26 @@ export function monthCard(m: MonthStats, today: Date): MonthCard {
 }
 
 export const TARGET_LABEL: Record<TargetKind, string> = { plano: 'plano', meta: 'meta', rateio: 'rateio' }
+
+/** Linha do detalhe do dia: atividade planejada e/ou realizada, lado a lado. */
+export interface DayRow { plan?: DayItem; done?: DayItem }
+
+/**
+ * Junta plano e realizado do dia numa única lista: pareia pela atividade conjunta (group_id),
+ * depois pela modalidade; o que sobrar entra sozinho. Ordenado pelo horário.
+ */
+export function pairDay(plan: DayItem[], entries: DayItem[]): DayRow[] {
+  const rows: DayRow[] = []
+  const left = [...plan]
+  const take = (f: (p: DayItem) => boolean) => { const i = left.findIndex(f); return i < 0 ? undefined : left.splice(i, 1)[0] }
+  const pending: DayItem[] = []
+  for (const e of entries) {
+    const p = e.group_id ? take((x) => x.group_id === e.group_id) : undefined
+    if (p) rows.push({ plan: p, done: e })
+    else pending.push(e)
+  }
+  for (const e of pending) rows.push({ plan: take((x) => !x.group_id && x.modality_id === e.modality_id) ?? take((x) => x.modality_id === e.modality_id), done: e })
+  for (const p of left) rows.push({ plan: p })
+  const start = (r: DayRow) => (r.done?.start_time ?? r.plan?.start_time ?? '')
+  return rows.sort((a, b) => start(a).localeCompare(start(b)))
+}

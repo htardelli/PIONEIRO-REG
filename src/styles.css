@@ -195,3 +195,14 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .mpick button.now { border-color: var(--brand); }
 .mpick button.on { background: var(--brand-2); color: #fff; }
 .mpick button.on b small, .mpick button.on span { color: #fff !important; }
+
+/* Detalhe do dia: atividade | plano | realizado */
+.drow { display: grid; grid-template-columns: 1fr 64px 76px; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.drow .n { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; line-height: 1.25; }
+.drow .n .dot { flex-shrink: 0; }
+.drow .pl { text-align: right; font-weight: 500; color: #97A3B6; font-size: 15px; }
+.drow .dn { text-align: right; font-weight: 800; font-size: 16px; }
+.drow .miss { color: var(--bad); }
+.drow.head { padding: 2px 0 6px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.drow.head span:not(:first-child) { text-align: right; }
+.drow.tot { border-bottom: 0; font-weight: 800; }

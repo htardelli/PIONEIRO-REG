@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabel, mondayIndex, serviceYearMonths, WEEK_HEAD, WEEKDAY } from '../domain'
-import { dayState, planDelta, yearStats, type YearData } from '../data'
+import { dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
 import { Header, MonthNav } from '../ui'
-import { byStart, ItemRow } from './Lancar'
+import { byStart } from './Lancar'
 
 /** Realizado dia a dia: calendário do mês e, ao tocar num dia, o detalhe das atividades logo abaixo. */
 export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEdit: (date: string) => void }) {
@@ -84,6 +84,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
   const events = data.events.filter((e) => e.date === date)
   const d = new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8)))
   const future = date > isoDate(today)
+  const rows = pairDay(plan, entries)
   return (
     <div className="card">
       <div className="card-head">
@@ -100,17 +101,27 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
           {events.map((e) => <div className="daytag ev" key={e.id}>📌 {eventName(e)}</div>)}
         </div>
       )}
-      <div className="sub" style={{ fontWeight: 700, margin: '4px 0' }}>REALIZADO</div>
-      {entries.length ? entries.map((e) => <ItemRow key={e.id} item={e} data={data} />)
-        : <div className="empty">{future ? 'Dia ainda não chegou.' : st.logged ? 'Nenhuma hora neste dia.' : 'Nada lançado.'}</div>}
+      {rows.length > 0 ? (
+        <>
+          <div className="drow head"><span>Atividade</span><span>Plano</span><span>Realizado</span></div>
+          {rows.map((r, i) => {
+            const it = r.done ?? r.plan!
+            const m = data.modalities.find((x) => x.id === it.modality_id)
+            const t = it.start_time ? `${it.start_time.slice(0, 5)}–${it.end_time?.slice(0, 5)}` : ''
+            return (
+              <div className="drow" key={i}>
+                <span className="n"><i className="dot" style={{ background: m?.color }} />
+                  <span>{m?.name}{it.group_id && ' 👥'}{t && <span className="sub"><br />{t}</span>}</span></span>
+                <span className="pl">{r.plan ? fmtH(r.plan.minutes) : '—'}</span>
+                <span className="dn">{r.done?.absent ? <span className="pill bad">✗ falta</span> : r.done ? fmtH(r.done.minutes) : future ? '' : <span className="miss">—</span>}</span>
+              </div>
+            )
+          })}
+          <div className="drow tot"><span>Total</span><span className="pl">{st.planned ? fmtH(st.planned) : '—'}</span><span className="dn">{future ? '' : fmtH(st.done)}</span></div>
+        </>
+      ) : <div className="empty">{future ? 'Nada planejado.' : st.logged ? 'Nenhuma hora neste dia.' : 'Nada planejado nem lançado.'}</div>}
       {note && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>Obs.: {note}</div>}
       {entries.some((e) => e.absent && e.note) && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{entries.find((e) => e.absent && e.note)!.note}</div>}
-      {plan.length > 0 && (
-        <>
-          <div className="sub" style={{ fontWeight: 700, margin: '12px 0 4px' }}>PLANEJADO · {fmtH(st.planned)}</div>
-          {plan.map((p) => <ItemRow key={p.id} item={p} data={data} />)}
-        </>
-      )}
       {!future && <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => onEdit(date)}>{entries.length ? 'Editar lançamento' : 'Lançar este dia'}</button>}
     </div>
   )
