@@ -329,3 +329,7 @@ revoke all on function public.partner_entries_add(uuid, jsonb) from public, anon
 grant execute on function public.partner_plan_upsert(uuid, jsonb) to authenticated;
 grant execute on function public.partner_plan_delete(uuid, uuid[], date, date) to authenticated;
 grant execute on function public.partner_entries_add(uuid, jsonb) to authenticated;
+
+-- ============ v0.6: meta do mês opcional ============
+-- 0 = mês sem meta (o alvo vira o rateio). Antes o padrão era 50 h.
+alter table public.month_records alter column goal_min set default 0;

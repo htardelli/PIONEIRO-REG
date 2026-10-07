@@ -17,7 +17,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   return (
     <>
       <div className="card" style={{ padding: 12 }}>
-        <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado / plano</span></div>
+        <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado / alvo</span></div>
         <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />
         <div className="ytotal">
           <div className="ytop">
@@ -53,7 +53,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
           <div className="card">
             <h3>{MONTH_NAME[today.getMonth()]}</h3>
             <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)} h</small></div>
-            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : 'meta do mês (sem plano)'}</div>
+            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
             <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} h em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
           </div>
           <div className="card">
@@ -109,8 +109,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         )}
       </div>
 
-      {ys.targetsSum < ys.goal && (
-        <div className="alert">⚠ Planos + metas dos meses somam {fmtHours(ys.targetsSum)} h — menos que a meta anual de {fmtHours(ys.goal)} h. Ajuste no Plano.</div>
+      {ys.freeMonths === 0 && ys.committed < ys.goal && (
+        <div className="alert">⚠ Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} h — menos que a meta anual de {fmtHours(ys.goal)} h. Ajuste no Plano.</div>
       )}
       {needJustification && onLaunch && (
         <div className="alert">

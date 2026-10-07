@@ -5,7 +5,6 @@ import {
 } from './domain'
 import type { Credit, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
-export const DEFAULT_GOAL_MIN = 50 * 60
 
 export interface YearData {
   userId: string
@@ -71,24 +70,27 @@ export interface MonthStats {
   creditLost: number
   counted: number
   planned: number
-  target: number // alvo do mês: o PLANO, se houver; senão a meta do mês
-  targetKind: 'plano' | 'meta'
+  target: number // alvo do mês: PLANO > META > RATEIO (horas que faltam ÷ meses sem plano e sem meta)
+  targetKind: TargetKind
   status: MonthStatus
   studies: number
   justification: string
 }
 
+export type TargetKind = 'plano' | 'meta' | 'rateio'
+
+/** Estatística isolada do mês. O alvo "rateio" só é calculado em yearStats (depende do ano todo). */
 export function monthStats(d: YearData, month: string, today: Date): MonthStats {
   const rec = d.records.find((r) => r.month === month)
   const ministry = sum(d.entries.filter((e) => e.date.startsWith(month)))
   const credit = sum(d.credits.filter((c) => c.month === month))
   const { counted, creditUsed, creditLost } = countedMinutes(ministry, credit)
-  const goal = rec?.goal_min ?? DEFAULT_GOAL_MIN
+  const goal = rec?.goal_min ?? 0 // 0 = mês sem meta cadastrada
   const planned = sum(d.plan.filter((p) => p.date.startsWith(month)))
   const target = planned > 0 ? planned : goal // o plano sobrepõe a meta
   return {
     month, goal, ministry, credit, creditUsed, creditLost, counted, planned, target,
-    targetKind: planned > 0 ? 'plano' : 'meta',
+    targetKind: planned > 0 ? 'plano' : goal > 0 ? 'meta' : 'rateio',
     status: monthStatus(month, today, counted, target),
     studies: rec?.bible_studies ?? 0,
     justification: rec?.justification ?? '',
@@ -107,27 +109,41 @@ export interface YearStats {
   diff: number
   level: PaceLevel
   needed: number
-  targetsSum: number // soma dos alvos do ano (plano do mês ou, sem plano, a meta)
+  committed: number // feito nos meses encerrados + alvos (plano/meta) dos meses em aberto
+  freeMonths: number // meses em aberto sem plano e sem meta (recebem o rateio)
+  share: number // rateio: (meta anual − committed) ÷ freeMonths
   plannedSum: number // total planejado no ano
   plannedMonths: number // meses com plano
 }
 
 export function yearStats(d: YearData, today: Date): YearStats {
+  const cur = monthKey(today)
+  const goalY = d.profile?.annual_goal_min ?? 36000
   const months = serviceYearMonths(d.sy).map((m) => monthStats(d, m, today))
+  // Rateio: o que falta para a meta anual, dividido pelos meses em aberto sem plano e sem meta
+  const open = (m: MonthStats) => m.month >= cur
+  const committed = months.reduce((a, m) => a + (open(m) ? (m.targetKind === 'rateio' ? 0 : m.target) : m.counted), 0)
+  const free = months.filter((m) => open(m) && m.targetKind === 'rateio')
+  const share = free.length ? Math.max(0, goalY - committed) / free.length : 0
+  for (const m of months) {
+    if (m.targetKind !== 'rateio') continue
+    m.target = open(m) ? share : 0
+    // mês encerrado sem plano e sem meta: não há alvo; vale o que foi feito
+    m.status = open(m) ? monthStatus(m.month, today, m.counted, m.target) : m.counted > 0 ? 'ok' : 'bad'
+  }
   const total = months.reduce((a, m) => a + m.counted, 0)
-  const goal = d.profile?.annual_goal_min ?? 36000
+  const goal = goalY
   const minGoal = d.profile?.min_goal_min ?? 33600
   const pace = idealPace(goal, d.sy, today)
   const paceMin = idealPace(minGoal, d.sy, today)
   // Necessidade mensal: o que falta, descontando só os meses já encerrados
-  const cur = monthKey(today)
   const closed = months.filter((m) => m.month < cur).reduce((a, m) => a + m.counted, 0)
   return {
     months, total, goal, minGoal, pace, paceMin,
     diff: total - pace,
     level: total >= pace ? 'ok' : total >= paceMin ? 'warn' : 'bad',
     needed: neededPerMonth(goal, closed, d.sy, today),
-    targetsSum: months.reduce((a, m) => a + m.target, 0),
+    committed, freeMonths: free.length, share,
     plannedSum: months.reduce((a, m) => a + m.planned, 0),
     plannedMonths: months.filter((m) => m.planned > 0).length,
   }
@@ -205,29 +221,23 @@ export function partnerHasGroup(items: DayItem[], date: string, groupId: string 
 
 export interface MonthCard {
   status: MonthStatus
-  target: number // minutos: plano, média necessária ou meta
-  kind: 'plano' | 'precisa' | 'meta'
-  note: string // linha abaixo da barra: "▲ +2,5", "▼ faltam 44", "✓ coberto", "sem plano"…
+  target: number
+  kind: TargetKind
+  note: string // abaixo da barra: "▲ +2,5", "▼ faltam 44", "✓ coberto" (vazio em meses futuros)
 }
 
-/** ✓ coberto (igual ao plano) · ▲ +X (acima) · ▼ faltam X (abaixo). */
+/** ✓ coberto (igual ao alvo) · ▲ +X (acima) · ▼ faltam X (abaixo). */
 export function planDelta(done: number, planned: number): string {
   const d = done - planned
   if (Math.abs(d) < 3) return '✓ coberto' // tolerância de arredondamento (< 3 min)
   return d > 0 ? `▲ +${fmtHours(d)}` : `▼ faltam ${fmtHours(-d)}`
 }
 
-/**
- * Linha do mês: com plano → compara com o plano (✓/▲/▼; meses futuros só mostram o plano).
- * Sem plano → atual/futuro compara com a média mensal necessária; encerrado compara com a meta do mês.
- */
-export function monthCard(m: MonthStats, today: Date, needed: number): MonthCard {
-  const cur = monthKey(today)
-  if (m.planned > 0) {
-    return { status: monthStatus(m.month, today, m.counted, m.planned), target: m.planned, kind: 'plano',
-      note: m.month > cur ? '' : planDelta(m.counted, m.planned) }
-  }
-  if (m.month < cur) return { status: monthStatus(m.month, today, m.counted, m.goal), target: m.goal, kind: 'meta', note: 'sem plano' }
-  return { status: monthStatus(m.month, today, m.counted, needed), target: needed, kind: 'precisa',
-    note: m.month === cur ? 'sem plano · média necessária' : '' }
+/** Card do mês a partir das estatísticas do ano (alvo já resolvido: plano > meta > rateio). */
+export function monthCard(m: MonthStats, today: Date): MonthCard {
+  const future = m.month > monthKey(today)
+  const note = future ? '' : m.target <= 0 ? 'sem plano/meta' : planDelta(m.counted, m.target)
+  return { status: m.status, target: m.target, kind: m.targetKind, note }
 }
+
+export const TARGET_LABEL: Record<TargetKind, string> = { plano: 'plano', meta: 'meta', rateio: 'rateio' }

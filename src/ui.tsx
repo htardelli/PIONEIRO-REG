@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { blockMinutes, fmtH, fmtHours, fromMinutes, MONTH_ABBR, toMinutes, type TimeBlock } from './domain'
-import { monthCard, type MonthStats } from './data'
+import { monthCard, TARGET_LABEL, type MonthStats } from './data'
 import type { Modality } from './types'
 
 export type Tab = 'painel' | 'lancar' | 'plano' | 'relatorio' | 'casal' | 'config'
@@ -118,7 +118,7 @@ export function MonthGrid({ months, today, needed, onPick }: {
     <>
       <div className="mgrid">
         {months.map((m) => {
-          const c = monthCard(m, today, needed)
+          const c = monthCard(m, today)
           const pct = c.target > 0 ? Math.min(100, (m.counted / c.target) * 100) : 0
           const noteColor = c.note.startsWith('▼') ? 'var(--bad)' : /^[▲✓]/.test(c.note) ? 'var(--ok)' : 'var(--muted)'
           const future = c.status === 'future'
@@ -127,11 +127,11 @@ export function MonthGrid({ months, today, needed, onPick }: {
               <span className="mtitle">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</span>
               <span className="mnum">
                 <b className={future ? 'muted' : ''}>{future ? '–' : fmtHours(m.counted)}</b>
-                <span className="muted"> / {fmtHours(c.target)} h</span>
+                {c.target > 0 ? <span className="muted"> / {fmtHours(c.target)} h</span> : <span className="muted"> h</span>}
               </span>
               <span className="bar"><i style={{ width: `${pct}%`, background: future ? '#C3CBD7' : STATUS_COLOR[c.status] }} /></span>
               <span className="mnote" style={{ color: c.note ? noteColor : 'var(--muted)' }}>
-                {c.note && !c.note.startsWith('sem plano ·') ? c.note : c.kind === 'precisa' ? 'precisa (média)' : c.kind}
+                {c.note || TARGET_LABEL[c.kind]}
               </span>
             </button>
           )
@@ -143,7 +143,7 @@ export function MonthGrid({ months, today, needed, onPick }: {
         <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
         <span><i style={{ background: 'var(--future)' }} />A vir</span>
       </div>
-      <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Realizado / plano do mês. Sem plano: média mensal necessária para fechar o ano.</div>
+      <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Realizado / alvo do mês. Alvo = plano; sem plano, a meta; sem plano e sem meta, o rateio (horas que faltam para a meta anual ÷ meses livres).</div>
     </>
   )
 }
