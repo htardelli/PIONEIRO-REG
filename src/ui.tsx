@@ -110,28 +110,28 @@ export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: 
 
 const STATUS_COLOR: Record<string, string> = { ok: 'var(--ok)', bad: 'var(--bad)', now: 'var(--now)', future: 'var(--future)' }
 
-/** Meses do ano de serviço: um mês por linha, com barra de progresso até o alvo (plano ou média necessária). */
+/** Meses do ano de serviço: grade de 3 colunas; cada card mostra realizado / alvo, barra de progresso e ✓/▲/▼. */
 export function MonthGrid({ months, today, needed, onPick }: {
   months: MonthStats[]; today: Date; needed: number; onPick?: (m: string) => void
 }) {
   return (
     <>
-      <div className="mlist">
+      <div className="mgrid">
         {months.map((m) => {
           const c = monthCard(m, today, needed)
           const pct = c.target > 0 ? Math.min(100, (m.counted / c.target) * 100) : 0
           const noteColor = c.note.startsWith('▼') ? 'var(--bad)' : /^[▲✓]/.test(c.note) ? 'var(--ok)' : 'var(--muted)'
+          const future = c.status === 'future'
           return (
-            <button key={m.month} className={`mrow s-${c.status}`} onClick={() => onPick?.(m.month)}>
-              <span className="mname"><i style={{ background: STATUS_COLOR[c.status] }} />{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</span>
-              <span className="mmid">
-                <span className="bar"><i style={{ width: `${pct}%`, background: c.status === 'future' ? '#C3CBD7' : STATUS_COLOR[c.status] }} /></span>
-                {c.note && <span className="mnote" style={{ color: noteColor }}>{c.note}</span>}
+            <button key={m.month} className={`mcard s-${c.status}`} onClick={() => onPick?.(m.month)}>
+              <span className="mtitle">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</span>
+              <span className="mnum">
+                <b className={future ? 'muted' : ''}>{future ? '–' : fmtHours(m.counted)}</b>
+                <span className="muted"> / {fmtHours(c.target)} h</span>
               </span>
-              <span className="mval">
-                {c.status === 'future'
-                  ? <span className="muted">{c.kind} {fmtHours(c.target)}</span>
-                  : <><b>{fmtHours(m.counted)}</b><span className="muted"> / {fmtHours(c.target)}</span></>}
+              <span className="bar"><i style={{ width: `${pct}%`, background: future ? '#C3CBD7' : STATUS_COLOR[c.status] }} /></span>
+              <span className="mnote" style={{ color: c.note ? noteColor : 'var(--muted)' }}>
+                {c.note && !c.note.startsWith('sem plano ·') ? c.note : c.kind === 'precisa' ? 'precisa (média)' : c.kind}
               </span>
             </button>
           )

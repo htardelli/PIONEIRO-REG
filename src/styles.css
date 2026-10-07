@@ -146,3 +146,15 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .mmid .bar { height: 7px; display: block; }
 .mnote { font-size: 11px; font-weight: 700; white-space: nowrap; }
 .mval { font-size: 13px; white-space: nowrap; text-align: right; }
+
+/* Meses do ano: grade de 3 colunas (opção A) */
+.mgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mcard { display: flex; flex-direction: column; gap: 4px; text-align: left; border-radius: 12px; padding: 8px 9px; border: 1.5px solid var(--line); background: #F7F9FB; min-width: 0; }
+.mcard.s-ok { background: var(--ok-soft); border-color: var(--ok); }
+.mcard.s-bad { background: var(--bad-soft); border-color: var(--bad); }
+.mcard.s-now { background: var(--warn-soft); border-color: var(--warn); }
+.mcard .mtitle { font-size: 11px; font-weight: 800; color: #3D4A5C; letter-spacing: .03em; }
+.mcard .mnum { white-space: nowrap; font-size: 12px; }
+.mcard .mnum b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
+.mcard .bar { height: 6px; display: block; }
+.mcard .mnote { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
