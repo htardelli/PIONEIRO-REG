@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, type TimeBlock } from '../domain'
+import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
 import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, useChoice } from '../ui'
 import type { DayItem } from '../types'
@@ -273,7 +273,7 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
 }) {
   const [month, setMonth] = useState(value.slice(0, 7))
   const [y, m] = month.split('-').map(Number)
-  const firstDow = new Date(y, m - 1, 1).getDay()
+  const firstDow = mondayIndex(new Date(y, m - 1, 1))
   const nDays = new Date(y, m, 0).getDate()
   const shiftMonth = (n: number) => {
     const x = new Date(y, m - 1 + n, 1)
@@ -292,7 +292,7 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
     if (cls === 'pend') pending++
     const hol = holidayOf(dt)
     const ev = data.events.some((e) => e.date === dt)
-    const mark = (hol || ev) ? <span className="mk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span> : null
+    const mark = (hol || ev) ? <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span> : null
     return { dt, day: i + 1, disabled, cls, done: st.done, mark }
   })
   return (
@@ -307,7 +307,7 @@ function DatePickerSheet({ data, today, value, min, max, onPick, onClose }: {
           <button className="link" onClick={onClose}>Fechar</button>
         </div>
         <div className="cal">
-          {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((h, i) => <div className="h" key={i}>{h}</div>)}
+          {WEEK_HEAD.map((h, i) => <div className="h" key={i}>{h}</div>)}
           {Array.from({ length: firstDow }, (_, i) => <div className="d x" key={'x' + i} />)}
           {cells.map((c) => (
             <button key={c.dt} disabled={c.disabled} onClick={() => onPick(c.dt)}

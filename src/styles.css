@@ -167,13 +167,13 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .ytotal .ytop .muted { text-transform: none; letter-spacing: 0; font-weight: 700; }
 
 /* Feriados e eventos no calendário */
-.cal .d .mk { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; height: auto; width: auto; line-height: 0; }
-.cal .d .mk i { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; display: block; box-sizing: border-box; }
+.cal .d .dmk { position: absolute; top: 5px; right: 5px; display: flex; gap: 3px; height: auto; width: auto; line-height: 0; }
+.cal .d .dmk i { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; display: block; box-sizing: border-box; }
 .cal .d.evday:not(.done):not(.part):not(.miss):not(.msel) { background: var(--credit-soft); }
-.mk .hol, .legend .hol { background: var(--bad); border-radius: 50% !important; }
-.mk .ev { border-radius: 50% !important; }
-.mk .hol.facultativo, .legend .hol.facultativo { background: #fff; border: 1.5px solid var(--bad); }
-.mk .ev, .legend .ev { background: var(--credit); }
+.dmk .hol, .legend .hol { background: var(--bad); border-radius: 50%; }
+.dmk .ev { border-radius: 50%; }
+.dmk .hol.facultativo, .legend .hol.facultativo { background: #fff; border: 1.5px solid var(--bad); }
+.dmk .ev, .legend .ev { background: var(--credit); }
 .cal .d.holday { color: var(--bad); }
 .cal .d.msel { background: var(--brand-2); color: #fff; }
 .cal .d.msel em { color: #fff; }

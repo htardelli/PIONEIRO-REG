@@ -93,7 +93,8 @@ describe('horários do plano', () => {
 
 describe('exclusão do plano', () => {
   it('semana de domingo a sábado', () => {
-    expect(weekDates('2026-10-07')).toEqual(['2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10'])
+    expect(weekDates('2026-10-07')).toEqual(['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'])
+    expect(weekDates('2026-10-11')[0]).toBe('2026-10-05') // domingo fecha a semana
   })
   it('ano preserva passado por padrão', () => {
     expect(deleteRange('2026-10-20', 'year', '2026-10-07', false)).toEqual(['2026-10-07', '2027-08-31'])

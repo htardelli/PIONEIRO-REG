@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
   blockErrors, blockMinutes, EVENT_KINDS, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
-  serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
+  serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock, mondayIndex, WEEK_HEAD,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, Header, MonthNav, useChoice } from '../ui'
@@ -51,7 +51,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   }, [sel, data])
 
   const [y, mo] = month.split('-').map(Number)
-  const firstDow = new Date(y, mo - 1, 1).getDay()
+  const firstDow = mondayIndex(new Date(y, mo - 1, 1))
   const nDays = daysInMonth(month)
 
   async function saveGoal() {
@@ -280,7 +280,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             </button>
           </div>
           <div className="cal">
-            {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((h, i) => <div className="h" key={i}>{h}</div>)}
+            {WEEK_HEAD.map((h, i) => <div className="h" key={i}>{h}</div>)}
             {Array.from({ length: firstDow }, (_, i) => <div className="d x" key={'x' + i} />)}
             {Array.from({ length: nDays }, (_, i) => {
               const date = `${month}-${String(i + 1).padStart(2, '0')}`
@@ -293,7 +293,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                   className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol && hol.kind !== 'facultativo' ? 'holday' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
-                  {(hol || evs.length > 0) && <span className="mk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
+                  {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
                   {shown > 0 && <em>{fmtHours(shown)}</em>}
                 </button>
               )

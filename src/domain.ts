@@ -196,10 +196,14 @@ export function blockErrors(blocks: TimeBlock[], nameOf: (id: string) => string 
 }
 
 /** Datas (domingo a sábado) da semana do dia. */
+/** Posição do dia numa semana que começa na segunda (seg=0 … dom=6). */
+export const mondayIndex = (d: Date) => (d.getDay() + 6) % 7
+export const WEEK_HEAD = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D']
+
 export function weekDates(date: string): string[] {
   const d = parseIso(date)
   const start = new Date(d)
-  start.setDate(d.getDate() - d.getDay())
+  start.setDate(d.getDate() - mondayIndex(d)) // semana de segunda a domingo
   return Array.from({ length: 7 }, (_, i) => {
     const x = new Date(start)
     x.setDate(start.getDate() + i)

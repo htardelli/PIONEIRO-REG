@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
-import { fmtHours, isoDate, monthKey } from '../domain'
+import { fmtHours, isoDate, monthKey, weekDates } from '../domain'
 import { yearStats, type YearData } from '../data'
 import { Avatar, DiffPill, Header, initials } from '../ui'
 import { PainelBody } from './Painel'
@@ -55,8 +55,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
 
   const people = [me, partner].map((d) => ({ d, ys: yearStats(d, today), name: d.profile?.name ?? '', color: d.profile?.color ?? '#2E75B6' }))
   const cur = monthKey(today)
-  const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay())
-  const week = Array.from({ length: 7 }, (_, i) => { const x = new Date(weekStart); x.setDate(weekStart.getDate() + i); return isoDate(x) })
+  const week = weekDates(isoDate(today)) // segunda a domingo
   const weekMax = Math.max(60, ...people.flatMap((p) => week.map((w) => p.d.entries.filter((e) => e.date === w).reduce((a, e) => a + e.minutes, 0))))
 
   return (
@@ -110,7 +109,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
                         return <div key={j} style={{ width: 12, height: Math.max(2, (v / weekMax) * 70), background: v ? p.color : 'var(--line)', borderRadius: 3 }} />
                       })}
                     </div>
-                    <span className="sub" style={{ fontSize: 10, fontWeight: 600 }}>{['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][i]}</span>
+                    <span className="sub" style={{ fontSize: 10, fontWeight: 600 }}>{['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][i]}</span>
                   </div>
                 ))}
               </div>
