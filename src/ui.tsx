@@ -121,16 +121,18 @@ export function Ring({ value, max, label, sub, color = '#2E75B6', size = 104 }: 
 
 export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: number; minGoal: number; color?: string }) {
   const scale = Math.max(goal, total) || 1
+  const pos = (v: number) => `${Math.min(100, (v / scale) * 100)}%`
   return (
-    <div style={{ margin: '12px 4px 20px' }}>
+    <div style={{ margin: '14px 4px 4px' }}>
       <div className="bar">
-        <i style={{ width: `${(total / scale) * 100}%`, background: color }} />
-        <div className="mk" style={{ left: `${(minGoal / scale) * 100}%`, background: 'var(--warn)' }}>
-          <span style={{ right: 4 }}>{fmtHours(minGoal)}</span>
-        </div>
-        <div className="mk" style={{ left: `calc(${(goal / scale) * 100}% - 2px)` }}>
-          <span style={{ right: -2 }}>{fmtHours(goal)}</span>
-        </div>
+        <i style={{ width: pos(total), background: color }} />
+        <b className="gdot" style={{ left: pos(minGoal), background: 'var(--warn)' }} title={`Mínimo ${fmtHours(minGoal)}`} />
+        <b className="gdot" style={{ left: pos(goal), background: 'var(--ink)' }} title={`Meta ${fmtHours(goal)}`} />
+      </div>
+      <div className="legend" style={{ marginTop: 10 }}>
+        <span><i style={{ background: color ?? 'var(--brand-2)', borderRadius: '50%' }} />Realizado {fmtHours(total)}</span>
+        <span><i style={{ background: 'var(--warn)', borderRadius: '50%' }} />Mínimo {fmtHours(minGoal)}</span>
+        <span><i style={{ background: 'var(--ink)', borderRadius: '50%' }} />Meta {fmtHours(goal)}</span>
       </div>
     </div>
   )

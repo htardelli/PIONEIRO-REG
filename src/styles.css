@@ -208,3 +208,4 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .drow.tot { border-bottom: 0; font-weight: 800; }
 .cal .d em.off { color: var(--bad); }
 .drow .pl s { color: var(--bad); opacity: .7; }
+.bar .gdot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; transform: translate(-50%, -50%); box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
