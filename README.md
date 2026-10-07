@@ -16,7 +16,7 @@ App: https://htardelli.github.io/PIONEIRO-REG/ · Demonstração: https://htarde
 
 1. **Banco** — Supabase → *SQL Editor* → cole `supabase/schema.sql` → *Run*.
 2. **Chave** — a URL e a *anon public key* já estão em `src/config.ts` (são públicas; a proteção é o RLS).
-3. **Publicação** — GitHub → *Settings → Pages* → *Source: GitHub Actions*.
+3. **Publicação** — automática: cada push em `main` testa, compila e publica no branch `gh-pages` (GitHub Pages).
 4. (Opcional) Supabase → *Authentication → Sign In / Providers → Email* → desligar *Confirm email*
    para entrar sem precisar confirmar o e-mail.
 5. Cada pessoa cria a sua conta no app; uma delas vincula o cônjuge pelo e-mail na aba **Casal**.
