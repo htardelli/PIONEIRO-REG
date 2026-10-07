@@ -1,1 +1,1 @@
-PSQL_CALLED with: postgresql://postgres.dlrcvcjqofxkdyujfzhy:Ab%40c%231@aws-1-ca-central-1.pooler.supabase.com:5432/postgres
+PSQL_CALLED
