@@ -185,3 +185,13 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .selbar { position: sticky; bottom: 76px; z-index: 5; background: var(--brand); color: #fff; border-radius: 14px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; box-shadow: 0 6px 20px rgba(0,0,0,.18); }
 .selbar b { flex: 1; font-size: 14px; }
 .selbar .btn { width: auto; }
+
+/* Seletor dos 12 meses */
+.mpick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.mpick button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; border-radius: 12px; background: #F7F9FB; border: 1.5px solid transparent; }
+.mpick button b { font-size: 16px; font-weight: 800; }
+.mpick button b small { font-size: 11px; color: var(--muted); font-weight: 700; }
+.mpick button span { font-size: 12px; font-weight: 700; color: var(--brand); }
+.mpick button.now { border-color: var(--brand); }
+.mpick button.on { background: var(--brand-2); color: #fff; }
+.mpick button.on b small, .mpick button.on span { color: #fff !important; }

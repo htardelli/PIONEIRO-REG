@@ -51,14 +51,41 @@ export function Header({ kicker, title, right }: { kicker: ReactNode; title: Rea
   )
 }
 
-export function MonthNav({ label, onPrev, onNext, prevDisabled, nextDisabled }: {
+export interface MonthPickInfo { line: string; status?: string }
+
+/** Navegação mensal. Com `months` + `onPick`, tocar no nome do mês abre a grade dos 12 meses do ano de serviço. */
+export function MonthNav({ label, onPrev, onNext, prevDisabled, nextDisabled, months, current, onPick, info, todayMonth }: {
   label: string; onPrev: () => void; onNext: () => void; prevDisabled?: boolean; nextDisabled?: boolean
+  months?: string[]; current?: string; onPick?: (m: string) => void; info?: (m: string) => MonthPickInfo; todayMonth?: string
 }) {
+  const [open, setOpen] = useState(false)
+  const pickable = !!(months && onPick)
   return (
     <>
       <button className="arrow" onClick={onPrev} disabled={prevDisabled} aria-label="Anterior">‹</button>
-      {label}
+      {pickable ? (
+        <button className="date-pick" onClick={() => setOpen(true)} aria-label="Escolher o mês">{label} <span className="caret">▾</span></button>
+      ) : label}
       <button className="arrow" onClick={onNext} disabled={nextDisabled} aria-label="Próximo">›</button>
+      {open && pickable && (
+        <div className="overlay" onClick={() => setOpen(false)}>
+          <div className="card dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="card-head"><h3>Ano de serviço · {Number(months![11].slice(0, 4))}</h3><button className="link" onClick={() => setOpen(false)}>Fechar</button></div>
+            <div className="mpick">
+              {months!.map((m) => {
+                const x = info?.(m)
+                const mo = Number(m.slice(5, 7))
+                return (
+                  <button key={m} className={`${m === current ? 'on' : ''} ${m === todayMonth ? 'now' : ''}`} onClick={() => { onPick!(m); setOpen(false) }}>
+                    <b>{MONTH_ABBR[mo - 1]}<small> {m.slice(2, 4)}</small></b>
+                    {x && <span style={{ color: x.status ? STATUS_COLOR[x.status] : undefined }}>{x.line}</span>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { CREDIT_TYPES, fmtH, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
+import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
 import { byModality, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthNav, Stepper } from '../ui'
 
@@ -65,7 +65,9 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
     <>
       <Header kicker={`Relatório · AS ${data.sy}`} title={
         <MonthNav label={monthLabel(month)} onPrev={() => setMonth(months[idx - 1])} onNext={() => setMonth(months[idx + 1])}
-          prevDisabled={idx <= 0} nextDisabled={idx >= 11} />
+          prevDisabled={idx <= 0} nextDisabled={idx >= 11}
+          months={months} current={month} onPick={setMonth} todayMonth={isoDate(today).slice(0, 7)}
+          info={(m) => { const x = ys.months.find((k) => k.month === m)!; return { line: fmtH(x.counted), status: x.status } }} />
       } />
       <div className="main">
         <div className="card">

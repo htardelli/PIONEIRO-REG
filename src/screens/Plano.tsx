@@ -269,7 +269,9 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
     <>
       <Header kicker={`Plano · AS ${data.sy}`} title={
         <MonthNav label={monthLabel(month)} onPrev={() => setMonth(months[idx - 1])} onNext={() => setMonth(months[idx + 1])}
-          prevDisabled={idx <= 0} nextDisabled={idx >= 11} />
+          prevDisabled={idx <= 0} nextDisabled={idx >= 11}
+          months={months} current={month} onPick={setMonth} todayMonth={todayIso.slice(0, 7)}
+          info={(m) => { const x = ys.months.find((k) => k.month === m)!; return { line: x.planned ? fmtH(x.planned) : '—', status: x.planned ? undefined : 'future' } }} />
       } />
       <div className="main">
         <div className="card" style={{ padding: 12 }}>
