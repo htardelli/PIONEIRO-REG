@@ -133,6 +133,11 @@ export function MonthGrid({ months, today, needed, onPick }: {
         <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
         <span><i style={{ background: 'var(--future)' }} />A vir</span>
       </div>
+      <div className="legend" style={{ marginTop: 6 }}>
+        <span><b style={{ color: 'var(--ok)' }}>✓</b> coberto</span>
+        <span><b style={{ color: 'var(--ok)' }}>▲</b> acima do plano</span>
+        <span><b style={{ color: 'var(--bad)' }}>▼</b> quanto falta</span>
+      </div>
       <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Mês sem plano mostra a média mensal necessária para fechar o ano.</div>
     </>
   )

@@ -205,13 +205,19 @@ export interface MonthCard {
  * Sem plano → mês atual/futuro: "precisa" / média mensal necessária para fechar o ano;
  * mês encerrado: "sem plano" e a cor compara com a meta do mês.
  */
+/** ✓ coberto (igual ao plano) · ▲ +X (acima) · ▼ X (abaixo: quanto falta). */
+export function planDelta(done: number, planned: number): string {
+  const d = done - planned
+  if (Math.abs(d) < 3) return '✓ coberto' // tolerância de arredondamento (< 3 min)
+  return d > 0 ? `▲ +${fmtHours(d)}` : `▼ ${fmtHours(-d)}`
+}
+
 export function monthCard(m: MonthStats, today: Date, needed: number): MonthCard {
   const cur = monthKey(today)
   if (m.planned > 0) {
-    const falta = Math.max(0, m.planned - m.counted)
     return {
       status: monthStatus(m.month, today, m.counted, m.planned),
-      lines: ['plano', fmtHours(m.planned), m.month > cur ? '' : falta > 0 ? `falta ${fmtHours(falta)}` : '✓ coberto'],
+      lines: ['plano', fmtHours(m.planned), m.month > cur ? '' : planDelta(m.counted, m.planned)],
     }
   }
   if (m.month < cur) return { status: monthStatus(m.month, today, m.counted, m.goal), lines: ['sem', 'plano', ''] }
