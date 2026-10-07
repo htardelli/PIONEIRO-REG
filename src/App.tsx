@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api'
 import { DEFAULT_MODALITIES, isoDate, monthKey, parseIso, serviceYearOf } from './domain'
-import { useYear } from './data'
+import { useYear, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
 import { Avatar, Header, Loading, TabBar, useToast, type Tab } from './ui'
 import { Auth } from './screens/Auth'
@@ -68,6 +68,10 @@ function Main({ user }: { user: AuthUser }) {
   const color = me.data?.profile?.color
   const go = (t: Tab) => { setTab(t); window.scrollTo(0, 0) }
   const d = me.data
+  // Participante para atividades conjuntas: só com compartilhamento mútuo e dados dele(a) carregados
+  const joint: JointPartner | null = partnerId && sharedOut && partner.data
+    ? { id: partnerId, name: partner.data.profile?.name || 'Cônjuge', data: partner.data } : null
+  const reloadBoth = async () => { await Promise.all([me.reload(), joint ? partner.reload() : Promise.resolve()]) }
 
   let body
   if (d?.profile?.must_change_password) {
@@ -86,8 +90,8 @@ function Main({ user }: { user: AuthUser }) {
       </div>
     </>
   )
-  else if (tab === 'lancar') body = <Lancar data={d} today={today} date={date} setDate={setDate} reload={me.reload} toast={toast.show} />
-  else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} />
+  else if (tab === 'lancar') body = <Lancar data={d} today={today} date={date} setDate={setDate} reload={reloadBoth} toast={toast.show} partner={joint} />
+  else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={reloadBoth} toast={toast.show} partner={joint} />
   else if (tab === 'relatorio') body = <Relatorio data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
   else if (tab === 'casal') body = partnerId && !partner.data ? <><Header kicker="" title="Nós dois" /><Loading error={partner.error} /></> : (
     <Casal me={d} partner={partnerId ? partner.data : null} sharedOut={sharedOut} today={today} toast={toast.show}

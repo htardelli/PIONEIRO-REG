@@ -151,6 +151,8 @@ export interface TimeBlock {
   modality_id: string
   start: string // HH:MM
   end: string // HH:MM
+  group_id?: string | null // atividade conjunta
+  with?: string[] // ids dos participantes (além de mim)
 }
 
 export function toMinutes(hhmm: string): number {
@@ -217,7 +219,7 @@ export function deleteRange(date: string, scope: DeleteScope, today: string, inc
 }
 
 /** Converte itens (plano/realizado) em blocos de horário; itens antigos sem horário ganham horários em sequência a partir das 08:00. */
-export function toBlocks(items: { modality_id: string; minutes: number; start_time?: string | null; end_time?: string | null }[]): TimeBlock[] {
+export function toBlocks(items: { modality_id: string; minutes: number; start_time?: string | null; end_time?: string | null; group_id?: string | null }[]): TimeBlock[] {
   let clock = 8 * 60
   return [...items]
     .sort((a, b) => (a.start_time ?? '99').localeCompare(b.start_time ?? '99'))
@@ -225,7 +227,7 @@ export function toBlocks(items: { modality_id: string; minutes: number; start_ti
       const start = p.start_time?.slice(0, 5) ?? fromMinutes(clock)
       const end = p.end_time?.slice(0, 5) ?? fromMinutes(toMinutes(start) + p.minutes)
       clock = Math.max(clock, toMinutes(end))
-      return { modality_id: p.modality_id, start, end }
+      return p.group_id ? { modality_id: p.modality_id, start, end, group_id: p.group_id } : { modality_id: p.modality_id, start, end }
     })
 }
 

@@ -149,8 +149,12 @@ export function DiffPill({ diff, level }: { diff: number; level: 'ok' | 'warn' |
 }
 
 /** Editor do plano do dia: atividades com modalidade, início e fim. Mostra conflitos de horário. */
-export function BlocksEditor({ modalities, value, onChange, errors }: {
+export interface Partner { id: string; name: string }
+
+export function BlocksEditor({ modalities, value, onChange, errors, partners = [], partnerHint }: {
   modalities: Modality[]; value: TimeBlock[]; onChange: (v: TimeBlock[]) => void; errors: Record<number, string>
+  partners?: Partner[] // participantes possíveis (compartilhamento mútuo)
+  partnerHint?: string // texto do toggle (ex.: "Com Jessika" / "Jessika participou")
 }) {
   const active = modalities.filter((m) => m.active)
   const set = (i: number, patch: Partial<TimeBlock>) => onChange(value.map((b, j) => (j === i ? { ...b, ...patch } : b)))
@@ -183,6 +187,20 @@ export function BlocksEditor({ modalities, value, onChange, errors }: {
               <input className="input" type="time" step={300} style={{ padding: 8, flex: 1, minWidth: 0 }} value={b.end} onChange={(e) => set(i, { end: e.target.value })} aria-label="Fim" />
               <b style={{ flexShrink: 0, fontSize: 14 }}>{fmtH(blockMinutes(b))}</b>
             </div>
+            {partners.length > 0 && (
+              <div className="chips" style={{ marginTop: 8 }}>
+                {partners.map((pt) => {
+                  const on = (b.with ?? []).includes(pt.id)
+                  return (
+                    <button key={pt.id} className={`chip ${on ? 'on' : ''}`} onClick={() => set(i, {
+                      with: on ? (b.with ?? []).filter((x) => x !== pt.id) : [...(b.with ?? []), pt.id],
+                    })}>
+                      👥 {partnerHint ? partnerHint.replace('{nome}', pt.name.split(' ')[0]) : `Com ${pt.name.split(' ')[0]}`}{on ? ' ✓' : ''}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
             {err && <div style={{ color: 'var(--bad)', fontSize: 12, fontWeight: 700, marginTop: 6 }}>⚠ {err}</div>}
           </div>
         )
@@ -190,4 +208,29 @@ export function BlocksEditor({ modalities, value, onChange, errors }: {
       <button className="btn outline small" style={{ marginTop: 10 }} onClick={add} disabled={active.length === 0}>+ Adicionar atividade</button>
     </div>
   )
+}
+
+// ---------- Diálogo de escolha (múltipla escolha) ----------
+export interface ChoiceOption<T> { label: string; value: T; kind?: 'brand' | 'outline' | 'ghost' | 'danger' }
+interface ChoiceReq { title: string; text?: string; options: ChoiceOption<unknown>[]; resolve: (v: unknown) => void }
+
+/** ask() abre um diálogo e devolve a opção escolhida (ou null se cancelado). */
+export function useChoice() {
+  const [req, setReq] = useState<ChoiceReq | null>(null)
+  const ask = <T,>(title: string, options: ChoiceOption<T>[], text?: string) =>
+    new Promise<T | null>((resolve) => setReq({ title, text, options: options as ChoiceOption<unknown>[], resolve: resolve as (v: unknown) => void }))
+  const close = (v: unknown) => { req?.resolve(v); setReq(null) }
+  const node = req ? (
+    <div className="overlay" onClick={() => close(null)}>
+      <div className="card form dialog" onClick={(e) => e.stopPropagation()}>
+        <div style={{ fontSize: 17, fontWeight: 800 }}>{req.title}</div>
+        {req.text && <div className="sub" style={{ fontSize: 14, whiteSpace: 'pre-line' }}>{req.text}</div>}
+        {req.options.map((o, i) => (
+          <button key={i} className={`btn small ${o.kind ?? (i === 0 ? 'brand' : 'outline')}`} onClick={() => close(o.value)}>{o.label}</button>
+        ))}
+        <button className="btn ghost small" onClick={() => close(null)}>Cancelar</button>
+      </div>
+    </div>
+  ) : null
+  return { ask, node }
 }

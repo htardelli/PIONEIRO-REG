@@ -122,7 +122,7 @@ function supabaseApi(): Api {
 }
 
 // ---------- Local / demonstração ----------
-const LS_KEY = 'pioneiro-reg-demo-v4'
+const LS_KEY = 'pioneiro-reg-demo-v5'
 
 function localApi(): Api {
   type Db = Record<Table, Row[]>
@@ -187,7 +187,38 @@ function localApi(): Api {
       db[table] = db[table].filter((r) => !match(r, q))
       save()
     },
-    async rpc<T>() {
+    async rpc<T>(fn: string, args: Row) {
+      // Simulação das funções do banco usadas por atividades conjuntas
+      const partner = args.p_partner as string
+      const modOf = (name: string) => {
+        const m = db.modalities.find((x) => x.user_id === partner && String(x.name).toLowerCase() === name.toLowerCase())
+        if (!m) throw new Error(`O participante não tem a modalidade "${name}".`)
+        return m.id as string
+      }
+      const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+      const overlap = (table: 'plan_items' | 'entries', it: Row) => db[table].find((x) => x.user_id === partner && x.date === it.date &&
+        x.group_id !== it.group_id && x.start_time && toMin(String(x.start_time)) < toMin(String(it.end)) && toMin(String(x.end_time)) > toMin(String(it.start)))
+      if (fn === 'partner_plan_upsert' || fn === 'partner_entries_add') {
+        const table = fn === 'partner_plan_upsert' ? 'plan_items' : 'entries'
+        let n = 0
+        for (const it of args.p_items as Row[]) {
+          if (table === 'entries' && db.entries.some((x) => x.user_id === partner && x.date === it.date && x.group_id === it.group_id)) continue
+          const c = overlap(table, it)
+          if (c) throw new Error(`Conflito com ${String(c.start_time).slice(0, 5)}–${String(c.end_time).slice(0, 5)} em ${String(it.date).slice(8)}/${String(it.date).slice(5, 7)}.`)
+          db[table] = db[table].filter((x) => !(x.user_id === partner && x.date === it.date && x.group_id === it.group_id))
+          db[table].push({ id: crypto.randomUUID(), user_id: partner, date: it.date, modality_id: modOf(String(it.modality)),
+            minutes: toMin(String(it.end)) - toMin(String(it.start)), start_time: it.start, end_time: it.end, group_id: it.group_id })
+          n++
+        }
+        save()
+        return n as T
+      }
+      if (fn === 'partner_plan_delete') {
+        const groups = args.p_groups as string[]
+        db.plan_items = db.plan_items.filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) &&
+          String(x.date) >= String(args.p_from) && String(x.date) <= String(args.p_to)))
+        save()
+      }
       return null as T
     },
   }

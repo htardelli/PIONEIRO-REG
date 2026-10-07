@@ -35,6 +35,7 @@ export interface DayItem {
   minutes: number
   start_time?: string | null // HH:MM[:SS] (somente no planejamento)
   end_time?: string | null
+  group_id?: string | null // atividade conjunta (mesmo id nos participantes)
 }
 
 export interface DayNote {

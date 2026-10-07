@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, fmtH, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, type TimeBlock } from '../domain'
-import { yearRange, type YearData } from '../data'
-import { BlocksEditor } from '../ui'
+import { partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
+import { BlocksEditor, useChoice } from '../ui'
 import type { DayItem } from '../types'
 
 const sumMin = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
@@ -12,7 +12,7 @@ function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   return (
     <div className="mod">
       <i className="dot" style={{ background: m?.color }} />
-      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}</span>
+      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{item.group_id && <span className="sub"> · 👥</span>}</span>
       <b>{fmtH(item.minutes)}</b>
     </div>
   )
@@ -23,9 +23,16 @@ const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCompare(b
 const ABSENCE_PREFIX = 'Faltei'
 const ABSENCE_REASONS = ['Saúde', 'Trabalho', 'Família', 'Clima', 'Viagem', 'Outro']
 
-export function Lancar({ data, today, date, setDate, reload, toast }: {
+export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   data: YearData; today: Date; date: string; setDate: (d: string) => void; reload: () => Promise<void>; toast: (m: string) => void
+  partner: JointPartner | null
 }) {
+  const choice = useChoice()
+  const pFirst = partner?.name.split(' ')[0] ?? ''
+  /** Marca como "participou" as atividades conjuntas que o participante ainda não lançou. */
+  const withPartner = (bs: TimeBlock[]): TimeBlock[] => bs.map((b) =>
+    partner && b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id) && !partnerHasGroup(partner.data.entries, date, b.group_id)
+      ? { ...b, with: [partner.id] } : b)
   const plan = data.plan.filter((p) => p.date === date).sort(byStart)
   const done = data.entries.filter((e) => e.date === date).sort(byStart)
   const note = data.notes.find((n) => n.date === date)
@@ -41,7 +48,7 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
   useEffect(() => {
     setEditing(false)
     setAbsent(false); setReason(''); setAbsText('')
-    setBlocks(toBlocks(done.length ? done : plan))
+    setBlocks(done.length ? toBlocks(done) : withPartner(toBlocks(plan)))
     setText(note?.note ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, data])
@@ -55,20 +62,46 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
   }
 
   async function save(items: TimeBlock[], noteText: string) {
+    const nameOfMod = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
+    const blocks = items.map((b) => (partner && b.with?.includes(partner.id) && !b.group_id ? { ...b, group_id: crypto.randomUUID() } : b))
     setBusy(true)
     try {
+      let shared = 0
+      if (partner) {
+        const pItems = blocks.filter((b) => b.with?.includes(partner.id) && blockMinutes(b) > 0)
+          .map((b) => ({ date, group_id: b.group_id, modality: nameOfMod(b.modality_id), start: b.start, end: b.end }))
+        if (pItems.length) shared = Number(await api.rpc('partner_entries_add', { p_partner: partner.id, p_items: pItems })) || 0
+      }
       await api.remove('entries', { eq: { user_id: data.userId, date } })
-      await api.insert('entries', items.filter((b) => blockMinutes(b) > 0).map((b) => ({
+      await api.insert('entries', blocks.filter((b) => blockMinutes(b) > 0).map((b) => ({
         user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
+        group_id: b.group_id ?? null,
       })))
       await api.upsert('day_notes', [{ user_id: data.userId, date, note: noteText }], 'user_id,date')
       await reload()
-      toast('Dia lançado ✓')
+      toast(shared ? `Dia lançado ✓ · também para ${pFirst}` : 'Dia lançado ✓')
     } catch (e) {
       toast((e as Error).message)
     } finally {
       setBusy(false)
     }
+  }
+
+  /** "Cumpri o planejado": se houver atividade conjunta ainda não lançada pelo participante, pergunta se ele(a) participou. */
+  async function confirmPlanned() {
+    let bs = withPartner(toBlocks(plan))
+    const pending = bs.filter((b) => b.with?.length)
+    if (pending.length && partner) {
+      const desc = pending.map((b) => `${data.modalities.find((m) => m.id === b.modality_id)?.name ?? ''} ${b.start}–${b.end}`).join('\n')
+      const r = await choice.ask<'both' | 'me'>(
+        `${pFirst} também participou?`,
+        [{ label: `Sim, os dois participamos`, value: 'both' }, { label: 'Só eu participei', value: 'me' }],
+        `Atividade conjunta:\n${desc}\n\nSe sim, o realizado também é lançado para ${pFirst} (que pode ajustar depois).`,
+      )
+      if (!r) return
+      if (r === 'me') bs = bs.map((b) => ({ ...b, with: [] }))
+    }
+    await save(bs, '')
   }
 
   const isAbsence = logged && done.length === 0 && (note?.note ?? '').startsWith(ABSENCE_PREFIX)
@@ -119,8 +152,8 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
             </div>
             {!editing && !absent && (
               <>
-                <button className="btn primary" disabled={busy} onClick={() => save(toBlocks(plan), '')}>✓ Cumpri o planejado</button>
-                <button className="btn outline" onClick={() => { setBlocks(toBlocks(plan)); setEditing(true) }}>Fiz diferente ▾</button>
+                <button className="btn primary" disabled={busy} onClick={confirmPlanned}>✓ Cumpri o planejado</button>
+                <button className="btn outline" onClick={() => { setBlocks(withPartner(toBlocks(plan))); setEditing(true) }}>Fiz diferente ▾</button>
                 <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>
               </>
             )}
@@ -153,7 +186,9 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
             <div className="card">
               <h3>O que foi realizado</h3>
               <div className="sub" style={{ marginBottom: 10 }}>Ajuste a modalidade e os horários reais de início e fim de cada atividade.</div>
-              <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors} />
+              <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
+                partners={partner ? [{ id: partner.id, name: partner.name }] : []} partnerHint="{nome} participou" />
+              {partner && <div className="sub" style={{ marginTop: 8 }}>Marque "{pFirst} participou" para lançar também para {pFirst} (se ainda não lançou). Ajustes posteriores de um não alteram o do outro.</div>}
             </div>
             <div className="card" style={{ padding: '12px 16px' }}>
               <div className="kv" style={{ padding: '4px 0 10px' }}>
@@ -172,6 +207,7 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
           </>
         )}
       </div>
+      {choice.node}
     </>
   )
 }

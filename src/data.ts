@@ -182,3 +182,15 @@ export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone 
   r.pct = r.planned > 0 ? r.done / r.planned : null
   return r
 }
+
+/** Participante de atividades conjuntas (compartilhamento mútuo). */
+export interface JointPartner {
+  id: string
+  name: string
+  data: YearData
+}
+
+/** Bloco do participante com o mesmo group_id no mesmo dia (plano ou realizado). */
+export function partnerHasGroup(items: DayItem[], date: string, groupId: string | null | undefined): boolean {
+  return !!groupId && items.some((x) => x.date === date && x.group_id === groupId)
+}

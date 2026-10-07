@@ -228,3 +228,104 @@ end $$;
 
 revoke all on function public.admin_create_user(text, text, text, boolean) from public, anon;
 grant execute on function public.admin_create_user(text, text, text, boolean) to authenticated;
+
+-- ============ Atividades conjuntas (v0.5) ============
+-- group_id liga a mesma atividade nos planos/lançamentos de participantes diferentes.
+alter table public.plan_items add column if not exists group_id uuid;
+alter table public.entries add column if not exists group_id uuid;
+create index if not exists plan_items_group on public.plan_items (group_id) where group_id is not null;
+create index if not exists entries_group on public.entries (group_id) where group_id is not null;
+
+-- Compartilhamento mútuo (os dois liberaram os próprios dados um para o outro)
+create or replace function public.is_mutual(a uuid, b uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.shares where owner = a and viewer = b)
+     and exists (select 1 from public.shares where owner = b and viewer = a);
+$$;
+
+-- Modalidade do participante com o mesmo nome (as modalidades são de cada usuário)
+create or replace function public.partner_modality(p_partner uuid, p_name text) returns uuid
+language plpgsql stable security definer set search_path = public as $$
+declare mid uuid; pname text;
+begin
+  select id into mid from public.modalities
+   where user_id = p_partner and lower(trim(name)) = lower(trim(p_name))
+   order by active desc limit 1;
+  if mid is null then
+    select name into pname from public.profiles where id = p_partner;
+    raise exception '% não tem a modalidade "%". Peça para criar em Configurações.', coalesce(pname, 'O participante'), p_name;
+  end if;
+  return mid;
+end $$;
+
+-- Grava (ou substitui) atividades conjuntas no PLANO do participante.
+-- p_items: [{date, group_id, modality, start, end}] — bloqueia se houver conflito de horário.
+create or replace function public.partner_plan_upsert(p_partner uuid, p_items jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare it jsonb; d date; g uuid; s time; e time; mid uuid; pname text; c record;
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para planejar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  select name into pname from public.profiles where id = p_partner;
+  for it in select * from jsonb_array_elements(p_items) loop
+    d := (it->>'date')::date; g := (it->>'group_id')::uuid; s := (it->>'start')::time; e := (it->>'end')::time;
+    mid := public.partner_modality(p_partner, it->>'modality');
+    delete from public.plan_items where user_id = p_partner and date = d and group_id = g;
+    select p.start_time, p.end_time, m.name into c
+      from public.plan_items p left join public.modalities m on m.id = p.modality_id
+     where p.user_id = p_partner and p.date = d and p.start_time < e and p.end_time > s limit 1;
+    if found then
+      raise exception 'Conflito no plano de % em %: % %–%.', coalesce(pname, 'participante'), to_char(d, 'DD/MM'),
+        coalesce(c.name, 'atividade'), to_char(c.start_time, 'HH24:MI'), to_char(c.end_time, 'HH24:MI');
+    end if;
+    insert into public.plan_items (user_id, date, modality_id, minutes, start_time, end_time, group_id)
+    values (p_partner, d, mid, (extract(epoch from (e - s)) / 60)::int, s, e, g);
+  end loop;
+end $$;
+
+-- Remove atividades conjuntas do PLANO do participante (grupos informados, no intervalo de datas)
+create or replace function public.partner_plan_delete(p_partner uuid, p_groups uuid[], p_from date, p_to date) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para alterar o plano do participante, os dois precisam ter compartilhado um com o outro.';
+  end if;
+  delete from public.plan_items
+   where user_id = p_partner and group_id = any(p_groups) and date between p_from and p_to;
+end $$;
+
+-- Lança o REALIZADO de atividades conjuntas para o participante (quem lança primeiro confirma a participação).
+-- Não sobrescreve: se o participante já lançou aquela atividade no dia, ela é ignorada.
+create or replace function public.partner_entries_add(p_partner uuid, p_items jsonb) returns int
+language plpgsql security definer set search_path = public as $$
+declare it jsonb; d date; g uuid; s time; e time; mid uuid; pname text; c record; n int := 0;
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para lançar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  select name into pname from public.profiles where id = p_partner;
+  for it in select * from jsonb_array_elements(p_items) loop
+    d := (it->>'date')::date; g := (it->>'group_id')::uuid; s := (it->>'start')::time; e := (it->>'end')::time;
+    continue when exists (select 1 from public.entries where user_id = p_partner and date = d and group_id = g);
+    mid := public.partner_modality(p_partner, it->>'modality');
+    select en.start_time, en.end_time, m.name into c
+      from public.entries en left join public.modalities m on m.id = en.modality_id
+     where en.user_id = p_partner and en.date = d and en.start_time < e and en.end_time > s limit 1;
+    if found then
+      raise exception 'Conflito no lançamento de % em %: % %–%.', coalesce(pname, 'participante'), to_char(d, 'DD/MM'),
+        coalesce(c.name, 'atividade'), to_char(c.start_time, 'HH24:MI'), to_char(c.end_time, 'HH24:MI');
+    end if;
+    insert into public.entries (user_id, date, modality_id, minutes, start_time, end_time, group_id)
+    values (p_partner, d, mid, (extract(epoch from (e - s)) / 60)::int, s, e, g);
+    n := n + 1;
+  end loop;
+  return n;
+end $$;
+
+revoke all on function public.partner_plan_upsert(uuid, jsonb) from public, anon;
+revoke all on function public.partner_plan_delete(uuid, uuid[], date, date) from public, anon;
+revoke all on function public.partner_entries_add(uuid, jsonb) from public, anon;
+grant execute on function public.partner_plan_upsert(uuid, jsonb) to authenticated;
+grant execute on function public.partner_plan_delete(uuid, uuid[], date, date) to authenticated;
+grant execute on function public.partner_entries_add(uuid, jsonb) to authenticated;

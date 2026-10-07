@@ -4,14 +4,19 @@ import {
   blockErrors, blockMinutes, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock,
 } from '../domain'
-import { dayState, monthStats, yearStats, type YearData } from '../data'
-import { BlocksEditor, Header, MonthNav } from '../ui'
+import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
+import { BlocksEditor, Header, MonthNav, useChoice } from '../ui'
+
+type Scope = 'all' | 'me'
 
 const DELETE_LABEL: Record<DeleteScope, string> = { day: 'Dia', week: 'Semana', month: 'Mês', year: 'Ano' }
 
-export function Plano({ data, today, month, setMonth, reload, toast }: {
+export function Plano({ data, today, month, setMonth, reload, toast, partner }: {
   data: YearData; today: Date; month: string; setMonth: (m: string) => void; reload: () => Promise<void>; toast: (m: string) => void
+  partner: JointPartner | null
 }) {
+  const choice = useChoice()
+  const pFirst = partner?.name.split(' ')[0] ?? ''
   const months = serviceYearMonths(data.sy)
   const idx = months.indexOf(month)
   const ms = monthStats(data, month, today)
@@ -19,6 +24,7 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
   const todayIso = isoDate(today)
   const [sel, setSel] = useState<string | null>(null)
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
+  const [original, setOriginal] = useState<TimeBlock[]>([])
   const [delScope, setDelScope] = useState<DeleteScope>('day')
   const [delPast, setDelPast] = useState(false)
   const [differ, setDiffer] = useState<string[] | null>(null) // dias de destino com plano diferente (aguardando decisão)
@@ -29,7 +35,10 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
   useEffect(() => { setGoalH(String(ms.goal / 60)); setSel(null) }, [month, ms.goal])
   useEffect(() => {
     if (!sel) return
-    setBlocks(toBlocks(data.plan.filter((x) => x.date === sel)))
+    const loaded = toBlocks(data.plan.filter((x) => x.date === sel)).map((b) =>
+      partner && partnerHasGroup(partner.data.plan, sel, b.group_id) ? { ...b, with: [partner.id] } : b)
+    setBlocks(loaded)
+    setOriginal(loaded)
     setDiffer(null)
     setScope('day')
     setDelScope('day')
@@ -64,16 +73,55 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
   async function savePlan(skip: string[]) {
     if (!sel) return
     setDiffer(null)
+    const dates = repeatDates(sel, scope).filter((dt) => !skip.includes(dt))
+    const nameOfMod = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
+    // Blocos conjuntos ganham um group_id (o mesmo nos dois planos)
+    let next: TimeBlock[] = blocks.map((b) => (partner && b.with?.includes(partner.id) && !b.group_id ? { ...b, group_id: crypto.randomUUID() } : b))
+
+    // Atividades conjuntas que já existiam e foram alteradas/removidas: perguntar o alcance
+    const removedGroups: string[] = []
+    const changedGroups: string[] = []
+    if (partner) {
+      for (const o of original.filter((x) => x.group_id && x.with?.includes(partner.id))) {
+        const nb = next.find((x) => x.group_id === o.group_id)
+        if (!nb || !nb.with?.includes(partner.id)) removedGroups.push(o.group_id!)
+        else if (nb.start !== o.start || nb.end !== o.end || nb.modality_id !== o.modality_id) changedGroups.push(o.group_id!)
+      }
+    }
+    let scopeChoice: Scope = 'all'
+    if (removedGroups.length || changedGroups.length) {
+      const r = await choice.ask<Scope>(
+        'Atividade conjunta alterada',
+        [{ label: 'Para todos os participantes', value: 'all' }, { label: 'Só para mim', value: 'me' }],
+        `Você ${removedGroups.length ? 'removeu' : 'alterou'} uma atividade feita com ${pFirst}. A mudança vale para quem?`,
+      )
+      if (!r) return
+      scopeChoice = r
+      if (r === 'me') {
+        // desvincula: o plano de quem não foi alterado fica como estava
+        next = next.map((x) => (x.group_id && changedGroups.includes(x.group_id) ? { ...x, group_id: null, with: [] } : x))
+      }
+    }
+
     setBusy(true)
     try {
-      const dates = repeatDates(sel, scope).filter((dt) => !skip.includes(dt))
+      if (partner) {
+        const items = dates.flatMap((date) => next.filter((x) => x.with?.includes(partner.id) && x.group_id)
+          .map((x) => ({ date, group_id: x.group_id, modality: nameOfMod(x.modality_id), start: x.start, end: x.end })))
+        if (items.length) await api.rpc('partner_plan_upsert', { p_partner: partner.id, p_items: items })
+        if (scopeChoice === 'all' && removedGroups.length) {
+          await api.rpc('partner_plan_delete', { p_partner: partner.id, p_groups: removedGroups, p_from: dates[0], p_to: dates[dates.length - 1] })
+        }
+      }
       await api.remove('plan_items', { eq: { user_id: data.userId }, in: ['date', dates] })
-      const rows = dates.flatMap((date) => blocks.map((b) => ({
-        user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
+      const rows = dates.flatMap((date) => next.map((x) => ({
+        user_id: data.userId, date, modality_id: x.modality_id, minutes: blockMinutes(x), start_time: x.start, end_time: x.end,
+        group_id: x.group_id ?? null,
       })))
       for (let i = 0; i < rows.length; i += 500) await api.insert('plan_items', rows.slice(i, i + 500))
       await reload()
-      toast(dates.length > 1 ? `Plano aplicado em ${dates.length} dias` : 'Plano salvo')
+      const joint = next.some((x) => partner && x.with?.includes(partner.id))
+      toast((dates.length > 1 ? `Plano aplicado em ${dates.length} dias` : 'Plano salvo') + (joint ? ` · incluído no plano de ${pFirst}` : ''))
       setSel(null)
     } catch (e) {
       toast((e as Error).message)
@@ -94,9 +142,24 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
     if (!sel) return
     const fmt = (d: string) => d.split('-').reverse().join('/')
     const what = delFrom === delTo ? `do dia ${fmt(delFrom)}` : `de ${fmt(delFrom)} a ${fmt(delTo)}`
-    if (!confirm(`Excluir o planejamento ${what}? Os lançamentos (horas realizadas) não são afetados.`)) return
+    const jointGroups = partner ? [...new Set(data.plan
+      .filter((p) => p.date >= delFrom && p.date <= delTo && p.group_id && partnerHasGroup(partner.data.plan, p.date, p.group_id))
+      .map((p) => p.group_id!))] : []
+    let alsoPartner = false
+    if (jointGroups.length) {
+      const r = await choice.ask<Scope>(
+        `Excluir o planejamento ${what}?`,
+        [{ label: 'Para todos os participantes', value: 'all', kind: 'danger' }, { label: 'Só para mim', value: 'me', kind: 'outline' }],
+        `Há atividades feitas com ${pFirst} nesse período. Excluir também do plano dele(a)?\nOs lançamentos (horas realizadas) não são afetados.`,
+      )
+      if (!r) return
+      alsoPartner = r === 'all'
+    } else if (!confirm(`Excluir o planejamento ${what}? Os lançamentos (horas realizadas) não são afetados.`)) return
     setBusy(true)
     try {
+      if (alsoPartner && partner) {
+        await api.rpc('partner_plan_delete', { p_partner: partner.id, p_groups: jointGroups, p_from: delFrom, p_to: delTo })
+      }
       await api.remove('plan_items', { eq: { user_id: data.userId }, range: ['date', delFrom, delTo] })
       await reload()
       toast(`Planejamento excluído (${delDays} ${delDays === 1 ? 'dia' : 'dias'})`)
@@ -148,7 +211,8 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
               <h3>Planejar {WEEKDAY_SHORT[selDow]}, {sel.slice(8)}/{sel.slice(5, 7)}</h3>
               <button className="link" onClick={() => setSel(null)}>Fechar</button>
             </div>
-            <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors} />
+            <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
+              partners={partner ? [{ id: partner.id, name: partner.name }] : []} />
             <div className="sub" style={{ fontWeight: 700, margin: '14px 0 6px' }}>REPETIR EM</div>
             <div className="seg">
               <button className={scope === 'day' ? 'on' : ''} onClick={() => setScope('day')}>Só este dia</button>
@@ -221,6 +285,7 @@ export function Plano({ data, today, month, setMonth, reload, toast }: {
             <span className={`pill ${ys.goalsSum >= ys.goal ? 'ok' : 'bad'}`}>{ys.goalsSum >= ys.goal ? 'ok' : `< ${fmtHours(ys.goal)}`}</span></span></div>
         </div>
       </div>
+      {choice.node}
     </>
   )
 }
