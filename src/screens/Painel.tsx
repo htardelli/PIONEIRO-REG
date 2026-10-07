@@ -87,17 +87,17 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
               <i style={{ width: `${Math.min(100, (pvd.done / Math.max(pvd.planned, pvd.done, 1)) * 100)}%`, background: color }} />
             </div>
             <div className="chips" style={{ marginTop: 10 }}>
-              <span className="pill ok">✓ {pvd.days.done} cumprido{pvd.days.done === 1 ? '' : 's'}</span>
-              <span className="pill warn">◐ {pvd.days.part} parcia{pvd.days.part === 1 ? 'l' : 'is'}</span>
-              <span className="pill bad">✗ {pvd.days.miss} falta{pvd.days.miss === 1 ? '' : 's'}</span>
-              {pvd.days.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>? {pvd.days.pending} não lançado{pvd.days.pending === 1 ? '' : 's'}</span>}
+              <span className="pill ok">✓ {pvd.acts.done} cumprida{pvd.acts.done === 1 ? '' : 's'}</span>
+              <span className="pill warn">◐ {pvd.acts.part} parcia{pvd.acts.part === 1 ? 'l' : 'is'}</span>
+              <span className="pill bad">✗ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
+              {pvd.acts.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>? {pvd.acts.pending} não lançada{pvd.acts.pending === 1 ? '' : 's'}</span>}
             </div>
-            {pvd.days.pending > 0 && (
+            {pvd.acts.pending > 0 && (
               <div className="sub" style={{ marginTop: 8 }}>
                 Inclui {fmtHours(pvd.pendingPlanned)} planejadas em dias ainda não lançados (contam como 0 até você lançar).
               </div>
             )}
-            {pvd.days.pending > 0 && onPickDate && (
+            {pvd.acts.pending > 0 && onPickDate && (
               <button className="link" style={{ marginTop: 10, fontSize: 13 }} onClick={() => onPickDate(pvd.pendingDates[0])}>
                 Lançar dias pendentes (a partir de {pvd.pendingDates[0].slice(8)}/{pvd.pendingDates[0].slice(5, 7)}) ›
               </button>

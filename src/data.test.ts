@@ -119,7 +119,7 @@ describe('falta zera o planejado (mantendo a justificativa)', () => {
     expect(dayState(d, '2026-10-05', today)).toMatchObject({ state: 'miss', planned: 0, absentMin: 2 * H, logged: true })
     const r = planVsDone(d, '2026-10', today)
     expect(r.planned).toBe(3 * H) // até hoje: dia 6 (dia 7 = hoje, ainda não lançado)
-    expect(r.days.miss).toBe(1)
+    expect(r.acts.miss).toBe(1)
   })
   it('dia passado não lançado continua contando o plano (pendente, não é falta)', () => {
     const d = data({ plan: [p('a', '2026-10-05', 2)] })
@@ -128,5 +128,18 @@ describe('falta zera o planejado (mantendo a justificativa)', () => {
   it('histórico das faltas com o motivo', () => {
     const d = data({ plan, notes, entries })
     expect(absencesOf(d)).toEqual([{ date: '2026-10-05', planned: 2 * H, reason: 'Faltei · Saúde', joint: false }])
+  })
+})
+
+describe('contagem por atividade planejada', () => {
+  it('cumprida, parcial e falta contam cada atividade do dia', () => {
+    const p = (id: string, mod: string, h: number, g?: string): DayItem => ({ id, user_id: 'u', date: '2026-10-05', modality_id: mod, minutes: h * H, group_id: g })
+    const e = (id: string, mod: string, h: number): DayItem => ({ id, user_id: 'u', date: '2026-10-05', modality_id: mod, minutes: h * H })
+    const d = data({
+      plan: [p('a', 'casa', 2), p('b', 'tpl', 2), p('c', 'carta', 1), { ...p('x', 'casa', 1.5), date: '2026-10-06' }],
+      entries: [e('1', 'casa', 2), e('2', 'tpl', 1.5)],
+    })
+    const r = planVsDone(d, '2026-10', today)
+    expect(r.acts).toEqual({ done: 1, part: 1, miss: 1, pending: 1 }) // dia 5: casa ✓, tpl ◐, carta ✗; dia 6 não lançado
   })
 })

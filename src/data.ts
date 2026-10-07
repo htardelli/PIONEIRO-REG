@@ -219,7 +219,7 @@ export interface PlanVsDone {
   planned: number // minutos planejados até hoje
   done: number // minutos realizados até hoje
   pct: number | null // cumprimento (realizado / planejado)
-  days: { done: number; part: number; miss: number; pending: number }
+  acts: { done: number; part: number; miss: number; pending: number } // contagem por ATIVIDADE planejada
   pendingDates: string[]
   pendingPlanned: number // minutos planejados nos dias ainda não lançados
 }
@@ -232,17 +232,23 @@ export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone 
   const todayIso = isoDate(today)
   const dates = new Set<string>()
   for (const x of [...d.plan, ...d.entries]) if (x.date.startsWith(month) && x.date <= todayIso) dates.add(x.date)
-  const r: PlanVsDone = { planned: 0, done: 0, pct: null, days: { done: 0, part: 0, miss: 0, pending: 0 }, pendingDates: [], pendingPlanned: 0 }
+  const r: PlanVsDone = { planned: 0, done: 0, pct: null, acts: { done: 0, part: 0, miss: 0, pending: 0 }, pendingDates: [], pendingPlanned: 0 }
   for (const date of [...dates].sort()) {
     const st = dayState(d, date, today)
     if (date === todayIso && !st.logged) continue
     r.planned += st.planned
     r.done += st.done
-    if (st.state === 'done') r.days.done++
-    else if (st.state === 'part') r.days.part++
-    else if (st.state === 'miss') {
-      if (st.logged) r.days.miss++
-      else { r.days.pending++; r.pendingDates.push(date); r.pendingPlanned += st.planned }
+    const dayPlan = d.plan.filter((p) => p.date === date)
+    if (!st.logged) { // dia planejado ainda não lançado
+      if (dayPlan.length) { r.acts.pending += dayPlan.length; r.pendingDates.push(date); r.pendingPlanned += st.planned }
+      continue
+    }
+    const off = cancelledPlan(d)
+    for (const row of pairDay(dayPlan, d.entries.filter((e) => e.date === date))) {
+      if (!row.plan) continue // atividade fora do plano não entra na contagem
+      if (off.has(row.plan.id) || !row.done || row.done.absent || row.done.minutes === 0) r.acts.miss++
+      else if (row.done.minutes >= row.plan.minutes) r.acts.done++
+      else r.acts.part++
     }
   }
   r.pct = r.planned > 0 ? r.done / r.planned : null
