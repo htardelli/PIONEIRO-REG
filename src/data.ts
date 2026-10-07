@@ -148,3 +148,37 @@ export function byModality(d: YearData, items: DayItem[]) {
     .filter((x) => x.minutes > 0)
     .sort((a, b) => b.minutes - a.minutes)
 }
+
+export interface PlanVsDone {
+  planned: number // minutos planejados até hoje
+  done: number // minutos realizados até hoje
+  pct: number | null // cumprimento (realizado / planejado)
+  days: { done: number; part: number; miss: number; pending: number }
+  pendingDates: string[]
+  pendingPlanned: number // minutos planejados nos dias ainda não lançados
+}
+
+/**
+ * Realizado × planejado no mês, até hoje. O dia de hoje só entra depois de lançado
+ * (para não contar como falta um dia que ainda está em andamento).
+ */
+export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone {
+  const todayIso = isoDate(today)
+  const dates = new Set<string>()
+  for (const x of [...d.plan, ...d.entries]) if (x.date.startsWith(month) && x.date <= todayIso) dates.add(x.date)
+  const r: PlanVsDone = { planned: 0, done: 0, pct: null, days: { done: 0, part: 0, miss: 0, pending: 0 }, pendingDates: [], pendingPlanned: 0 }
+  for (const date of [...dates].sort()) {
+    const st = dayState(d, date, today)
+    if (date === todayIso && !st.logged) continue
+    r.planned += st.planned
+    r.done += st.done
+    if (st.state === 'done') r.days.done++
+    else if (st.state === 'part') r.days.part++
+    else if (st.state === 'miss') {
+      if (st.logged) r.days.miss++
+      else { r.days.pending++; r.pendingDates.push(date); r.pendingPlanned += st.planned }
+    }
+  }
+  r.pct = r.planned > 0 ? r.done / r.planned : null
+  return r
+}
