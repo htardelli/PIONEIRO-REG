@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
-import { absencesOf, byModality, monthStats, yearStats, type YearData } from '../data'
+import { absencesOf, byModality, closedMonthPace, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthNav, Stepper } from '../ui'
 
 export function Relatorio({ data, today, month, setMonth, reload, toast, name }: {
@@ -14,6 +14,8 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
   const mods = byModality(data, data.entries.filter((e) => e.date.startsWith(month)))
   const credits = data.credits.filter((c) => c.month === month)
   const faltas = absencesOf(data)
+  const pace = closedMonthPace(data, month, today)
+  const behind = !!pace && pace.cum < pace.ideal
   const [adding, setAdding] = useState(false)
   const [cType, setCType] = useState(CREDIT_TYPES[0])
   const [cMin, setCMin] = useState(240)
@@ -143,8 +145,13 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
         <div className="card">
           <div className="card-head">
             <h3>Justificativa</h3>
-            {ys.level !== 'ok' && <span className={`pill ${ys.level}`}>{ys.level === 'bad' ? 'abaixo de 560 h' : 'abaixo de 600 h'}</span>}
+            {behind && <span className="pill bad">abaixo do ritmo</span>}
           </div>
+          {behind && pace && (
+            <div className="alert" style={{ marginBottom: 10 }}>
+              Mês fechado abaixo do ritmo ideal: acumulado {fmtH(pace.cum)} × ideal {fmtH(pace.ideal)} (faltaram {fmtH(pace.ideal - pace.cum)}). Registre a justificativa.
+            </div>
+          )}
           <textarea className="input" style={{ minHeight: 80 }} placeholder="Registro interno: o que impactou as horas neste mês?" value={just}
             onChange={(e) => setJust(e.target.value)} onBlur={() => just !== ms.justification && upsertRecord({ justification: just }).then(() => toast('Justificativa salva'))} />
         </div>

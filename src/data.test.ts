@@ -143,3 +143,16 @@ describe('contagem por atividade planejada', () => {
     expect(r.acts).toEqual({ done: 1, part: 1, miss: 1, pending: 1 }) // dia 5: casa ✓, tpl ◐, carta ✗; dia 6 não lançado
   })
 })
+
+import { closedMonthPace } from './data'
+
+describe('alerta de ritmo só no mês fechado', () => {
+  it('mês atual não alerta; mês fechado compara o acumulado com o ritmo ideal no último dia', () => {
+    const d = data({ entries: [item('2026-09-10', 40)] })
+    expect(closedMonthPace(d, '2026-10', today)).toBeNull()
+    const p = closedMonthPace(d, '2026-09', today)!
+    expect(p.cum).toBe(40 * H)
+    expect(p.ideal).toBeCloseTo((36000 * 30) / 365) // 30 de 365 dias de 600 h ≈ 49:19
+    expect(p.cum < p.ideal).toBe(true)
+  })
+})

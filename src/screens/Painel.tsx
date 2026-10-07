@@ -16,7 +16,6 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const toggleMonths = () => setMonthsOpen((o) => !o)
   const diff = pvd.done - pvd.planned
   const actsTotal = pvd.acts.done + pvd.acts.part + pvd.acts.miss + pvd.acts.pending // atividades planejadas até hoje
-  const needJustification = ys.level !== 'ok' && cur && !cur.justification
 
   return (
     <>
@@ -116,11 +115,6 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
 
       {ys.freeMonths === 0 && ys.committed < ys.goal && (
         <div className="alert">⚠ Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} — menos que a meta anual de {fmtHours(ys.goal)}. Ajuste no Plano.</div>
-      )}
-      {needJustification && onLaunch && (
-        <div className="alert">
-          {ys.level === 'bad' ? 'Abaixo do ritmo de 560 h.' : 'Abaixo do ritmo de 600 h.'} Registre uma justificativa no Relatório do mês.
-        </div>
       )}
 
       {onLaunch && (

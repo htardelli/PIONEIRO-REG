@@ -331,3 +331,15 @@ export function absencesOf(d: YearData): AbsenceRow[] {
   }
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }
+
+/**
+ * Ritmo no fechamento do mês: acumulado do ano até o fim do mês × ritmo ideal (meta anual) nesse dia.
+ * null enquanto o mês não fechou.
+ */
+export function closedMonthPace(d: YearData, month: string, today: Date): { cum: number; ideal: number } | null {
+  if (month >= monthKey(today)) return null
+  const [y, m] = month.split('-').map(Number)
+  const ys = yearStats(d, today)
+  const cum = ys.months.filter((x) => x.month <= month).reduce((a, x) => a + x.counted, 0)
+  return { cum, ideal: idealPace(ys.goal, d.sy, new Date(y, m, 0)) }
+}
