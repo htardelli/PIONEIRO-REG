@@ -1,7 +1,7 @@
 name: Publicar no GitHub Pages
 
 # A cada push em main:
-#   1) aplica supabase/schema.sql no banco (idempotente, numa única transação)
+#   1) se supabase/ mudou (ou execução manual), aplica schema.sql no banco (idempotente, numa única transação)
 #   2) testa, compila e grava o app no branch gh-pages (servido pelo GitHub Pages)
 # Se a etapa do banco falhar, o app novo NÃO é publicado.
 on:
@@ -22,7 +22,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verificar se houve mudança no banco
+        id: mudou
+        run: |
+          before="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" != "push" ] || [ -z "$before" ] || [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            echo "sim=1" >> "$GITHUB_OUTPUT"
+          elif git diff --quiet "$before" "${{ github.sha }}" -- supabase/; then
+            echo "Nenhuma mudança em supabase/ — banco não precisa ser atualizado."
+            echo "sim=0" >> "$GITHUB_OUTPUT"
+          else
+            echo "sim=1" >> "$GITHUB_OUTPUT"
+          fi
       - name: Aplicar supabase/schema.sql
+        if: steps.mudou.outputs.sim == '1'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |

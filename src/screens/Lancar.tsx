@@ -20,6 +20,9 @@ function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
 
 const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
 
+const ABSENCE_PREFIX = 'Faltei'
+const ABSENCE_REASONS = ['Saúde', 'Trabalho', 'Família', 'Clima', 'Viagem', 'Outro']
+
 export function Lancar({ data, today, date, setDate, reload, toast }: {
   data: YearData; today: Date; date: string; setDate: (d: string) => void; reload: () => Promise<void>; toast: (m: string) => void
 }) {
@@ -31,9 +34,13 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const [absent, setAbsent] = useState(false)
+  const [reason, setReason] = useState('')
+  const [absText, setAbsText] = useState('')
 
   useEffect(() => {
     setEditing(false)
+    setAbsent(false); setReason(''); setAbsText('')
     setBlocks(toBlocks(done.length ? done : plan))
     setText(note?.note ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,6 +71,9 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
     }
   }
 
+  const isAbsence = logged && done.length === 0 && (note?.note ?? '').startsWith(ABSENCE_PREFIX)
+  const absenceNote = () => [ABSENCE_PREFIX + (reason ? ` (${reason.toLowerCase()})` : ''), absText.trim()].filter(Boolean).join(': ')
+
   const nameOf = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
   const errors = blockErrors(blocks, nameOf)
   const hasErrors = Object.keys(errors).length > 0
@@ -90,11 +100,13 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
           <div className="card">
             <div className="card-head">
               <h3>Lançado · {fmtH(doneTotal)}</h3>
-              <span className={`pill ${doneTotal >= planTotal ? 'ok' : 'warn'}`}>{planTotal ? `plano ${fmtH(planTotal)}` : 'sem plano'}</span>
+              {isAbsence
+                ? <span className="pill bad">✗ Faltei</span>
+                : <span className={`pill ${doneTotal >= planTotal ? 'ok' : 'warn'}`}>{planTotal ? `plano ${fmtH(planTotal)}` : 'sem plano'}</span>}
             </div>
-            {done.length === 0 && <div className="empty">Nenhuma hora neste dia.</div>}
+            {done.length === 0 && !isAbsence && <div className="empty">Nenhuma hora neste dia.</div>}
             {done.map((e) => <ItemRow key={e.id} item={e} data={data} />)}
-            {note?.note && <div className="sub" style={{ marginTop: 8 }}>Obs.: {note.note}</div>}
+            {note?.note && <div className="sub" style={{ marginTop: 8, fontSize: 14 }}>{isAbsence ? note.note : `Obs.: ${note.note}`}</div>}
             <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => setEditing(true)}>Editar lançamento</button>
           </div>
         )}
@@ -105,11 +117,29 @@ export function Lancar({ data, today, date, setDate, reload, toast }: {
               <h3>Planejado para o dia · {fmtH(planTotal)}</h3>
               {plan.map((p) => <ItemRow key={p.id} item={p} data={data} />)}
             </div>
-            {!editing && (
+            {!editing && !absent && (
               <>
                 <button className="btn primary" disabled={busy} onClick={() => save(toBlocks(plan), '')}>✓ Cumpri o planejado</button>
                 <button className="btn outline" onClick={() => { setBlocks(toBlocks(plan)); setEditing(true) }}>Fiz diferente ▾</button>
+                <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>
               </>
+            )}
+            {absent && (
+              <div className="card form">
+                <h3 style={{ margin: 0 }}>Faltei · motivo</h3>
+                <div className="chips">
+                  {ABSENCE_REASONS.map((r) => (
+                    <button key={r} className={`chip ${reason === r ? 'on' : ''}`} onClick={() => setReason(reason === r ? '' : r)}>{r}</button>
+                  ))}
+                </div>
+                <input className="input" placeholder="Detalhe (opcional)" value={absText} onChange={(e) => setAbsText(e.target.value)} />
+                <div className="sub">O dia fica como não realizado (0 h). Você pode editar depois.</div>
+                <div className="row" style={{ gap: 10 }}>
+                  <button className="btn ghost small" onClick={() => setAbsent(false)}>Cancelar</button>
+                  <button className="btn small" style={{ background: 'var(--bad)', color: '#fff' }} disabled={busy}
+                    onClick={() => save([], absenceNote())}>Confirmar falta</button>
+                </div>
+              </div>
             )}
           </>
         )}
