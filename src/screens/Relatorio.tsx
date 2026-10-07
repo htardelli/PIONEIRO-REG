@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
-import { byModality, monthStats, yearStats, type YearData } from '../data'
+import { absencesOf, byModality, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthNav, Stepper } from '../ui'
 
 export function Relatorio({ data, today, month, setMonth, reload, toast, name }: {
@@ -13,6 +13,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
   const ys = yearStats(data, today)
   const mods = byModality(data, data.entries.filter((e) => e.date.startsWith(month)))
   const credits = data.credits.filter((c) => c.month === month)
+  const faltas = absencesOf(data)
   const [adding, setAdding] = useState(false)
   const [cType, setCType] = useState(CREDIT_TYPES[0])
   const [cMin, setCMin] = useState(240)
@@ -126,6 +127,17 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
               <div className="legend" style={{ fontSize: 12 }}>{mods.map((x) => <span key={x.modality?.id}><i style={{ background: x.modality?.color }} />{x.modality?.name} {fmtHours(x.minutes)}</span>)}</div>
             </>
           )}
+        </div>
+
+        <div className="card">
+          <div className="card-head"><h3>Faltas do ano</h3>{faltas.length > 0 && <span className="pill bad">{faltas.length} · {fmtH(faltas.reduce((a, f) => a + f.planned, 0))} zeradas</span>}</div>
+          {faltas.length === 0 ? <div className="empty">Nenhuma falta lançada neste ano de serviço.</div> : faltas.map((f) => (
+            <div className="mod" key={f.date}>
+              <span className="n">{f.date.slice(8)}/{f.date.slice(5, 7)}{f.joint && ' 👥'}<span className="sub"> · {f.reason || 'sem justificativa'}</span></span>
+              <b style={{ color: 'var(--bad)' }}><s>{fmtH(f.planned)}</s></b>
+            </div>
+          ))}
+          <div className="sub" style={{ marginTop: 8 }}>As horas planejadas dos dias de falta não contam no planejamento; a justificativa fica guardada aqui.</div>
         </div>
 
         <div className="card">

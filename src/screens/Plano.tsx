@@ -299,7 +299,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
                   {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
-                  {shown > 0 && <em>{fmtHours(shown)}</em>}
+                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.absentMin > 0 && st.done === 0 && <em className="off">✗</em>}
                 </button>
               )
             })}

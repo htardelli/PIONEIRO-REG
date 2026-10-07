@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabel, mondayIndex, serviceYearMonths, WEEK_HEAD, WEEKDAY } from '../domain'
-import { dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
+import { cancelledPlan, dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
 import { CalLegend, Header, MonthNav } from '../ui'
 import { byStart } from './Lancar'
 
@@ -55,7 +55,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
                   className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${ev ? 'evday' : ''}`}>
                   {i + 1}
                   {(hol || ev) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span>}
-                  {st.done > 0 && <em>{fmtH(st.done)}</em>}
+                  {st.done > 0 ? <em>{fmtH(st.done)}</em> : st.absentMin > 0 && <em className="off">✗</em>}
                 </button>
               )
             })}
@@ -81,11 +81,12 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
   const d = new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8)))
   const future = date > isoDate(today)
   const rows = pairDay(plan, entries)
+  const off = cancelledPlan(data)
   return (
     <div className="card">
       <div className="card-head">
         <h3>{WEEKDAY[d.getDay()]}, {date.slice(8)}/{date.slice(5, 7)}</h3>
-        {!future && (st.done > 0 || st.planned > 0) && (
+        {!future && st.absentMin > 0 && st.done === 0 ? <span className="pill bad">✗ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
           <span className={`pill ${st.planned === 0 || st.done >= st.planned ? 'ok' : st.done > 0 ? 'warn' : 'bad'}`}>
             {st.planned > 0 ? `${fmtH(st.done)} de ${fmtH(st.planned)}` : fmtH(st.done)}
           </span>
@@ -108,7 +109,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
               <div className="drow" key={i}>
                 <span className="n"><i className="dot" style={{ background: m?.color }} />
                   <span>{m?.name}{it.group_id && ' 👥'}{t && <span className="sub"><br />{t}</span>}</span></span>
-                <span className="pl">{r.plan ? fmtH(r.plan.minutes) : '—'}</span>
+                <span className="pl">{!r.plan ? '—' : off.has(r.plan.id) ? <s title="Falta: não conta no planejado">{fmtH(r.plan.minutes)}</s> : fmtH(r.plan.minutes)}</span>
                 <span className="dn">{r.done?.absent ? <span className="pill bad">✗ falta</span> : r.done ? fmtH(r.done.minutes) : future ? '' : <span className="miss">—</span>}</span>
               </div>
             )
@@ -116,9 +117,10 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
           <div className="drow tot"><span>Total</span><span className="pl">{st.planned ? fmtH(st.planned) : '—'}</span><span className="dn">{future ? '' : fmtH(st.done)}</span></div>
         </>
       ) : <div className="empty">{future ? 'Nada planejado.' : st.logged ? 'Nenhuma hora neste dia.' : 'Nada planejado nem lançado.'}</div>}
-      {note && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>Obs.: {note}</div>}
+      {note && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{st.absentMin > 0 && st.done === 0 ? 'Justificativa' : 'Obs.'}: {note}</div>}
+      {st.absentMin > 0 && <div className="sub" style={{ marginTop: 4 }}>{fmtH(st.absentMin)} planejadas foram zeradas pela falta (não contam no planejado).</div>}
       {entries.some((e) => e.absent && e.note) && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{entries.find((e) => e.absent && e.note)!.note}</div>}
-      {!future && <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => onEdit(date)}>{entries.length ? 'Editar lançamento' : 'Lançar este dia'}</button>}
+      {!future && <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => onEdit(date)}>{entries.length || st.logged ? 'Editar lançamento' : 'Lançar este dia'}</button>}
     </div>
   )
 }

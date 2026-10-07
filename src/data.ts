@@ -65,6 +65,37 @@ export function useYear(userId: string | null, sy: number) {
 // ---------- Estatísticas ----------
 const sum = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
 
+/**
+ * Atividades planejadas que viraram FALTA: contam 00:00 no planejamento (a justificativa fica no histórico).
+ * - dia lançado sem nenhuma hora (botão "Faltei"): todo o plano do dia;
+ * - falta por atividade (conjunta): só a atividade faltada.
+ */
+const cancelCache = new WeakMap<YearData, Set<string>>()
+export function cancelledPlan(d: YearData): Set<string> {
+  const hit = cancelCache.get(d)
+  if (hit) return hit
+  const done = new Map<string, number>()
+  const absent = new Set<string>()
+  for (const e of d.entries) {
+    if (e.absent) { if (e.group_id) absent.add(`${e.date}|${e.group_id}`) }
+    else done.set(e.date, (done.get(e.date) ?? 0) + e.minutes)
+  }
+  const noted = new Set(d.notes.map((n) => n.date))
+  const out = new Set<string>()
+  for (const p of d.plan) {
+    const dayOff = noted.has(p.date) && !(done.get(p.date) ?? 0)
+    if (dayOff || (p.group_id && absent.has(`${p.date}|${p.group_id}`))) out.add(p.id)
+  }
+  cancelCache.set(d, out)
+  return out
+}
+
+/** Minutos planejados que ainda valem (sem as faltas). */
+export function effectivePlan(d: YearData, items: DayItem[]): number {
+  const off = cancelledPlan(d)
+  return items.reduce((a, p) => a + (off.has(p.id) ? 0 : p.minutes), 0)
+}
+
 export interface MonthStats {
   month: string
   goal: number
@@ -90,7 +121,7 @@ export function monthStats(d: YearData, month: string, today: Date): MonthStats 
   const credit = sum(d.credits.filter((c) => c.month === month))
   const { counted, creditUsed, creditLost } = countedMinutes(ministry, credit)
   const goal = rec?.goal_min ?? 0 // 0 = mês sem meta cadastrada
-  const planned = sum(d.plan.filter((p) => p.date.startsWith(month)))
+  const planned = effectivePlan(d, d.plan.filter((p) => p.date.startsWith(month))) // faltas zeram o planejado
   const target = planned > 0 ? planned : goal // o plano sobrepõe a meta
   return {
     month, goal, ministry, credit, creditUsed, creditLost, counted, planned, target,
@@ -158,7 +189,9 @@ export type DayState = 'done' | 'part' | 'miss' | 'plan' | 'none'
 export function dayState(d: YearData, date: string, today: Date) {
   const dayPlan = d.plan.filter((p) => p.date === date)
   const dayEntries = d.entries.filter((e) => e.date === date)
-  const planned = sum(dayPlan)
+  const rawPlanned = sum(dayPlan)
+  const planned = effectivePlan(d, dayPlan) // faltas zeram o planejado
+  const absentMin = rawPlanned - planned
   const done = sum(dayEntries)
   // Faltas por atividade (conjunta): o dia só conta como lançado se TODAS as atividades planejadas foram cobertas
   const absentGroups = new Set(dayEntries.filter((e) => e.absent && e.group_id).map((e) => e.group_id))
@@ -168,9 +201,9 @@ export function dayState(d: YearData, date: string, today: Date) {
   let state: DayState = 'none'
   if (done > 0 && done >= planned) state = 'done'
   else if (done > 0) state = 'part'
-  else if (planned > 0 && (past || logged)) state = 'miss'
-  else if (planned > 0) state = 'plan'
-  return { planned, done, logged, state }
+  else if (rawPlanned > 0 && (past || logged)) state = 'miss'
+  else if (rawPlanned > 0) state = 'plan'
+  return { planned, rawPlanned, absentMin, done, logged, state }
 }
 
 export function byModality(d: YearData, items: DayItem[]) {
@@ -272,4 +305,23 @@ export function pairDay(plan: DayItem[], entries: DayItem[]): DayRow[] {
   for (const p of left) rows.push({ plan: p })
   const start = (r: DayRow) => (r.done?.start_time ?? r.plan?.start_time ?? '')
   return rows.sort((a, b) => start(a).localeCompare(start(b)))
+}
+
+/** Faltas do ano (histórico das justificativas): dia, plano zerado e motivo. */
+export interface AbsenceRow { date: string; planned: number; reason: string; joint: boolean }
+export function absencesOf(d: YearData): AbsenceRow[] {
+  const off = cancelledPlan(d)
+  const byDate = new Map<string, AbsenceRow>()
+  for (const p of d.plan) {
+    if (!off.has(p.id)) continue
+    const r = byDate.get(p.date) ?? { date: p.date, planned: 0, reason: '', joint: false }
+    r.planned += p.minutes
+    byDate.set(p.date, r)
+  }
+  for (const r of byDate.values()) {
+    const ab = d.entries.find((e) => e.date === r.date && e.absent && e.note)
+    r.joint = !!ab && !d.notes.some((n) => n.date === r.date && n.note)
+    r.reason = d.notes.find((n) => n.date === r.date)?.note || ab?.note || ''
+  }
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }

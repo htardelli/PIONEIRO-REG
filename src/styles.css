@@ -206,3 +206,5 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .drow.head { padding: 2px 0 6px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
 .drow.head span:not(:first-child) { text-align: right; }
 .drow.tot { border-bottom: 0; font-weight: 800; }
+.cal .d em.off { color: var(--bad); }
+.drow .pl s { color: var(--bad); opacity: .7; }
