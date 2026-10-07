@@ -209,3 +209,6 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .cal .d em.off { color: var(--bad); }
 .drow .pl s { color: var(--bad); opacity: .7; }
 .bar .gdot { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff; transform: translate(-50%, -50%); box-shadow: 0 0 0 1px rgba(0,0,0,.08); }
+.card-head.expander { width: 100%; text-align: left; font: inherit; color: inherit; background: none; padding: 0; cursor: pointer; }
+.chev { display: inline-block; font-size: 16px; color: var(--brand); transition: transform .2s; transform: rotate(-90deg); margin-left: 4px; }
+.chev.open { transform: rotate(0deg); }

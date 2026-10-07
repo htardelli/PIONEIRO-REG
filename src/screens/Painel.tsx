@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, WEEKDAY_SHORT } from '../domain'
 import { planVsDone, yearStats, type YearData } from '../data'
 import { DiffPill, GoalBar, MonthGrid, Ring } from '../ui'
@@ -11,6 +12,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
   const curLeft = cur ? Math.max(0, cur.target - cur.counted) : 0
   const pvd = planVsDone(data, monthKey(today), today)
+  const [monthsOpen, setMonthsOpen] = useState(() => { try { return localStorage.getItem('painel-meses') !== 'fechado' } catch { return true } })
+  const toggleMonths = () => setMonthsOpen((o) => { try { localStorage.setItem('painel-meses', o ? 'fechado' : 'aberto') } catch { /* sem armazenamento */ } return !o })
   const diff = pvd.done - pvd.planned
   const actsTotal = pvd.acts.done + pvd.acts.part + pvd.acts.miss + pvd.acts.pending // atividades planejadas até hoje
   const needJustification = ys.level !== 'ok' && cur && !cur.justification
@@ -18,8 +21,11 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   return (
     <>
       <div className="card" style={{ padding: 12 }}>
-        <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado / alvo</span></div>
-        <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />
+        <button className="card-head expander" onClick={toggleMonths} aria-expanded={monthsOpen}>
+          <h3>Meses do ano de serviço</h3>
+          <span className="sub" style={{ fontWeight: 700 }}>{monthsOpen && 'realizado / alvo '}<span className={`chev ${monthsOpen ? 'open' : ''}`}>▾</span></span>
+        </button>
+        {monthsOpen && <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />}
         <div className="ytotal">
           <div className="ytop">
             <span>Planejamento anual</span>
