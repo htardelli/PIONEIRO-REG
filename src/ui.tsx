@@ -1,0 +1,179 @@
+import { useEffect, useState, type ReactNode } from 'react'
+import { fmtH, fmtHours, MONTH_ABBR } from './domain'
+import type { MonthStats } from './data'
+import type { Modality } from './types'
+
+export type Tab = 'painel' | 'lancar' | 'plano' | 'relatorio' | 'casal' | 'config'
+
+const ICONS: Record<Exclude<Tab, 'config'>, ReactNode> = {
+  painel: <path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z" />,
+  lancar: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>,
+  plano: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
+  relatorio: <><path d="M6 3h9l4 4v14H6z" /><path d="M9 12h7M9 16h7" /></>,
+  casal: <><circle cx="9" cy="8" r="3.5" /><circle cx="17" cy="9" r="2.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5" /></>,
+}
+const LABELS = { painel: 'Painel', lancar: 'Lançar', plano: 'Plano', relatorio: 'Relatório', casal: 'Casal' }
+
+export function TabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+  return (
+    <nav className="tabbar">
+      <div>
+        {(Object.keys(LABELS) as (keyof typeof LABELS)[]).map((t) => (
+          <button key={t} className={tab === t ? 'on' : ''} onClick={() => onTab(t)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{ICONS[t]}</svg>
+            {LABELS[t]}
+          </button>
+        ))}
+      </div>
+    </nav>
+  )
+}
+
+export function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean)
+  return ((p[0]?.[0] ?? '?') + (p.length > 1 ? p[p.length - 1][0] : (p[0]?.[1] ?? ''))).toUpperCase()
+}
+
+export function Avatar({ name, color, onClick }: { name: string; color?: string; onClick?: () => void }) {
+  return (
+    <button className="avatar" style={{ background: color }} onClick={onClick} aria-label="Configurações">
+      {initials(name)}
+    </button>
+  )
+}
+
+export function Header({ kicker, title, right }: { kicker: ReactNode; title: ReactNode; right?: ReactNode }) {
+  return (
+    <header className="top">
+      <div className="kicker">{kicker}</div>
+      <div className="title"><span className="nav-arrows">{title}</span>{right}</div>
+    </header>
+  )
+}
+
+export function MonthNav({ label, onPrev, onNext, prevDisabled, nextDisabled }: {
+  label: string; onPrev: () => void; onNext: () => void; prevDisabled?: boolean; nextDisabled?: boolean
+}) {
+  return (
+    <>
+      <button className="arrow" onClick={onPrev} disabled={prevDisabled} aria-label="Anterior">‹</button>
+      {label}
+      <button className="arrow" onClick={onNext} disabled={nextDisabled} aria-label="Próximo">›</button>
+    </>
+  )
+}
+
+export function Stepper({ value, onChange, step = 15 }: { value: number; onChange: (v: number) => void; step?: number }) {
+  return (
+    <div className="step">
+      <button onClick={() => onChange(Math.max(0, value - step))} aria-label="Diminuir">−</button>
+      <span>{fmtH(value)}</span>
+      <button onClick={() => onChange(value + step)} aria-label="Aumentar">+</button>
+    </div>
+  )
+}
+
+export function Ring({ value, max, label, sub, color = '#2E75B6', size = 104 }: {
+  value: number; max: number; label: string; sub: string; color?: string; size?: number
+}) {
+  const c = 2 * Math.PI * 50
+  const frac = max > 0 ? Math.min(1, value / max) : 0
+  return (
+    <svg width={size} height={size} viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#E3E8EF" strokeWidth="12" />
+      {frac > 0 && (
+        <circle cx="60" cy="60" r="50" fill="none" stroke={color} strokeWidth="12" strokeLinecap="round"
+          strokeDasharray={`${frac * c} ${c}`} transform="rotate(-90 60 60)" />
+      )}
+      <text x="60" y="58" textAnchor="middle" fontSize="26" fontWeight="800" fill="#0F1B2D">{label}</text>
+      <text x="60" y="76" textAnchor="middle" fontSize="11" fontWeight="600" fill="#66748A">{sub}</text>
+    </svg>
+  )
+}
+
+export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: number; minGoal: number; color?: string }) {
+  const scale = Math.max(goal, total) || 1
+  return (
+    <div style={{ margin: '12px 4px 20px' }}>
+      <div className="bar">
+        <i style={{ width: `${(total / scale) * 100}%`, background: color }} />
+        <div className="mk" style={{ left: `${(minGoal / scale) * 100}%`, background: 'var(--warn)' }}>
+          <span style={{ right: 4 }}>{fmtHours(minGoal)}</span>
+        </div>
+        <div className="mk" style={{ left: `calc(${(goal / scale) * 100}% - 2px)` }}>
+          <span style={{ right: -2 }}>{fmtHours(goal)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function MonthGrid({ months, onPick }: { months: MonthStats[]; onPick?: (m: string) => void }) {
+  return (
+    <>
+      <div className="months">
+        {months.map((m) => (
+          <button key={m.month} className={`m s-${m.status}`} onClick={() => onPick?.(m.month)}>
+            <div className="t">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</div>
+            <div className="r">{m.status === 'future' ? '–' : fmtHours(m.counted)}</div>
+            <div className="g">meta {fmtHours(m.goal)}</div>
+          </button>
+        ))}
+      </div>
+      <div className="legend">
+        <span><i style={{ background: 'var(--ok)' }} />Concluído</span>
+        <span><i style={{ background: 'var(--bad)' }} />Abaixo da meta</span>
+        <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
+        <span><i style={{ background: 'var(--future)' }} />A vir</span>
+      </div>
+    </>
+  )
+}
+
+/** Editor de minutos por modalidade (usado no lançamento e no planejamento). */
+export function ItemsEditor({ modalities, value, onChange }: {
+  modalities: Modality[]; value: Record<string, number>; onChange: (v: Record<string, number>) => void
+}) {
+  const shown = Object.keys(value)
+  const available = modalities.filter((m) => m.active && !shown.includes(m.id))
+  return (
+    <div>
+      {shown.length === 0 && <div className="empty">Nenhuma modalidade. Adicione abaixo.</div>}
+      {shown.map((id) => {
+        const m = modalities.find((x) => x.id === id)
+        return (
+          <div className="mod" key={id}>
+            <i className="dot" style={{ background: m?.color ?? '#999' }} />
+            <span className="n">{m?.name ?? '—'}</span>
+            <Stepper value={value[id]} onChange={(v) => onChange({ ...value, [id]: v })} />
+          </div>
+        )
+      })}
+      {available.length > 0 && (
+        <select className="input" style={{ marginTop: 10, color: 'var(--brand)', fontWeight: 700, fontSize: 15 }} value=""
+          onChange={(e) => e.target.value && onChange({ ...value, [e.target.value]: 60 })}>
+          <option value="">+ Adicionar modalidade</option>
+          {available.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      )}
+    </div>
+  )
+}
+
+export function useToast() {
+  const [msg, setMsg] = useState<string | null>(null)
+  useEffect(() => {
+    if (!msg) return
+    const t = setTimeout(() => setMsg(null), 2200)
+    return () => clearTimeout(t)
+  }, [msg])
+  return { show: setMsg, node: msg ? <div className="toast">{msg}</div> : null }
+}
+
+export function Loading({ error }: { error?: string | null }) {
+  return <div className="main">{error ? <div className="error">{error}</div> : <div className="empty">Carregando…</div>}</div>
+}
+
+export function DiffPill({ diff, level }: { diff: number; level: 'ok' | 'warn' | 'bad' }) {
+  return <span className={`pill ${level}`}>{diff >= 0 ? '▲ +' : '▼ −'}{fmtHours(Math.abs(diff))} h {diff >= 0 ? 'adiantado' : 'atrasado'}</span>
+}
