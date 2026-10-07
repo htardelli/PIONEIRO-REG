@@ -154,3 +154,77 @@ create policy profiles_update on public.profiles for update using (id = auth.uid
 alter table public.shares enable row level security;
 drop policy if exists shares_read on public.shares;
 create policy shares_read on public.shares for select using (owner = auth.uid() or viewer = auth.uid());
+
+-- ============ Administração (v0.4) ============
+alter table public.profiles add column if not exists is_admin boolean not null default false;
+alter table public.profiles add column if not exists must_change_password boolean not null default false;
+
+-- A primeira conta criada vira administradora, se ainda não houver nenhuma.
+update public.profiles set is_admin = true
+where id = (select id from auth.users order by created_at limit 1)
+  and not exists (select 1 from public.profiles where is_admin);
+
+-- Pelo app, ninguém altera o próprio papel de admin; a troca obrigatória de senha só pode ser desligada (true → false).
+create or replace function public.protect_profile_flags() returns trigger
+language plpgsql as $$
+begin
+  -- Só restringe chamadas feitas pelo app (papéis authenticated/anon); funções internas e migrações passam.
+  if current_user in ('authenticated', 'anon') then
+    if new.is_admin is distinct from old.is_admin then
+      raise exception 'Não é permitido alterar o papel de administrador.';
+    end if;
+    if new.must_change_password and not old.must_change_password then
+      raise exception 'Operação não permitida.';
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists protect_profile_flags on public.profiles;
+create trigger protect_profile_flags before update on public.profiles
+  for each row execute function public.protect_profile_flags();
+
+-- Admin cria uma conta com senha provisória (troca obrigatória no primeiro acesso).
+-- share_mine: o admin já compartilha os PRÓPRIOS dados com a nova conta (o inverso fica a critério da nova pessoa).
+create or replace function public.admin_create_user(p_email text, p_name text, p_password text, share_mine boolean default true)
+returns uuid
+language plpgsql security definer set search_path = public, extensions as $$
+declare
+  uid uuid := gen_random_uuid();
+  em text := lower(trim(p_email));
+begin
+  if not exists (select 1 from public.profiles where id = auth.uid() and is_admin) then
+    raise exception 'Somente administradores podem criar contas.';
+  end if;
+  if em !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'E-mail inválido.'; end if;
+  if length(coalesce(p_password, '')) < 8 then raise exception 'A senha provisória precisa ter pelo menos 8 caracteres.'; end if;
+  if exists (select 1 from auth.users where lower(email) = em) then raise exception 'Já existe uma conta com este e-mail.'; end if;
+
+  insert into auth.users (
+    instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+    raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+    confirmation_token, recovery_token, email_change_token_new, email_change
+  ) values (
+    '00000000-0000-0000-0000-000000000000', uid, 'authenticated', 'authenticated', em,
+    extensions.crypt(p_password, extensions.gen_salt('bf')), now(),
+    '{"provider":"email","providers":["email"]}'::jsonb,
+    jsonb_build_object('name', coalesce(nullif(trim(p_name), ''), split_part(em, '@', 1))),
+    now(), now(), '', '', '', ''
+  );
+
+  insert into auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+  values (gen_random_uuid(), uid::text, uid,
+          jsonb_build_object('sub', uid::text, 'email', em, 'email_verified', true),
+          'email', now(), now(), now());
+
+  -- o perfil é criado pelo gatilho handle_new_user; marca a troca obrigatória
+  update public.profiles set must_change_password = true where id = uid;
+
+  if share_mine then
+    insert into public.shares values (auth.uid(), uid) on conflict do nothing;
+  end if;
+  return uid;
+end $$;
+
+revoke all on function public.admin_create_user(text, text, text, boolean) from public, anon;
+grant execute on function public.admin_create_user(text, text, text, boolean) to authenticated;

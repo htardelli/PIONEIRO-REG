@@ -22,6 +22,7 @@ export interface Api {
   signIn(email: string, password: string): Promise<void>
   signUp(email: string, password: string, name: string): Promise<'ok' | 'confirm'>
   signOut(): Promise<void>
+  updatePassword(password: string): Promise<void>
   select<T>(table: Table, q?: Query): Promise<T[]>
   insert(table: Table, rows: Row[]): Promise<void>
   upsert(table: Table, rows: Row[], onConflict: string): Promise<void>
@@ -36,6 +37,7 @@ function translate(msg: string): string {
   if (/Email not confirmed/i.test(msg)) return 'Confirme seu e-mail pelo link que enviamos antes de entrar.'
   if (/User already registered/i.test(msg)) return 'Este e-mail já tem cadastro. Use "Entrar".'
   if (/Password should be at least/i.test(msg)) return 'A senha precisa ter pelo menos 6 caracteres.'
+  if (/should be different from the old password/i.test(msg)) return 'A nova senha precisa ser diferente da provisória.'
   if (/Failed to fetch|NetworkError/i.test(msg)) return 'Sem conexão com o servidor. Verifique a internet.'
   return msg
 }
@@ -77,6 +79,10 @@ function supabaseApi(): Api {
       check(error)
       return data.session ? 'ok' : 'confirm'
     },
+    async updatePassword(password) {
+      const { error } = await sb.auth.updateUser({ password })
+      check(error)
+    },
     async signOut() {
       await sb.auth.signOut()
     },
@@ -116,7 +122,7 @@ function supabaseApi(): Api {
 }
 
 // ---------- Local / demonstração ----------
-const LS_KEY = 'pioneiro-reg-demo-v3'
+const LS_KEY = 'pioneiro-reg-demo-v4'
 
 function localApi(): Api {
   type Db = Record<Table, Row[]>
@@ -149,6 +155,7 @@ function localApi(): Api {
     },
     async signIn() { logged = true; listeners.forEach((l) => l()) },
     async signUp() { logged = true; listeners.forEach((l) => l()); return 'ok' },
+    async updatePassword() { /* demonstração: nada a fazer */ },
     async signOut() {
       localStorage.removeItem(LS_KEY)
       db = buildDemoData(new Date()) as unknown as Db

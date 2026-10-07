@@ -11,6 +11,7 @@ import { Plano } from './screens/Plano'
 import { Relatorio } from './screens/Relatorio'
 import { Casal } from './screens/Casal'
 import { Config } from './screens/Config'
+import { ChangePassword } from './screens/ChangePassword'
 
 function getToday(): Date {
   // ?hoje=AAAA-MM-DD permite simular uma data (útil para testes)
@@ -69,6 +70,9 @@ function Main({ user }: { user: AuthUser }) {
   const d = me.data
 
   let body
+  if (d?.profile?.must_change_password) {
+    return <ChangePassword name={name} onDone={me.reload} />
+  }
   if (!d) body = <><Header kicker="" title="" /><Loading error={me.error} /></>
   else if (tab === 'painel') body = (
     <>

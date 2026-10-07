@@ -5,6 +5,8 @@ export interface Profile {
   color: string
   annual_goal_min: number
   min_goal_min: number
+  is_admin?: boolean
+  must_change_password?: boolean
 }
 
 export interface Modality {

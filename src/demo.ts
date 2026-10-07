@@ -13,7 +13,7 @@ export function buildDemoData(today: Date) {
   const id = () => `d${++seq}`
   const db = {
     profiles: [
-      { id: DEMO_ME, name: 'Você', email: 'voce@exemplo.com', color: '#2E75B6', annual_goal_min: 36000, min_goal_min: 33600 },
+      { id: DEMO_ME, name: 'Você', email: 'voce@exemplo.com', color: '#2E75B6', annual_goal_min: 36000, min_goal_min: 33600, is_admin: true },
       { id: DEMO_PARTNER, name: 'Cônjuge', email: 'conjuge@exemplo.com', color: '#D35D8C', annual_goal_min: 36000, min_goal_min: 33600 },
     ],
     shares: [{ owner: DEMO_ME, viewer: DEMO_PARTNER }, { owner: DEMO_PARTNER, viewer: DEMO_ME }],
