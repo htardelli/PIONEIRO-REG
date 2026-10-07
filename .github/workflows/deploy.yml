@@ -40,10 +40,20 @@ jobs:
         if: steps.mudou.outputs.sim == '1'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_REF: dlrcvcjqofxkdyujfzhy
           SUPABASE_POOLER_HOST: aws-1-ca-central-1.pooler.supabase.com
         run: |
+          # Preferência: segredo só com a senha (SUPABASE_DB_PASSWORD); o endereço é montado aqui.
+          if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::add-mask::$SUPABASE_DB_PASSWORD"
+            pw_enc=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1].strip(), safe=""))' "$SUPABASE_DB_PASSWORD")
+            echo "::add-mask::$pw_enc"
+            SUPABASE_DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:${pw_enc}@${SUPABASE_POOLER_HOST}:5432/postgres"
+            echo "Usando SUPABASE_DB_PASSWORD (endereço montado automaticamente)."
+          fi
           if [ -z "$SUPABASE_DB_URL" ]; then
-            echo "::warning::Segredo SUPABASE_DB_URL não configurado — atualização do banco ignorada."
+            echo "::warning::Segredo SUPABASE_DB_PASSWORD (ou SUPABASE_DB_URL) não configurado — atualização do banco ignorada."
             exit 0
           fi
           # Nunca exibir a senha: valida o formato sem imprimir o valor e mascara a senha no log.
