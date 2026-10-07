@@ -7,8 +7,8 @@ import { PainelBody } from './Painel'
 
 const LEVEL_TXT = { ok: 'No ritmo de 600 h', warn: 'Entre 560 e 600 h', bad: 'Abaixo de 560 h' }
 
-export function Casal({ me, partner, today, onLinked, toast }: {
-  me: YearData; partner: YearData | null; today: Date; onLinked: () => void; toast: (m: string) => void
+export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
+  me: YearData; partner: YearData | null; sharedOut: boolean; today: Date; onLinked: () => void; toast: (m: string) => void
 }) {
   const [view, setView] = useState<'resumo' | 'painel'>('resumo')
   const [email, setEmail] = useState('')
@@ -18,7 +18,8 @@ export function Casal({ me, partner, today, onLinked, toast }: {
     setBusy(true)
     try {
       await api.rpc('link_partner', { partner_email: email })
-      toast('Vínculo criado ✓')
+      toast('Compartilhamento ativado ✓')
+      setEmail('')
       onLinked()
     } catch (e) {
       toast((e as Error).message)
@@ -27,19 +28,26 @@ export function Casal({ me, partner, today, onLinked, toast }: {
     }
   }
 
+  const shareForm = (
+    <div className="card form">
+      <h3>Compartilhar meu desempenho</h3>
+      <div className="sub" style={{ fontSize: 14 }}>
+        Informe o e-mail da conta do cônjuge para que ele(a) possa ver os seus dados (somente leitura).
+        Só você pode liberar o acesso aos seus dados: para os dois se verem, cada um compartilha com o outro.
+      </div>
+      <input className="input" type="email" placeholder="email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+      <button className="btn brand" disabled={busy || !email.includes('@')} onClick={link}>Compartilhar</button>
+    </div>
+  )
+
   if (!partner) {
     return (
       <>
         <Header kicker={`AS ${me.sy}`} title="Nós dois" />
         <div className="main">
-          <div className="card form">
-            <h3>Vincular cônjuge</h3>
-            <div className="sub" style={{ fontSize: 14 }}>
-              Informe o e-mail da conta do cônjuge. Os dois passam a ver o desempenho um do outro (somente leitura). A outra pessoa precisa já ter se cadastrado.
-            </div>
-            <input className="input" type="email" placeholder="email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <button className="btn brand" disabled={busy || !email.includes('@')} onClick={link}>Vincular</button>
-          </div>
+          {sharedOut && <div className="info">✓ Você já compartilha os seus dados. Quando o cônjuge compartilhar os dele(a) com você, o comparativo aparece aqui.</div>}
+          {!sharedOut && shareForm}
+          {sharedOut && <div className="sub" style={{ textAlign: 'center' }}>Peça para o cônjuge abrir a aba Casal no app dele(a) e informar o seu e-mail.</div>}
         </div>
       </>
     )
@@ -60,6 +68,9 @@ export function Casal({ me, partner, today, onLinked, toast }: {
           <button className={view === 'painel' ? 'on' : ''} onClick={() => setView('painel')}>Painel de {partner.profile?.name || 'cônjuge'}</button>
         </div>
 
+        {!sharedOut && (
+          <div className="alert">{partner.profile?.name} compartilha os dados com você, mas você ainda não compartilhou os seus. Use o formulário no fim da página.</div>
+        )}
         {view === 'painel' ? (
           <PainelBody data={partner} today={today} color={people[1].color} />
         ) : (
@@ -105,10 +116,11 @@ export function Casal({ me, partner, today, onLinked, toast }: {
               </div>
               <div className="legend">{people.map((p, i) => <span key={i}><i style={{ background: p.color }} />{p.name}</span>)}</div>
             </div>
+            {!sharedOut && shareForm}
             <button className="btn danger small" onClick={async () => {
-              if (!confirm(`Desfazer o vínculo com ${partner.profile?.name}?`)) return
+              if (!confirm(`Desfazer o compartilhamento com ${partner.profile?.name} (nos dois sentidos)?`)) return
               await api.rpc('unlink_partner', { partner: partner.userId }); onLinked()
-            }}>Desfazer vínculo ({initials(partner.profile?.name ?? '')})</button>
+            }}>Desfazer compartilhamento ({initials(partner.profile?.name ?? '')})</button>
           </>
         )}
       </div>

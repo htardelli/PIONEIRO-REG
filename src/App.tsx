@@ -36,6 +36,7 @@ function Main({ user }: { user: AuthUser }) {
   const sy = serviceYearOf(today)
   const me = useYear(user.id, sy)
   const [partnerId, setPartnerId] = useState<string | null>(null)
+  const [sharedOut, setSharedOut] = useState(false)
   const partner = useYear(partnerId, sy)
   const [tab, setTab] = useState<Tab>('painel')
   const [date, setDate] = useState(isoDate(today))
@@ -43,8 +44,12 @@ function Main({ user }: { user: AuthUser }) {
   const toast = useToast()
 
   const loadPartner = useCallback(async () => {
-    const shares = await api.select<Share>('shares', { eq: { viewer: user.id } })
-    setPartnerId(shares.find((s) => s.owner !== user.id)?.owner ?? null)
+    const [incoming, outgoing] = await Promise.all([
+      api.select<Share>('shares', { eq: { viewer: user.id } }),
+      api.select<Share>('shares', { eq: { owner: user.id } }),
+    ])
+    setPartnerId(incoming.find((s) => s.owner !== user.id)?.owner ?? null)
+    setSharedOut(outgoing.some((s) => s.viewer !== user.id))
   }, [user.id])
   useEffect(() => { void loadPartner().catch(() => {}) }, [loadPartner])
 
@@ -80,7 +85,7 @@ function Main({ user }: { user: AuthUser }) {
   else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} />
   else if (tab === 'relatorio') body = <Relatorio data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
   else if (tab === 'casal') body = partnerId && !partner.data ? <><Header kicker="" title="Nós dois" /><Loading error={partner.error} /></> : (
-    <Casal me={d} partner={partnerId ? partner.data : null} today={today} toast={toast.show}
+    <Casal me={d} partner={partnerId ? partner.data : null} sharedOut={sharedOut} today={today} toast={toast.show}
       onLinked={() => { void loadPartner(); void partner.reload() }} />
   )
   else body = <Config data={d} reload={me.reload} toast={toast.show} onBack={() => go('painel')} />

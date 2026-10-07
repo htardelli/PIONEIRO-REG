@@ -40,7 +40,8 @@ language sql stable security definer set search_path = public as $$
       or exists (select 1 from public.shares s where s.owner = target and s.viewer = auth.uid());
 $$;
 
--- Vincula o cônjuge pelo e-mail (as duas contas precisam existir). Compartilhamento mútuo.
+-- Compartilha os MEUS dados (somente leitura) com a conta do e-mail informado.
+-- Só o dono dos dados pode conceder o acesso: para os dois se verem, cada um compartilha com o outro.
 create or replace function public.link_partner(partner_email text) returns uuid
 language plpgsql security definer set search_path = public as $$
 declare pid uuid;
@@ -50,7 +51,6 @@ begin
   if pid is null then raise exception 'Nenhuma conta com este e-mail. Peça para a pessoa se cadastrar primeiro.'; end if;
   if pid = auth.uid() then raise exception 'Informe o e-mail do cônjuge, não o seu.'; end if;
   insert into public.shares values (auth.uid(), pid) on conflict do nothing;
-  insert into public.shares values (pid, auth.uid()) on conflict do nothing;
   return pid;
 end $$;
 
