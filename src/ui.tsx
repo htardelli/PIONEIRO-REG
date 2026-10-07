@@ -3,25 +3,26 @@ import { blockMinutes, fmtH, fmtHours, fromMinutes, MONTH_ABBR, toMinutes, type 
 import { monthCard, TARGET_LABEL, type MonthStats } from './data'
 import type { Modality } from './types'
 
-export type Tab = 'painel' | 'lancar' | 'plano' | 'relatorio' | 'casal' | 'config'
+export type Tab = 'painel' | 'lancar' | 'mes' | 'plano' | 'relatorio' | 'casal' | 'config'
 
 const ICONS: Record<Exclude<Tab, 'config'>, ReactNode> = {
   painel: <path d="M3 12l9-8 9 8v8a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z" />,
   lancar: <><circle cx="12" cy="12" r="9" /><path d="M12 8v8M8 12h8" /></>,
+  mes: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /><path d="M8.5 15.5l2 2 4.5-4.5" /></>,
   plano: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
   relatorio: <><path d="M6 3h9l4 4v14H6z" /><path d="M9 12h7M9 16h7" /></>,
   casal: <><circle cx="9" cy="8" r="3.5" /><circle cx="17" cy="9" r="2.5" /><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M15 14.5c3 0 6 2 6 5.5" /></>,
 }
-const LABELS = { painel: 'Painel', lancar: 'Lançar', plano: 'Plano', relatorio: 'Relatório', casal: 'Casal' }
+const LABELS = { painel: 'Painel', lancar: 'Lançar', mes: 'Mês', plano: 'Plano', relatorio: 'Relatório', casal: 'Casal' }
 
-export function TabBar({ tab, onTab }: { tab: Tab; onTab: (t: Tab) => void }) {
+export function TabBar({ tab, onTab, monthName }: { tab: Tab; onTab: (t: Tab) => void; monthName?: string }) {
   return (
     <nav className="tabbar">
       <div>
         {(Object.keys(LABELS) as (keyof typeof LABELS)[]).map((t) => (
           <button key={t} className={tab === t ? 'on' : ''} onClick={() => onTab(t)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{ICONS[t]}</svg>
-            {LABELS[t]}
+            {t === 'mes' && monthName ? monthName : LABELS[t]}
           </button>
         ))}
       </div>

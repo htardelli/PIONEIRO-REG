@@ -7,7 +7,7 @@ import type { DayItem } from '../types'
 
 const sumMin = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
 
-function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
+export function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   const m = data.modalities.find((x) => x.id === item.modality_id)
   return (
     <div className="mod">
@@ -18,7 +18,7 @@ function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   )
 }
 
-const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
+export const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
 
 const ABSENCE_PREFIX = 'Faltei'
 const ABSENCE_REASONS = ['Saúde', 'Trabalho', 'Família', 'Clima', 'Viagem', 'Outro']

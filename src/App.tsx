@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api } from './api'
-import { DEFAULT_MODALITIES, isoDate, monthKey, parseIso, serviceYearOf } from './domain'
+import { DEFAULT_MODALITIES, isoDate, monthKey, MONTH_NAME, parseIso, serviceYearOf } from './domain'
 import { useYear, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
 import { Avatar, Header, Loading, TabBar, useToast, type Tab } from './ui'
 import { Auth } from './screens/Auth'
 import { PainelBody } from './screens/Painel'
 import { Lancar } from './screens/Lancar'
+import { Mes } from './screens/Mes'
 import { Plano } from './screens/Plano'
 import { Relatorio } from './screens/Relatorio'
 import { Casal } from './screens/Casal'
@@ -91,6 +92,7 @@ function Main({ user }: { user: AuthUser }) {
     </>
   )
   else if (tab === 'lancar') body = <Lancar data={d} today={today} date={date} setDate={setDate} reload={reloadBoth} toast={toast.show} partner={joint} />
+  else if (tab === 'mes') body = <Mes data={d} today={today} onEdit={(dt) => { setDate(dt); go('lancar') }} />
   else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={reloadBoth} toast={toast.show} partner={joint} />
   else if (tab === 'relatorio') body = <Relatorio data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
   else if (tab === 'casal') body = partnerId && !partner.data ? <><Header kicker="" title="Nós dois" /><Loading error={partner.error} /></> : (
@@ -103,7 +105,7 @@ function Main({ user }: { user: AuthUser }) {
     <div className="app">
       {api.demo && <div className="banner">MODO DEMONSTRAÇÃO · dados de exemplo, salvos só neste aparelho</div>}
       {body}
-      <TabBar tab={tab} onTab={go} />
+      <TabBar tab={tab} onTab={go} monthName={MONTH_NAME[today.getMonth()]} />
       {toast.node}
     </div>
   )
