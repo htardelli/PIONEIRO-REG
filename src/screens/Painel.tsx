@@ -17,8 +17,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   return (
     <>
       <div className="card" style={{ padding: 12 }}>
-        <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado / meta</span></div>
-        <MonthGrid months={ys.months} onPick={onPickMonth} />
+        <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado · plano</span></div>
+        <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />
       </div>
 
       <div className="card">

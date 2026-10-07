@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { blockMinutes, fmtH, fmtHours, fromMinutes, MONTH_ABBR, toMinutes, type TimeBlock } from './domain'
-import type { MonthStats } from './data'
+import { monthCard, type MonthStats } from './data'
 import type { Modality } from './types'
 
 export type Tab = 'painel' | 'lancar' | 'plano' | 'relatorio' | 'casal' | 'config'
@@ -108,24 +108,32 @@ export function GoalBar({ total, goal, minGoal, color }: { total: number; goal: 
   )
 }
 
-export function MonthGrid({ months, onPick }: { months: MonthStats[]; onPick?: (m: string) => void }) {
+export function MonthGrid({ months, today, needed, onPick }: {
+  months: MonthStats[]; today: Date; needed: number; onPick?: (m: string) => void
+}) {
   return (
     <>
       <div className="months">
-        {months.map((m) => (
-          <button key={m.month} className={`m s-${m.status}`} onClick={() => onPick?.(m.month)}>
-            <div className="t">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</div>
-            <div className="r">{m.status === 'future' ? '–' : fmtHours(m.counted)}</div>
-            <div className="g">meta {fmtHours(m.goal)}</div>
-          </button>
-        ))}
+        {months.map((m) => {
+          const c = monthCard(m, today, needed)
+          return (
+            <button key={m.month} className={`m s-${c.status}`} onClick={() => onPick?.(m.month)}>
+              <div className="t">{MONTH_ABBR[Number(m.month.slice(5)) - 1]}</div>
+              <div className="r">{c.status === 'future' ? '–' : fmtHours(m.counted)}</div>
+              <div className="g">{c.lines[0]}</div>
+              <div className="g" style={{ fontWeight: 800 }}>{c.lines[1]}</div>
+              <div className="g">{c.lines[2] || '\u00a0'}</div>
+            </button>
+          )
+        })}
       </div>
       <div className="legend">
-        <span><i style={{ background: 'var(--ok)' }} />Concluído</span>
-        <span><i style={{ background: 'var(--bad)' }} />Abaixo da meta</span>
+        <span><i style={{ background: 'var(--ok)' }} />Plano coberto</span>
+        <span><i style={{ background: 'var(--bad)' }} />Abaixo do plano</span>
         <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
         <span><i style={{ background: 'var(--future)' }} />A vir</span>
       </div>
+      <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Mês sem plano mostra a média mensal necessária para fechar o ano.</div>
     </>
   )
 }

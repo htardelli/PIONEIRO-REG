@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
 import {
-  countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, serviceYearMonths, type MonthStatus,
+  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, serviceYearMonths, type MonthStatus,
 } from './domain'
 import type { Credit, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
@@ -193,4 +193,27 @@ export interface JointPartner {
 /** Bloco do participante com o mesmo group_id no mesmo dia (plano ou realizado). */
 export function partnerHasGroup(items: DayItem[], date: string, groupId: string | null | undefined): boolean {
   return !!groupId && items.some((x) => x.date === date && x.group_id === groupId)
+}
+
+export interface MonthCard {
+  status: MonthStatus
+  lines: [string, string, string] // rótulo, valor, complemento (abaixo do realizado)
+}
+
+/**
+ * Card do mês: com plano → "plano" / X / "falta Y" (ou "✓ coberto") e a cor compara com o plano.
+ * Sem plano → mês atual/futuro: "precisa" / média mensal necessária para fechar o ano;
+ * mês encerrado: "sem plano" e a cor compara com a meta do mês.
+ */
+export function monthCard(m: MonthStats, today: Date, needed: number): MonthCard {
+  const cur = monthKey(today)
+  if (m.planned > 0) {
+    const falta = Math.max(0, m.planned - m.counted)
+    return {
+      status: monthStatus(m.month, today, m.counted, m.planned),
+      lines: ['plano', fmtHours(m.planned), m.month > cur ? '' : falta > 0 ? `falta ${fmtHours(falta)}` : '✓ coberto'],
+    }
+  }
+  if (m.month < cur) return { status: monthStatus(m.month, today, m.counted, m.goal), lines: ['sem', 'plano', ''] }
+  return { status: monthStatus(m.month, today, m.counted, needed), lines: ['precisa', fmtHours(needed), ''] }
 }

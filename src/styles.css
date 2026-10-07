@@ -61,7 +61,7 @@ button { cursor: pointer; border: 0; background: none; }
 .m { border-radius: 12px; padding: 6px 2px 7px; text-align: center; border: 1.5px solid transparent; }
 .m .t { font-size: 10px; font-weight: 800; letter-spacing: .04em; }
 .m .r { font-size: 16px; font-weight: 800; line-height: 1.15; margin-top: 2px; }
-.m .g { font-size: 10px; font-weight: 600; opacity: .85; }
+.m .g { font-size: 10px; font-weight: 600; opacity: .9; white-space: nowrap; line-height: 1.25; }
 .m.s-ok { background: var(--ok); color: #fff; }
 .m.s-bad { background: var(--bad); color: #fff; }
 .m.s-now { background: var(--now); color: #3A2A00; border-color: var(--warn); }
