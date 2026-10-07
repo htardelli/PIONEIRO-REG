@@ -342,7 +342,6 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                   <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(ev)}>Remover</button>
                 </div>
               ))}
-              {!evDates && <button className="link" style={{ alignSelf: 'flex-start', color: 'var(--credit)' }} onClick={() => { setEvRange(false); setEvDates([sel]) }}>+ Marcar evento neste dia (congresso, assembleia…)</button>}
             </div>
             <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
               partners={partner ? [{ id: partner.id, name: partner.name }] : []} />
