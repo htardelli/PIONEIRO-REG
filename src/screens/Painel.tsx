@@ -12,6 +12,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const curLeft = cur ? Math.max(0, cur.target - cur.counted) : 0
   const pvd = planVsDone(data, monthKey(today), today)
   const diff = pvd.done - pvd.planned
+  const actsTotal = pvd.acts.done + pvd.acts.part + pvd.acts.miss + pvd.acts.pending // atividades planejadas até hoje
+  const actsMonth = data.plan.filter((p) => p.date.startsWith(monthKey(today))).length
   const needJustification = ys.level !== 'ok' && cur && !cur.justification
 
   return (
@@ -87,6 +89,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
               <i style={{ width: `${Math.min(100, (pvd.done / Math.max(pvd.planned, pvd.done, 1)) * 100)}%`, background: color }} />
             </div>
             <div className="chips" style={{ marginTop: 10 }}>
+              <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>📋 {actsTotal} planejada{actsTotal === 1 ? '' : 's'}{actsMonth > actsTotal ? ` de ${actsMonth} no mês` : ''}</span>
               <span className="pill ok">✓ {pvd.acts.done} cumprida{pvd.acts.done === 1 ? '' : 's'}</span>
               <span className="pill warn">◐ {pvd.acts.part} parcia{pvd.acts.part === 1 ? 'l' : 'is'}</span>
               <span className="pill bad">✗ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
