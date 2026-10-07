@@ -130,11 +130,11 @@ export function GoalBar({ total, goal, minGoal, color, pace }: { total: number; 
         <b className="gdot" style={{ left: pos(goal), background: 'var(--ink)' }} title={`Meta ${fmtHours(goal)}`} />
         {pace !== undefined && <b className="gdot" style={{ left: pos(pace), background: 'var(--credit)' }} title={`Ritmo ideal hoje ${fmtHours(pace)}`} />}
       </div>
-      <div className="legend" style={{ marginTop: 10 }}>
-        <span><i style={{ background: color ?? 'var(--brand-2)', borderRadius: '50%' }} />Realizado {fmtHours(total)}</span>
-        {pace !== undefined && <span><i style={{ background: 'var(--credit)', borderRadius: '50%' }} />Ideal hoje {fmtHours(pace)}</span>}
-        <span><i style={{ background: 'var(--warn)', borderRadius: '50%' }} />Mínimo {fmtHours(minGoal)}</span>
-        <span><i style={{ background: 'var(--ink)', borderRadius: '50%' }} />Meta {fmtHours(goal)}</span>
+      <div className="legend" style={{ marginTop: 10, flexWrap: 'nowrap', justifyContent: 'space-between' }}>
+        <span><i style={{ background: color ?? 'var(--brand-2)', borderRadius: '50%' }} />Feito</span>
+        {pace !== undefined && <span><i style={{ background: 'var(--credit)', borderRadius: '50%' }} />Ideal</span>}
+        <span><i style={{ background: 'var(--warn)', borderRadius: '50%' }} />Mínimo</span>
+        <span><i style={{ background: 'var(--ink)', borderRadius: '50%' }} />Meta</span>
       </div>
     </div>
   )
