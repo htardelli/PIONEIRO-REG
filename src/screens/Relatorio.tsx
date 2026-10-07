@@ -45,9 +45,9 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
   }
 
   function exportCsv() {
-    const rows = [['Mês', 'Meta (h)', 'Ministério (h)', 'Crédito lançado (h)', 'Crédito considerado (h)', 'Total considerado (h)', 'Estudos', 'Justificativa']]
+    const rows = [['Mês', 'Meta (h)', 'Plano (h)', 'Alvo (h)', 'Ministério (h)', 'Crédito lançado (h)', 'Crédito considerado (h)', 'Total considerado (h)', 'Estudos', 'Justificativa']]
     for (const m of ys.months) {
-      rows.push([monthLabel(m.month), h(m.goal), h(m.ministry), h(m.credit), h(m.creditUsed), h(m.counted), String(m.studies), m.justification])
+      rows.push([monthLabel(m.month), h(m.goal), h(m.planned), h(m.target), h(m.ministry), h(m.credit), h(m.creditUsed), h(m.counted), String(m.studies), m.justification])
     }
     rows.push([], ['Data', 'Modalidade', 'Horas'])
     for (const e of [...data.entries].sort((a, b) => a.date.localeCompare(b.date)))

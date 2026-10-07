@@ -93,7 +93,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
                 const m = ys.months.find((x) => x.month === cur)
                 return (
                   <div className="kv" key={i}>
-                    <span>{name}<div className="sub">Mês: {fmtHours(m?.counted ?? 0)}/{fmtHours(m?.goal ?? 0)} h · precisa {fmtHours(ys.needed)} h/mês</div></span>
+                    <span>{name}<div className="sub">Mês: {fmtHours(m?.counted ?? 0)}/{fmtHours(m?.target ?? 0)} h · precisa {fmtHours(ys.needed)} h/mês</div></span>
                     <span className={`pill ${ys.level}`}>{LEVEL_TXT[ys.level]}</span>
                   </div>
                 )

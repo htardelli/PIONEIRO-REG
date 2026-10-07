@@ -71,6 +71,8 @@ export interface MonthStats {
   creditLost: number
   counted: number
   planned: number
+  target: number // alvo do mês: o PLANO, se houver; senão a meta do mês
+  targetKind: 'plano' | 'meta'
   status: MonthStatus
   studies: number
   justification: string
@@ -82,10 +84,12 @@ export function monthStats(d: YearData, month: string, today: Date): MonthStats 
   const credit = sum(d.credits.filter((c) => c.month === month))
   const { counted, creditUsed, creditLost } = countedMinutes(ministry, credit)
   const goal = rec?.goal_min ?? DEFAULT_GOAL_MIN
+  const planned = sum(d.plan.filter((p) => p.date.startsWith(month)))
+  const target = planned > 0 ? planned : goal // o plano sobrepõe a meta
   return {
-    month, goal, ministry, credit, creditUsed, creditLost, counted,
-    planned: sum(d.plan.filter((p) => p.date.startsWith(month))),
-    status: monthStatus(month, today, counted, goal),
+    month, goal, ministry, credit, creditUsed, creditLost, counted, planned, target,
+    targetKind: planned > 0 ? 'plano' : 'meta',
+    status: monthStatus(month, today, counted, target),
     studies: rec?.bible_studies ?? 0,
     justification: rec?.justification ?? '',
   }
@@ -103,7 +107,9 @@ export interface YearStats {
   diff: number
   level: PaceLevel
   needed: number
-  goalsSum: number
+  targetsSum: number // soma dos alvos do ano (plano do mês ou, sem plano, a meta)
+  plannedSum: number // total planejado no ano
+  plannedMonths: number // meses com plano
 }
 
 export function yearStats(d: YearData, today: Date): YearStats {
@@ -121,7 +127,9 @@ export function yearStats(d: YearData, today: Date): YearStats {
     diff: total - pace,
     level: total >= pace ? 'ok' : total >= paceMin ? 'warn' : 'bad',
     needed: neededPerMonth(goal, closed, d.sy, today),
-    goalsSum: months.reduce((a, m) => a + m.goal, 0),
+    targetsSum: months.reduce((a, m) => a + m.target, 0),
+    plannedSum: months.reduce((a, m) => a + m.planned, 0),
+    plannedMonths: months.filter((m) => m.planned > 0).length,
   }
 }
 

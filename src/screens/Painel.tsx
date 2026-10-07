@@ -9,7 +9,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const cur = ys.months.find((m) => m.month === monthKey(today))
   const daysLeft = daysLeftInYear(data.sy, today)
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  const curLeft = cur ? Math.max(0, cur.goal - cur.counted) : 0
+  const curLeft = cur ? Math.max(0, cur.target - cur.counted) : 0
   const pvd = planVsDone(data, monthKey(today), today)
   const diff = pvd.done - pvd.planned
   const needJustification = ys.level !== 'ok' && cur && !cur.justification
@@ -19,6 +19,19 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
       <div className="card" style={{ padding: 12 }}>
         <div className="card-head"><h3>Meses do ano de serviço</h3><span className="sub" style={{ fontWeight: 700 }}>realizado / plano</span></div>
         <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />
+        <div className="ytotal">
+          <div className="ytop">
+            <span>Planejamento anual</span>
+            <span><b>{fmtHours(ys.plannedSum)}</b><span className="muted"> / {fmtHours(ys.goal)} h</span></span>
+          </div>
+          <span className="bar"><i style={{ width: `${Math.min(100, (ys.plannedSum / ys.goal) * 100)}%`, background: ys.plannedSum >= ys.goal ? 'var(--ok)' : 'var(--brand-2)' }} /></span>
+          <div className="ybot">
+            <span>{ys.plannedMonths} de 12 meses planejados</span>
+            {ys.plannedSum < ys.goal
+              ? <span>faltam planejar <b style={{ color: 'var(--bad)' }}>{fmtHours(ys.goal - ys.plannedSum)} h</b></span>
+              : <span style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ cobre a meta anual</span>}
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -39,7 +52,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         <div className="row">
           <div className="card">
             <h3>{MONTH_NAME[today.getMonth()]}</h3>
-            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.goal)} h</small></div>
+            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)} h</small></div>
+            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : 'meta do mês (sem plano)'}</div>
             <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} h em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
           </div>
           <div className="card">
@@ -95,8 +109,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         )}
       </div>
 
-      {ys.goalsSum < ys.goal && (
-        <div className="alert">⚠ A soma das metas mensais é {fmtHours(ys.goalsSum)} h — menor que a meta anual de {fmtHours(ys.goal)} h. Ajuste no Plano.</div>
+      {ys.targetsSum < ys.goal && (
+        <div className="alert">⚠ Planos + metas dos meses somam {fmtHours(ys.targetsSum)} h — menos que a meta anual de {fmtHours(ys.goal)} h. Ajuste no Plano.</div>
       )}
       {needJustification && onLaunch && (
         <div className="alert">

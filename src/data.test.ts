@@ -5,7 +5,7 @@ const H = 60
 const today = new Date(2026, 9, 7) // 07/10/2026
 const ms = (month: string, counted: number, planned: number, goal = 50 * H): MonthStats => ({
   month, goal, ministry: counted, credit: 0, creditUsed: 0, creditLost: 0, counted, planned,
-  status: 'now', studies: 0, justification: '',
+  target: planned > 0 ? planned : goal, targetKind: planned > 0 ? 'plano' : 'meta', status: 'now', studies: 0, justification: '',
 })
 
 describe('linha do mês', () => {
@@ -38,5 +38,29 @@ describe('ícones do plano', () => {
     expect(planDelta(52 * H, 52 * H)).toBe('✓ coberto')
     expect(planDelta(55 * H, 52 * H)).toBe('▲ +3')
     expect(planDelta(8 * H, 52 * H)).toBe('▼ faltam 44')
+  })
+})
+
+import { monthStats, yearStats, type YearData } from './data'
+
+describe('plano sobrepõe a meta', () => {
+  const base: YearData = {
+    userId: 'u', sy: 2027, profile: null, modalities: [], notes: [], credits: [],
+    records: [{ user_id: 'u', month: '2026-10', goal_min: 50 * H, bible_studies: 0, justification: '' }],
+    plan: [{ id: 'p', user_id: 'u', date: '2026-10-13', modality_id: 'm', minutes: 30 * H }],
+    entries: [{ id: 'e', user_id: 'u', date: '2026-10-02', modality_id: 'm', minutes: 30 * H }],
+  }
+  it('mês com plano usa o plano como alvo (não a meta)', () => {
+    const m = monthStats(base, '2026-10', today)
+    expect(m).toMatchObject({ target: 30 * H, targetKind: 'plano', status: 'ok' }) // 30h feitas = plano de 30h
+  })
+  it('mês sem plano usa a meta', () => {
+    expect(monthStats(base, '2026-11', today)).toMatchObject({ target: 50 * H, targetKind: 'meta' })
+  })
+  it('totais do ano: planejado e alvos', () => {
+    const ys = yearStats(base, today)
+    expect(ys.plannedSum).toBe(30 * H)
+    expect(ys.plannedMonths).toBe(1)
+    expect(ys.targetsSum).toBe(30 * H + 11 * 50 * H)
   })
 })

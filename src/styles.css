@@ -158,3 +158,10 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .mcard .mnum b { font-size: 21px; font-weight: 800; letter-spacing: -.02em; }
 .mcard .bar { height: 6px; display: block; }
 .mcard .mnote { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.ytotal { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--brand-soft); display: flex; flex-direction: column; gap: 6px; }
+.ytotal .ytop { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; color: var(--brand); }
+.ytotal .ytop b { font-size: 20px; color: var(--ink); text-transform: none; letter-spacing: -.02em; }
+.ytotal .bar { height: 8px; display: block; background: #fff; }
+.ytotal .ybot { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-weight: 600; }
+.ytotal .ytop .muted { text-transform: none; letter-spacing: 0; font-weight: 700; }

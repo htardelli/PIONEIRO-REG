@@ -281,8 +281,9 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
           </div>
           <div className="kv"><span>Planejado no mês</span><span><b>{fmtHours(ms.planned)} h</b>{' '}
             <span className={`pill ${slack >= 0 ? 'ok' : 'warn'}`}>{slack >= 0 ? `folga ${fmtHours(slack)} h` : `faltam ${fmtHours(-slack)} h`}</span></span></div>
-          <div className="kv"><span>Soma das metas do ano</span><span><b>{fmtHours(ys.goalsSum)} h</b>{' '}
-            <span className={`pill ${ys.goalsSum >= ys.goal ? 'ok' : 'bad'}`}>{ys.goalsSum >= ys.goal ? 'ok' : `< ${fmtHours(ys.goal)}`}</span></span></div>
+          <div className="kv"><span>Planejamento anual</span><span><b>{fmtHours(ys.plannedSum)} h</b>{' '}
+            <span className={`pill ${ys.plannedSum >= ys.goal ? 'ok' : 'warn'}`}>{ys.plannedSum >= ys.goal ? 'cobre a meta' : `faltam ${fmtHours(ys.goal - ys.plannedSum)}`}</span></span></div>
+          <div className="sub" style={{ paddingBottom: 8 }}>O plano do mês substitui a meta; a meta só vale nos meses sem plano.</div>
         </div>
       </div>
       {choice.node}
