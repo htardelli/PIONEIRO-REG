@@ -15,8 +15,7 @@ App: https://htardelli.github.io/PIONEIRO-REG/ · Demonstração: https://htarde
 ## Configuração (uma vez)
 
 1. **Banco** — Supabase → *SQL Editor* → cole `supabase/schema.sql` → *Run*.
-2. **Chave** — Supabase → *Project Settings → API* → copie a **anon public key**.
-   GitHub → *Settings → Secrets and variables → Actions → Variables* → nova variável `SUPABASE_ANON_KEY`.
+2. **Chave** — a URL e a *anon public key* já estão em `src/config.ts` (são públicas; a proteção é o RLS).
 3. **Publicação** — GitHub → *Settings → Pages* → *Source: GitHub Actions*.
 4. (Opcional) Supabase → *Authentication → Sign In / Providers → Email* → desligar *Confirm email*
    para entrar sem precisar confirmar o e-mail.
