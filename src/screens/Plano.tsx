@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, DEFAULT_EVENT_TYPES, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
+  blockErrors, blockMinutes, dateRuns, fmtRun, DEFAULT_EVENT_TYPES, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock, mondayIndex, WEEK_HEAD,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
@@ -237,30 +237,37 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
     } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
   }
 
-  async function removeEvent(ev: DayEvent) {
-    const shared = !!(partner && ev.group_id && partner.data.events.some((x) => x.date === ev.date && x.group_id === ev.group_id))
+  async function removeEvent(evOrRun: DayEvent | DayEvent[]) {
+    const evs = Array.isArray(evOrRun) ? evOrRun : [evOrRun]
+    const ev = evs[0]
+    const when = evs.length > 1 ? `de ${fmtRun(evs[0].date, evs[evs.length - 1].date)} (${evs.length} dias)` : `de ${fmtD(ev.date)}`
+    const sharedEvs = evs.filter((e) => partner && e.group_id && partner.data.events.some((x) => x.date === e.date && x.group_id === e.group_id))
     let alsoPartner = false
-    if (shared) {
-      const r = await choice.ask<Scope>(`Remover "${eventName(ev)}" de ${fmtD(ev.date)}?`,
+    if (sharedEvs.length) {
+      const r = await choice.ask<Scope>(`Remover "${eventName(ev)}" ${when}?`,
         [{ label: 'Para todos os participantes', value: 'all', kind: 'danger' }, { label: 'Só para mim', value: 'me', kind: 'outline' }],
         `Este evento também está no calendário de ${pFirst}.`)
       if (!r) return
       alsoPartner = r === 'all'
-    } else if (!confirm(`Remover "${eventName(ev)}" de ${fmtD(ev.date)}?`)) return
+    } else if (!confirm(`Remover "${eventName(ev)}" ${when}?`)) return
     try {
-      if (alsoPartner && partner) await api.rpc('partner_events_delete', { p_partner: partner.id, p_groups: [ev.group_id], p_dates: [ev.date] })
-      await api.remove('day_events', { eq: { id: ev.id } })
+      if (alsoPartner && partner) await api.rpc('partner_events_delete', { p_partner: partner.id,
+        p_groups: [...new Set(sharedEvs.map((e) => e.group_id))], p_dates: sharedEvs.map((e) => e.date) })
+      await api.remove('day_events', { eq: { user_id: data.userId }, in: ['id', evs.map((e) => e.id)] })
       await reload()
       toast('Evento removido')
     } catch (e) { toast((e as Error).message) }
   }
 
   const togglePick = (date: string) => setPicked((xs) => (xs.includes(date) ? xs.filter((x) => x !== date) : [...xs, date].sort()))
-  const monthMarks = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)
-    .flatMap((date) => [
-      ...(holidayOf(date) ? [{ date, hol: holidayOf(date)!, ev: null as DayEvent | null }] : []),
-      ...eventsOn(date).map((ev) => ({ date, hol: null, ev })),
-    ])
+  // Feriados e eventos do mês: dias seguidos do mesmo evento viram uma linha só ("01 - 03/10 · Congresso")
+  const monthDays = Array.from({ length: nDays }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)
+  const monthMarks = [
+    ...dateRuns(monthDays.filter((d) => holidayOf(d)).map((d) => ({ date: d, hol: holidayOf(d)! })), (x) => x.hol.name)
+      .map((r) => ({ ...r, hol: r.items[0].hol, evs: null as DayEvent[] | null })),
+    ...dateRuns(data.events.filter((e) => e.date.startsWith(month)), (e) => `${e.kind}|${e.title}`)
+      .map((r) => ({ from: r.from, to: r.to, hol: null, evs: r.items })),
+  ].sort((a, b) => a.from.localeCompare(b.from))
 
   const selDow = sel ? parseIso(sel).getDay() : 0
   const ym = ys.months.find((x) => x.month === month)
@@ -407,10 +414,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             <h3>Feriados e eventos do mês</h3>
             <div className="daytags" style={{ marginBottom: 0 }}>
               {monthMarks.map((m) => m.hol ? (
-                <div className="daytag hol" key={m.date + 'h'}><span className="grow">{fmtD(m.date)} · {m.hol.name}</span><span className="sub">{HOLIDAY_LABEL[m.hol.kind]}</span></div>
+                <div className="daytag hol" key={m.from + 'h'}><span className="grow">{fmtRun(m.from, m.to)} · {m.hol.name}</span><span className="sub">{HOLIDAY_LABEL[m.hol.kind]}</span></div>
               ) : (
-                <div className="daytag ev" key={m.ev!.id}><span className="grow">{fmtD(m.date)} · {eventName(m.ev!)}</span>
-                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(m.ev!)}>Remover</button></div>
+                <div className="daytag ev" key={m.evs![0].id}><span className="grow">{fmtRun(m.from, m.to)} · {eventName(m.evs![0])}</span>
+                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(m.evs!)}>Remover</button></div>
               ))}
             </div>
           </div>

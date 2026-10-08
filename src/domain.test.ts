@@ -139,3 +139,14 @@ describe('feriados', () => {
     expect(holidayOf('2026-10-13')).toBeUndefined()
   })
 })
+
+import { dateRuns, fmtRun } from './domain'
+
+describe('eventos em dias seguidos numa linha só', () => {
+  it('agrupa dias consecutivos com a mesma chave', () => {
+    const xs = [{ date: '2026-10-02', k: 'A' }, { date: '2026-10-01', k: 'A' }, { date: '2026-10-03', k: 'A' }, { date: '2026-10-05', k: 'A' }, { date: '2026-10-02', k: 'B' }]
+    const r = dateRuns(xs, (x) => x.k)
+    expect(r.map((x) => `${fmtRun(x.from, x.to)} ${x.items[0].k} ${x.items.length}`)).toEqual(['01 - 03/10 A 3', '02/10 B 1', '05/10 A 1'])
+    expect(fmtRun('2026-09-30', '2026-10-02')).toBe('30/09 - 02/10')
+  })
+})

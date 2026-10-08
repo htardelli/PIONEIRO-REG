@@ -301,3 +301,22 @@ export const HOLIDAY_LABEL: Record<HolidayKind, string> = { nacional: 'feriado n
 export const DEFAULT_EVENT_TYPES = ['Congresso', 'Assembleia', 'Visita do SC', 'Celebração']
 export const EVENT_OTHER = 'Outro'
 export const eventName = (ev: { kind: string; title: string }) => (ev.title ? (ev.kind === 'Outro' ? ev.title : `${ev.kind} · ${ev.title}`) : ev.kind)
+
+/** Junta itens iguais (mesma chave) em dias seguidos: [{from, to, items}]. Entrada em qualquer ordem. */
+export function dateRuns<T extends { date: string }>(items: T[], key: (x: T) => string): { from: string; to: string; items: T[] }[] {
+  const next = (d: string) => { const x = parseIso(d); x.setDate(x.getDate() + 1); return isoDate(x) }
+  const runs: { from: string; to: string; k: string; items: T[] }[] = []
+  for (const it of [...items].sort((a, b) => a.date.localeCompare(b.date))) {
+    const k = key(it)
+    const open = runs.find((r) => r.k === k && (next(r.to) === it.date || r.to === it.date))
+    if (open) { open.to = it.date; open.items.push(it) } else runs.push({ from: it.date, to: it.date, k, items: [it] })
+  }
+  return runs.sort((a, b) => a.from.localeCompare(b.from)).map(({ from, to, items }) => ({ from, to, items }))
+}
+
+/** "01/10" ou "01 - 03/10" (mesmo mês) ou "30/09 - 02/10". */
+export function fmtRun(from: string, to: string): string {
+  const f = (d: string) => `${d.slice(8)}/${d.slice(5, 7)}`
+  if (from === to) return f(from)
+  return from.slice(0, 7) === to.slice(0, 7) ? `${from.slice(8)} - ${f(to)}` : `${f(from)} - ${f(to)}`
+}
