@@ -35,8 +35,9 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
         <div className="card" style={{ padding: '12px 16px' }}>
           <div className="kv"><span>Realizado no mês</span><b>{fmtH(ms.ministry)}</b></div>
           {ms.creditUsed > 0 && <div className="kv"><span>Crédito considerado</span><b style={{ color: 'var(--credit)' }}>{fmtH(ms.creditUsed)}</b></div>}
-          <div className="kv"><span>Alvo ({ms.targetKind})</span><span><b>{fmtH(ms.target)}</b>{' '}
-            {ms.target > 0 && <span className={`pill ${ms.counted >= ms.target ? 'ok' : 'warn'}`}>{planDelta(ms.counted, ms.target)}</span>}</span></div>
+          <div className="kv"><span>Alvo ({ms.targetKind}){' '}
+            {ms.target > 0 && <span className={`pill ${ms.counted >= ms.target ? 'ok' : 'warn'}`}>{planDelta(ms.counted, ms.target)}</span>}</span>
+            <b>{fmtH(ms.target)}</b></div>
           <div className="kv" style={{ borderBottom: 0 }}><span>Dias com serviço</span><b>{daysDone}</b></div>
         </div>
 
