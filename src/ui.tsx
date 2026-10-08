@@ -201,6 +201,13 @@ export function DiffPill({ diff, level }: { diff: number; level: 'ok' | 'warn' |
 /** Editor do plano do dia: atividades com modalidade, início e fim. Mostra conflitos de horário. */
 export interface Partner { id: string; name: string }
 
+/** Novo bloco de 1 h começando onde o último termina (ou às 08:00). */
+export function newBlockAfter(value: TimeBlock[], modalities: Modality[]): TimeBlock {
+  const last = value.reduce((a, b) => Math.max(a, b.end ? toMinutes(b.end) : 0), 0)
+  const start = Math.min(last || 8 * 60, 22 * 60)
+  return { modality_id: modalities.find((m) => m.active)?.id ?? '', start: fromMinutes(start), end: fromMinutes(start + 60) }
+}
+
 export function BlocksEditor({ modalities, value, onChange, errors, partners = [], partnerHint }: {
   modalities: Modality[]; value: TimeBlock[]; onChange: (v: TimeBlock[]) => void; errors: Record<number, string>
   partners?: Partner[] // participantes possíveis (compartilhamento mútuo)
@@ -208,11 +215,7 @@ export function BlocksEditor({ modalities, value, onChange, errors, partners = [
 }) {
   const active = modalities.filter((m) => m.active)
   const set = (i: number, patch: Partial<TimeBlock>) => onChange(value.map((b, j) => (j === i ? { ...b, ...patch } : b)))
-  function add() {
-    const last = value.reduce((a, b) => Math.max(a, b.end ? toMinutes(b.end) : 0), 0)
-    const start = last || 8 * 60
-    onChange([...value, { modality_id: active[0]?.id ?? '', start: fromMinutes(start), end: fromMinutes(start + 60) }])
-  }
+  const add = () => onChange([...value, newBlockAfter(value, modalities)])
   return (
     <div>
       {value.length === 0 && <div className="empty">Nenhuma atividade planejada neste dia.</div>}

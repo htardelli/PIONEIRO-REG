@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
 import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
-import { BlocksEditor, CalLegend, useChoice } from '../ui'
+import { BlocksEditor, CalLegend, newBlockAfter, useChoice } from '../ui'
 import type { DayItem } from '../types'
 
 const sumMin = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
@@ -42,6 +42,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const note = data.notes.find((n) => n.date === date)
   const logged = done.length > 0 || !!note || (absences.length > 0 && plan.length === 0)
   const [editing, setEditing] = useState(false)
+  const [extra, setExtra] = useState<'plan' | 'done' | null>(null) // editor aberto pelo "+ atividade não planejada"
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
@@ -51,12 +52,20 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const [absText, setAbsText] = useState('')
 
   useEffect(() => {
-    setEditing(false)
+    setEditing(false); setExtra(null)
     setAbsent(false); setReason(''); setAbsText('')
     setBlocks(done.length ? toBlocks(done) : withPartner(toBlocks(plan)))
     setText(note?.note ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [date, data])
+
+  /** "+ Atividade não planejada": abre o lançamento do dia com uma atividade nova no fim. */
+  function addExtra() {
+    const base = done.length ? toBlocks(done) : withPartner(toBlocks(plan))
+    setBlocks([...base, newBlockAfter(base, data.modalities)])
+    setExtra(done.length || !plan.length ? 'done' : 'plan')
+    setEditing(true)
+  }
 
   const d = parseIso(date)
   const [from] = yearRange(data.sy)
@@ -232,11 +241,19 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
           <div className="info">Nada planejado para este dia. Se fez algo, lance abaixo com os horários.</div>
         )}
 
+        {!showEditor && !absent && (
+          <button className="btn outline" onClick={addExtra}>+ Atividade não planejada</button>
+        )}
+
         {showEditor && (
           <>
             <div className="card">
               <h3>O que foi realizado</h3>
-              <div className="sub" style={{ marginBottom: 10 }}>Ajuste a modalidade e os horários reais de início e fim de cada atividade.</div>
+              <div className="sub" style={{ marginBottom: 10 }}>
+                {extra === 'plan' ? 'A nova atividade foi adicionada no fim. As atividades do plano vieram junto: ajuste ou remova (✕) as que não fez.'
+                  : extra === 'done' ? 'A nova atividade foi adicionada no fim. Ajuste a modalidade e os horários.'
+                  : 'Ajuste a modalidade e os horários reais de início e fim de cada atividade.'}
+              </div>
               <BlocksEditor modalities={data.modalities} value={blocks} onChange={setBlocks} errors={errors}
                 partners={partner ? [{ id: partner.id, name: partner.name }] : []} partnerHint="{nome} participou" />
               {partner && <div className="sub" style={{ marginTop: 8 }}>Marque "{pFirst} participou" para lançar também para {pFirst} (se ainda não lançou). Ajustes posteriores de um não alteram o do outro.</div>}
@@ -254,7 +271,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
             </div>
             {hasErrors && <div className="error">Corrija os horários em vermelho para salvar.</div>}
             <button className="btn brand" disabled={busy || hasErrors} onClick={() => save(blocks, text)}>{busy ? 'Salvando…' : 'Salvar'}</button>
-            {editing && <button className="btn ghost small" onClick={() => setEditing(false)}>Cancelar</button>}
+            {editing && <button className="btn ghost small" onClick={() => { setEditing(false); setExtra(null); setBlocks(done.length ? toBlocks(done) : withPartner(toBlocks(plan))) }}>Cancelar</button>}
           </>
         )}
       </div>
