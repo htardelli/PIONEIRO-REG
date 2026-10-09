@@ -209,9 +209,12 @@ function WeekCard({ week, today, color, goal }: { week: WeekStats; today: string
           )
         })}
       </div>
-      <div className="sub" style={{ marginTop: 8 }}>
-        Meta da semana = ritmo para {fmtHours(goal)} no ano. Planejado na semana: <b style={{ color: week.planned < week.target ? 'var(--bad)' : 'var(--ink)' }}>{fmtHours(week.planned)}</b>
-        {week.planned < week.target && ' — abaixo da meta'}.
+      <div className="sub" style={{ marginTop: 8 }}>Meta: <b style={{ color: 'var(--ink)' }}>{fmtHours(week.target)}</b> por semana para fechar {fmtHours(goal)} no ano.</div>
+      <div className="sub">
+        Seu plano desta semana: <b style={{ color: 'var(--ink)' }}>{fmtHours(week.planned)}</b>{' · '}
+        {week.planned < week.target
+          ? <b style={{ color: 'var(--bad)' }}>faltam planejar {fmtH(week.target - week.planned)}</b>
+          : <b style={{ color: 'var(--ok)' }}>✓ cobre a meta</b>}
       </div>
     </div>
   )
