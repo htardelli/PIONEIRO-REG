@@ -73,7 +73,6 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         </div>
       )}
 
-      <div className="psec">Dia</div>
       <div className="card" role={onLaunch ? 'button' : undefined} style={{ cursor: onLaunch ? 'pointer' : undefined }} onClick={onLaunch}>
         <div className="card-head" style={{ marginBottom: 6 }}>
           <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
@@ -85,10 +84,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
       </div>
 
-      <div className="psec">Semana</div>
       <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
 
-      <div className="psec">Mês</div>
       {cur && (
         <div className="card">
           <h3>{MONTH_NAME[today.getMonth()]}</h3>
@@ -140,7 +137,6 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         )}
       </div>
 
-      <div className="psec">Ano</div>
       {ringCard}
 
       <div className="card" style={{ padding: 12 }}>
