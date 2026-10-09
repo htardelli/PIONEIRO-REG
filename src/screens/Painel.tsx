@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, monthLabel, parseIso, WEEKDAY_SHORT } from '../domain'
-import { dayState, plansBelowPace, planToIcs, planVsDone, weekStats, yearStats, type WeekStats, type YearData } from '../data'
+import { cancelledPlan, dayState, pairDay, plansBelowPace, planToIcs, planVsDone, weekStats, yearStats, type WeekStats, type YearData } from '../data'
 import { DiffPill, GoalBar, MonthGrid, Ring } from '../ui'
 
 export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onPlanMonth, color }: {
@@ -22,6 +22,10 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
     : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, td.done > 0 ? 'var(--warn)' : 'var(--today)']
     : td.logged ? ['lançado', 'var(--muted)']
     : ['', '']
+  // Tudo de hoje já lançado (feito ou falta)? Então o botão Lançar fica inativo
+  const offToday = cancelledPlan(data)
+  const allLaunched = todayPlan.length > 0 && (td.faltou || pairDay(todayPlan.filter((p) => !offToday.has(p.id)),
+    data.entries.filter((e) => e.date === todayIso && !e.absent)).every((r) => !r.plan || r.done))
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
   const week = weekStats(data, today)
   const below = plansBelowPace(data, today)
@@ -90,7 +94,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             )) : <div className="sub">Sem plano para hoje</div>}
             <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''}`}{todayStatus && <>{todayPlan.length > 0 && ' · '}<b style={{ color: todayColor }}>{todayStatus}</b></>}</div>
           </div>
-          {onLaunch && <button className="btn brand small" style={{ width: 'auto', padding: '10px 18px', flexShrink: 0 }} onClick={onLaunch}>Lançar</button>}
+          {onLaunch && <button className="btn brand small" style={{ width: 'auto', padding: '10px 18px', flexShrink: 0 }} onClick={onLaunch} disabled={allLaunched}
+            title={allLaunched ? 'Todas as atividades de hoje já foram lançadas' : undefined}>{allLaunched ? 'Lançado ✓' : 'Lançar'}</button>}
         </div>
       </div>
 
