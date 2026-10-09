@@ -25,6 +25,10 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
   const week = weekStats(data, today)
   const below = plansBelowPace(data, today)
+  // Alerta fechado fica oculto até a situação mudar (outro mês abaixo ou plano alterado)
+  const alertKey = below.map((m) => `${m.month}:${m.planned}`).join('|')
+  const [closedKey, setClosedKey] = useState(() => { try { return localStorage.getItem('painel-alerta-fechado') ?? '' } catch { return '' } })
+  const closeAlert = () => { setClosedKey(alertKey); try { localStorage.setItem('painel-alerta-fechado', alertKey) } catch { /* sem armazenamento */ } }
   /** Baixa um .ics com o plano dos próximos 30 dias (abre na agenda do celular / importa no Outlook). */
   function exportAgenda() {
     const to = new Date(today); to.setDate(to.getDate() + 30)
@@ -56,8 +60,9 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
 
   return (
     <>
-      {below.length > 0 && (
-        <div className="alert" style={{ display: 'flex', gap: 10 }}>
+      {below.length > 0 && closedKey !== alertKey && (
+        <div className="alert" style={{ display: 'flex', gap: 10, position: 'relative', paddingRight: 36 }}>
+          <button className="xclose" aria-label="Fechar alerta" onClick={closeAlert}>✕</button>
           <span style={{ fontSize: 18 }}>⚠</span>
           <div>
             Plano de <b>{monthLabel(below[0].month).split(' ')[0].toLowerCase()}</b> ({fmtHours(below[0].planned)}) está abaixo do ritmo necessário (<b>{fmtHours(below[0].needed)}</b>).
