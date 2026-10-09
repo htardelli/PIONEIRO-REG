@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, WEEKDAY_SHORT } from '../domain'
-import { planVsDone, yearStats, type YearData } from '../data'
+import { dayState, planVsDone, yearStats, type YearData } from '../data'
 import { DiffPill, GoalBar, MonthGrid, Ring } from '../ui'
 
 export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, color }: {
@@ -12,6 +12,15 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
   const curLeft = cur ? Math.max(0, cur.target - cur.counted) : 0
   const pvd = planVsDone(data, monthKey(today), today)
+  // Planejamento do dia
+  const todayIso = isoDate(today)
+  const td = dayState(data, todayIso, today)
+  const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+  const [todayStatus, todayColor] = td.absentMin > 0 && td.done === 0 ? ['✗ faltou', 'var(--bad)']
+    : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
+    : td.done > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, 'var(--warn)']
+    : td.logged ? ['lançado', 'var(--muted)']
+    : todayPlan.length ? [onLaunch ? 'a lançar ›' : 'a lançar', 'var(--brand)'] : ['', '']
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
   const toggleMonths = () => setMonthsOpen((o) => !o)
   const diff = pvd.done - pvd.planned
@@ -62,11 +71,12 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
             <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
             <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
           </div>
-          <div className="card">
-            <h3>Precisa/mês</h3>
-            <div className="big">{fmtHours(ys.needed)}</div>
-            <div className="sub">média nos meses restantes</div>
-          </div>
+          <button className="card" style={{ textAlign: 'left', font: 'inherit', color: 'inherit' }} onClick={onLaunch} disabled={!onLaunch}>
+            <h3>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
+            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
+            <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
+            <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
+          </button>
         </div>
       )}
 
