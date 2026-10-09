@@ -1,4 +1,5 @@
 :root {
+  --today: #0E8FA3; --today-soft: #E0F3F6; /* destaque do dia de hoje */
   --bg: #EEF1F5; --card: #FFFFFF; --ink: #0F1B2D; --muted: #66748A; --line: #E3E8EF;
   --brand: #1F4E79; --brand-2: #2E75B6; --brand-soft: #E6EFF8;
   --ok: #1E8E5A; --ok-soft: #E3F4EC; --warn: #C98A06; --warn-soft: #FDF3DC; --now: #F2B705;
@@ -96,7 +97,8 @@ button { cursor: pointer; border: 0; background: none; }
 .cal .d.part { background: var(--warn-soft); } .cal .d.part em { color: var(--warn); }
 .cal .d.miss { background: var(--bad-soft); } .cal .d.miss em { color: var(--bad); }
 .cal .d.lanc { border-color: #5B6B82; }
-.cal .d.today { border-color: var(--brand); }
+.cal .d.today { border: 2px solid var(--today); color: var(--today); }
+.cal .d.today:not(.done):not(.part):not(.miss):not(.msel) { background: var(--today-soft); }
 .cal .d.sel { box-shadow: 0 0 0 2px var(--brand-2) inset; }
 
 .field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -217,13 +219,14 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 
 /* Esta semana: barras por dia (plano tracejado × feito) */
 .wbars { display: flex; gap: 6px; align-items: flex-end; }
-.wday { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.wday { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 4px 0 2px; }
 .wcol { position: relative; width: 100%; height: 64px; }
 .wplan { position: absolute; bottom: 0; left: 0; right: 0; border: 1.5px dashed #B9C3D1; border-radius: 7px; }
 .wdone { position: absolute; bottom: 0; left: 4px; right: 4px; border-radius: 5px; }
 .wx { position: absolute; bottom: 4px; width: 100%; text-align: center; color: var(--bad); font-weight: 800; font-size: 13px; }
 .wlbl { font-size: 10px; font-weight: 600; color: var(--muted); white-space: nowrap; }
-.wday.today .wlbl { color: var(--brand); font-weight: 800; }
+.wday.today { background: var(--today-soft); border-radius: 10px; }
+.wday.today .wlbl, .wday.today .wplanh { color: var(--today); font-weight: 800; }
 .xclose { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; font-weight: 800; color: #6E4C00; display: grid; place-items: center; }
 .xclose:active { background: rgba(0,0,0,.08); }
 .wleg { display: flex; flex-direction: column; gap: 2px; margin-top: 10px; font-size: 13px; color: var(--muted); }
@@ -233,3 +236,7 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .avatar { overflow: hidden; padding: 0; }
 .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .wplanh { font-size: 9.5px; font-weight: 600; color: #A9B4C4; min-height: 12px; line-height: 12px; }
+
+/* Card Hoje em destaque */
+.card.today-card { border: 2px solid var(--today); background: linear-gradient(180deg, var(--today-soft), #fff 70%); }
+.card.today-card h3 { color: var(--today); }

@@ -73,7 +73,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         </div>
       )}
 
-      <div className="card">
+      <div className="card today-card">
         <div className="card-head" style={{ marginBottom: 6 }}>
           <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
           {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
