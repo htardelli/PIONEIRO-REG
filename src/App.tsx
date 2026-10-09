@@ -50,8 +50,12 @@ function Main({ user }: { user: AuthUser }) {
       api.select<Share>('shares', { eq: { viewer: user.id } }),
       api.select<Share>('shares', { eq: { owner: user.id } }),
     ])
-    setPartnerId(incoming.find((s) => s.owner !== user.id)?.owner ?? null)
-    setSharedOut(outgoing.some((s) => s.viewer !== user.id))
+    // Cônjuge: de preferência quem tem compartilhamento MÚTUO comigo; escolha estável (ordenada)
+    const owners = incoming.map((s) => s.owner).filter((o) => o !== user.id).sort()
+    const mutual = owners.find((o) => outgoing.some((s) => s.viewer === o))
+    const pid = mutual ?? owners[0] ?? null
+    setPartnerId(pid)
+    setSharedOut(!!pid && outgoing.some((s) => s.viewer === pid))
   }, [user.id])
   useEffect(() => { void loadPartner().catch(() => {}) }, [loadPartner])
 

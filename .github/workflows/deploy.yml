@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read  # mínimo por padrão; só o job de publicação recebe escrita
 
 concurrency:
   group: pages
@@ -24,6 +24,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Verificar se houve mudança no banco
         id: mudou
         run: |
@@ -51,14 +52,6 @@ jobs:
             echo "::add-mask::$pw_enc"
             SUPABASE_DB_URL="postgresql://postgres.${SUPABASE_PROJECT_REF}:${pw_enc}@${SUPABASE_POOLER_HOST}:5432/postgres"
             echo "Usando SUPABASE_DB_PASSWORD (endereço montado automaticamente)."
-            python3 - "$SUPABASE_DB_PASSWORD" <<'PY'
-          import sys
-          p = sys.argv[1].strip()
-          tipos = [n for n, ok in [("letras", any(c.isalpha() for c in p)), ("números", any(c.isdigit() for c in p)),
-                   ("símbolos", any(not c.isalnum() for c in p))] if ok]
-          print(f"Diagnóstico (sem revelar a senha): {len(p)} caracteres; contém {', '.join(tipos) or 'nada'}.")
-          if any(c in p for c in "•●*"): print("::warning::A senha parece conter pontos de máscara (•/*): copie a senha real, não o campo mascarado.")
-          PY
           fi
           if [ -z "$SUPABASE_DB_URL" ]; then
             echo "::warning::Segredo SUPABASE_DB_PASSWORD (ou SUPABASE_DB_URL) não configurado — atualização do banco ignorada."
@@ -106,6 +99,8 @@ jobs:
     name: Testar, compilar e publicar
     needs: banco
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # gravar o branch gh-pages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

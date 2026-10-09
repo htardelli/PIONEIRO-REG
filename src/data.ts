@@ -379,7 +379,7 @@ export function plansBelowPace(d: YearData, today: Date): { month: string; plann
 export function planToIcs(d: YearData, from: string, to: string): string {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
   const dt = (date: string, t: string) => `${date.replace(/-/g, '')}T${t.slice(0, 5).replace(':', '')}00`
-  const esc = (s: string) => s.replace(/[\\,;]/g, (c) => '\\' + c)
+  const esc = (s: string) => s.replace(/[\\,;]/g, (c) => '\\' + c).replace(/\r?\n/g, '\\n')
   const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pioneiro-REG//PT-BR', 'CALSCALE:GREGORIAN']
   for (const p of d.plan.filter((x) => x.date >= from && x.date <= to && x.start_time && x.end_time).sort((a, b) => a.date.localeCompare(b.date))) {
     const name = d.modalities.find((m) => m.id === p.modality_id)?.name ?? 'Serviço'

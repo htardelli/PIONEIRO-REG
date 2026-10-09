@@ -55,7 +55,9 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
     rows.push([], ['Data', 'Modalidade', 'Horas'])
     for (const e of [...data.entries].sort((a, b) => a.date.localeCompare(b.date)))
       rows.push([e.date.split('-').reverse().join('/'), data.modalities.find((m) => m.id === e.modality_id)?.name ?? '', h(e.minutes)])
-    const csv = '﻿' + rows.map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n')
+    // Neutraliza fórmulas (=, +, -, @) para o Excel não executar conteúdo digitado (ex.: justificativa)
+    const cell = (c: unknown) => { const v = String(c ?? ''); return /^[=+\-@\t\r]/.test(v) && !/^-?\d/.test(v.replace(/^[−-]/, '')) ? `'${v}` : v }
+    const csv = '\uFEFF' + rows.map((r) => r.map((c) => `"${cell(c).replace(/"/g, '""')}"`).join(';')).join('\r\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     a.download = `pioneiro-reg-AS${data.sy}.csv`

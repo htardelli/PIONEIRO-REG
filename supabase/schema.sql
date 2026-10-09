@@ -248,6 +248,7 @@ create or replace function public.partner_modality(p_partner uuid, p_name text) 
 language plpgsql stable security definer set search_path = public as $$
 declare mid uuid; pname text;
 begin
+  if not public.is_mutual(auth.uid(), p_partner) then raise exception 'Sem permissão.'; end if;
   select id into mid from public.modalities
    where user_id = p_partner and lower(trim(name)) = lower(trim(p_name))
    order by active desc limit 1;
@@ -256,6 +257,20 @@ begin
     raise exception '% não tem a modalidade "%". Peça para criar em Configurações.', coalesce(pname, 'O participante'), p_name;
   end if;
   return mid;
+end $$;
+
+-- Validação comum das listas enviadas ao participante (v0.12): tamanho, atividade conjunta e janela de datas
+create or replace function public.check_partner_items(p_items jsonb, p_max_future int default 400) returns void
+language plpgsql stable set search_path = public as $$
+declare it jsonb;
+begin
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) > 1000 then
+    raise exception 'Lista inválida (máx. 1000 itens).';
+  end if;
+  for it in select * from jsonb_array_elements(p_items) loop
+    if nullif(it->>'group_id', '') is null then raise exception 'Somente atividades conjuntas podem ser gravadas para o participante.'; end if;
+    if (it->>'date')::date not between current_date - 400 and current_date + p_max_future then raise exception 'Data fora do período permitido.'; end if;
+  end loop;
 end $$;
 
 -- Grava (ou substitui) atividades conjuntas no PLANO do participante.
@@ -267,6 +282,7 @@ begin
   if not public.is_mutual(auth.uid(), p_partner) then
     raise exception 'Para planejar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
   end if;
+  perform public.check_partner_items(p_items);
   select name into pname from public.profiles where id = p_partner;
   for it in select * from jsonb_array_elements(p_items) loop
     d := (it->>'date')::date; g := (it->>'group_id')::uuid; s := (it->>'start')::time; e := (it->>'end')::time;
@@ -304,6 +320,7 @@ begin
   if not public.is_mutual(auth.uid(), p_partner) then
     raise exception 'Para lançar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
   end if;
+  perform public.check_partner_items(p_items, 1); -- realizado: no máximo até amanhã (fuso)
   select name into pname from public.profiles where id = p_partner;
   for it in select * from jsonb_array_elements(p_items) loop
     d := (it->>'date')::date; g := (it->>'group_id')::uuid; s := (it->>'start')::time; e := (it->>'end')::time;
@@ -369,7 +386,7 @@ begin
     raise exception 'Para lançar juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
   end if;
   insert into public.entries (user_id, date, modality_id, minutes, start_time, end_time, group_id, absent, note)
-  select p.user_id, p.date, p.modality_id, 0, p.start_time, p.end_time, p.group_id, true, coalesce(p_note, 'Faltei')
+  select p.user_id, p.date, p.modality_id, 0, p.start_time, p.end_time, p.group_id, true, left(coalesce(p_note, 'Faltei'), 300)
     from public.plan_items p
    where p.user_id = p_partner and p.date = p_date and p.group_id = any(p_groups)
      and not exists (select 1 from public.entries e where e.user_id = p_partner and e.date = p_date and e.group_id = p.group_id);
@@ -406,10 +423,11 @@ begin
   if not public.is_mutual(auth.uid(), p_partner) then
     raise exception 'Para marcar eventos juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
   end if;
+  perform public.check_partner_items(p_items);
   for it in select * from jsonb_array_elements(p_items) loop
     delete from public.day_events where user_id = p_partner and date = (it->>'date')::date and group_id = (it->>'group_id')::uuid;
     insert into public.day_events (user_id, date, kind, title, group_id)
-    values (p_partner, (it->>'date')::date, it->>'kind', coalesce(it->>'title', ''), (it->>'group_id')::uuid);
+    values (p_partner, (it->>'date')::date, left(it->>'kind', 60), left(coalesce(it->>'title', ''), 120), (it->>'group_id')::uuid);
   end loop;
 end $$;
 
@@ -457,3 +475,34 @@ create policy write_own on public.event_types for all using (user_id = auth.uid(
 -- ============ v0.11: foto de perfil ============
 -- Imagem pequena (JPEG 256×256 em data URL) gerada no próprio app.
 alter table public.profiles add column if not exists avatar text;
+
+-- ============ v0.12: endurecimento de segurança ============
+-- Funções auxiliares fora do alcance do papel anônimo; as internas, só para o próprio banco
+revoke all on function public.can_read(uuid) from public, anon;
+grant execute on function public.can_read(uuid) to authenticated;
+revoke all on function public.link_partner(text) from public, anon;
+grant execute on function public.link_partner(text) to authenticated;
+revoke all on function public.unlink_partner(uuid) from public, anon;
+grant execute on function public.unlink_partner(uuid) to authenticated;
+revoke all on function public.is_mutual(uuid, uuid) from public, anon, authenticated;
+revoke all on function public.partner_modality(uuid, text) from public, anon, authenticated;
+revoke all on function public.check_partner_items(jsonb, int) from public, anon, authenticated;
+
+-- Cores só em hexadecimal e foto só como JPEG pequeno em data URL (impede imagem/estilo externo e abuso de espaço).
+-- "not valid": vale para gravações novas sem travar dados antigos.
+alter table public.profiles drop constraint if exists profiles_color_hex;
+alter table public.profiles add constraint profiles_color_hex check (color ~ '^#[0-9A-Fa-f]{6}$') not valid;
+alter table public.modalities drop constraint if exists modalities_color_hex;
+alter table public.modalities add constraint modalities_color_hex check (color ~ '^#[0-9A-Fa-f]{6}$') not valid;
+alter table public.profiles drop constraint if exists profiles_avatar_ok;
+alter table public.profiles add constraint profiles_avatar_ok
+  check (avatar is null or (avatar ~ '^data:image/jpeg;base64,[A-Za-z0-9+/=]+$' and length(avatar) <= 150000)) not valid;
+-- Textos livres com tamanho máximo
+alter table public.profiles drop constraint if exists profiles_name_len;
+alter table public.profiles add constraint profiles_name_len check (length(name) <= 80) not valid;
+alter table public.month_records drop constraint if exists month_records_just_len;
+alter table public.month_records add constraint month_records_just_len check (length(justification) <= 2000) not valid;
+alter table public.day_notes drop constraint if exists day_notes_note_len;
+alter table public.day_notes add constraint day_notes_note_len check (length(note) <= 500) not valid;
+alter table public.day_events drop constraint if exists day_events_len;
+alter table public.day_events add constraint day_events_len check (length(kind) <= 60 and length(title) <= 120) not valid;
