@@ -238,6 +238,7 @@ function localApi(): Api {
         db[t] = db[t].filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) && dates.includes(String(x.date))))
         save()
       }
+      if (fn === 'admin_pending_users') return [] as T // demonstração: nenhum cadastro pendente
       if (fn === 'partner_plan_delete') {
         const groups = args.p_groups as string[]
         db.plan_items = db.plan_items.filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) &&

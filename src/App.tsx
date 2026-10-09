@@ -80,7 +80,7 @@ function Main({ user }: { user: AuthUser }) {
   // Primeiro acesso: cria as modalidades padrão (uma única vez)
   const seeded = useRef(false)
   useEffect(() => {
-    if (me.data && me.data.modalities.length === 0 && !seeded.current) {
+    if (me.data && me.data.profile?.approved !== false && me.data.modalities.length === 0 && !seeded.current) {
       seeded.current = true
       void api.insert('modalities', DEFAULT_MODALITIES.map((m, i) => ({ user_id: user.id, name: m.name, color: m.color, active: true, sort: i })))
         .then(me.reload)
@@ -89,7 +89,7 @@ function Main({ user }: { user: AuthUser }) {
   // Primeiro acesso: tipos de evento padrão (editáveis em Configurações)
   const seededEv = useRef(false)
   useEffect(() => {
-    if (me.data && me.data.eventTypes.length === 0 && !seededEv.current) {
+    if (me.data && me.data.profile?.approved !== false && me.data.eventTypes.length === 0 && !seededEv.current) {
       seededEv.current = true
       void api.insert('event_types', DEFAULT_EVENT_TYPES.map((name, i) => ({ user_id: user.id, name, sort: i })))
         .then(me.reload).catch(() => {})
@@ -108,9 +108,18 @@ function Main({ user }: { user: AuthUser }) {
   // Participante para atividades conjuntas: só com compartilhamento mútuo e dados dele(a) carregados
   const joint: JointPartner | null = partnerId && sharedOut && partner.data
     ? { id: partnerId, name: partner.data.profile?.name || 'Cônjuge', data: partner.data } : null
+  // Administrador: quantos cadastros aguardam aprovação
+  const [pendingCount, setPendingCount] = useState(0)
+  const isAdmin = !!me.data?.profile?.is_admin
+  useEffect(() => {
+    if (!isAdmin) return
+    api.rpc<unknown[]>('admin_pending_users', {}).then((r) => setPendingCount(r?.length ?? 0)).catch(() => {})
+  }, [isAdmin, tab])
+
   const reloadBoth = async () => { await Promise.all([me.reload(), joint ? partner.reload() : Promise.resolve()]) }
 
   let body
+  if (d?.profile?.approved === false) return <Pending name={name} />
   if (d?.profile?.must_change_password) {
     return <ChangePassword name={name} onDone={me.reload} />
   }
@@ -120,6 +129,11 @@ function Main({ user }: { user: AuthUser }) {
       <Header kicker={`Ano de serviço ${sy} · mês ${((today.getMonth() + 4) % 12) + 1} de 12`} title={`Olá, ${name.split(' ')[0]}!`}
         side={<Avatar name={name} color={color} photo={d.profile?.avatar} size={60} onClick={() => go('config')} />} />
       <div className="main">
+        {pendingCount > 0 && (
+          <button className="alert" style={{ textAlign: 'left', font: 'inherit' }} onClick={() => go('config')}>
+            👤 {pendingCount} {pendingCount === 1 ? 'cadastro aguardando' : 'cadastros aguardando'} sua aprovação · <b>ver ›</b>
+          </button>
+        )}
         <PainelBody data={d} today={today} color={color}
           onLaunch={() => { go('lancar'); setDate(isoDate(today)) }}
           onPickMonth={(m) => { go('relatorio'); setMonth(m) }}
@@ -144,6 +158,23 @@ function Main({ user }: { user: AuthUser }) {
       {body}
       <TabBar tab={tab} onTab={go} monthName={MONTH_NAME[today.getMonth()]} />
       {toast.node}
+    </div>
+  )
+}
+
+/** Conta criada pelo cadastro e ainda não aprovada pelo administrador. */
+function Pending({ name }: { name: string }) {
+  return (
+    <div className="center">
+      <div className="card form" style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
+        <div style={{ fontSize: 40 }}>⏳</div>
+        <div className="title" style={{ justifyContent: 'center' }}>Aguardando aprovação</div>
+        <div className="sub" style={{ fontSize: 14 }}>
+          Olá, {name.split(' ')[0]}! Seu cadastro foi recebido. Assim que o administrador aprovar, o app libera o acesso — é só abrir de novo.
+        </div>
+        <button className="btn outline small" onClick={() => location.reload()}>Verificar de novo</button>
+        <button className="btn ghost small" onClick={() => api.signOut()}>Sair</button>
+      </div>
     </div>
   )
 }

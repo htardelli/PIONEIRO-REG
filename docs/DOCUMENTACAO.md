@@ -48,7 +48,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 
 | Tabela | Uso | Acesso (RLS) |
 |---|---|---|
-| `profiles` | Nome, cor, metas (600/560 h em minutos), foto (`avatar`), `is_admin`, `must_change_password` | Lê o próprio e o de quem compartilhou; altera só o próprio (gatilho impede mudar `is_admin` / religar troca de senha) |
+| `profiles` | Nome, cor, metas (600/560 h em minutos), foto (`avatar`), `is_admin`, `must_change_password`, `approved` (cadastro aprovado) | Lê o próprio e o de quem compartilhou; altera só o próprio (gatilho impede mudar `is_admin` / religar troca de senha) |
 | `shares` | Consentimento: `owner` compartilha os **seus** dados com `viewer` | Leitura por quem participa; criação/remoção só via `link_partner` / `unlink_partner` |
 | `modalities` | Modalidades (Cartas, TPE/TPL, Casa em Casa…) com cor e ativa/inativa | Próprio + compartilhado (leitura) |
 | `month_records` | Por mês: meta (opcional), estudos bíblicos, justificativa | idem |
@@ -112,7 +112,10 @@ Funções principais: `can_read`, `is_mutual`, `link_partner`, `unlink_partner`,
 
 ### Configurações
 - Foto do perfil (recortada e reduzida no aparelho), nome, metas, cor, modalidades, **tipos de evento**,
-  criação de conta com senha provisória (somente administrador), sair, versão.
+  **cadastros pendentes** (aprovar/recusar) e criação de conta com senha provisória (somente administrador), sair, versão.
+
+### Login e cadastro
+- **Entrar** ou **Pedir cadastro**. O cadastro fica "Aguardando aprovação" até o administrador aprovar; o Painel do administrador avisa quantos aguardam.
 
 ## 6. Publicação e operação
 

@@ -11,7 +11,7 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação).
 - **Escrita no cônjuge** só por funções `partner_*` e só com **compartilhamento mútuo** — e apenas para
   **atividades conjuntas** (com `group_id`), com datas numa janela razoável e listas limitadas.
 - **Perfil**: ninguém se promove a administrador nem religa a troca obrigatória de senha (gatilho `protect_profile_flags`).
-- **Contas novas** só pelo administrador (Configurações), com senha provisória e troca obrigatória no primeiro acesso.
+- **Contas novas**: pelo cadastro do app (**nasce bloqueada** até o administrador aprovar em Configurações → Cadastros pendentes; recusar exclui a conta) ou criadas pelo administrador (senha provisória, troca obrigatória, já aprovadas). Conta pendente não lê nem grava dados (RLS exige `is_approved()`), não compartilha e não se aprova sozinha.
 - A chave `anon` em `src/config.ts` é **pública por definição**; a proteção é o RLS.
 
 ## Achados e correções (v0.12)
@@ -20,7 +20,7 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação).
 |---|---|---|---|
 | 1 | Média | Compartilhamento mútuo permitia ao cônjuge gravar lançamentos/planos **não conjuntos** (sem `group_id`), em qualquer data e em quantidade ilimitada; textos sem limite | **Corrigido**: `check_partner_items` exige `group_id`, limita a 1000 itens, datas entre −400 e +400 dias (realizado: no máximo até amanhã); textos truncados. Texto da tela Casal ajustado |
 | 2 | Média | Funções `can_read`, `link_partner`, `unlink_partner`, `is_mutual` e `partner_modality` executáveis pelo papel anônimo; `partner_modality` sem checagem (vazava o nome do perfil) | **Corrigido**: `revoke` do anônimo; `is_mutual`/`partner_modality` só internas; `partner_modality` exige compartilhamento mútuo |
-| 3 | Média | Cadastro público + `link_partner` permitiam descobrir se um e-mail tem conta | **Corrigido no app**: tela de login sem "Criar conta". **Pendente (você)**: desligar o cadastro no Supabase |
+| 3 | Média | Cadastro público + `link_partner` permitiam descobrir se um e-mail tem conta | **Corrigido (v0.13)**: cadastro só com aprovação do administrador; conta pendente não chama `link_partner` nem vê dados |
 | 4 | Média/Baixa | Um estranho que compartilhasse com a vítima podia aparecer como "cônjuge" e usar foto/cor externas (rastreamento) | **Corrigido**: cônjuge = compartilhamento **mútuo** (escolha estável); cor só hexadecimal; foto só JPEG pequeno em data URL (≤150 KB); **CSP** só permite recursos do app e o Supabase do projeto |
 | 5 | Baixa | Injeção de fórmula no "Exportar Excel" | **Corrigido**: células iniciadas por `= + - @` são neutralizadas |
 | 6 | Baixa | Quebra de linha não escapada no `.ics` | **Corrigido** |
@@ -30,7 +30,7 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação).
 
 ## Ações pendentes (manuais, no painel)
 
-1. **Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" → desligar.**
+1. **Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" → manter LIGADO** (o cadastro passa pela sua aprovação no app).
 2. **Supabase → Project Settings → Database → Reset database password**, depois atualizar o segredo
    `SUPABASE_DB_PASSWORD` no GitHub (*Settings → Secrets and variables → Actions*).
 3. (Opcional) Fixar as actions do workflow por SHA em vez de `@v4`.

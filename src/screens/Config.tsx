@@ -94,6 +94,7 @@ export function Config({ data, reload, toast, onBack }: {
 
         <EventTypes data={data} reload={reload} toast={toast} />
 
+        {p?.is_admin && <PendingUsers toast={toast} />}
         {p?.is_admin && <AdminCreateUser toast={toast} />}
 
         <button className="btn danger" onClick={() => api.signOut()}>Sair da conta</button>
@@ -148,6 +149,35 @@ function genPassword(): string {
   const a = new Uint32Array(10)
   crypto.getRandomValues(a)
   return Array.from(a, (n) => chars[n % chars.length]).join('')
+}
+
+/** Administrador: cadastros feitos pelo app aguardando aprovação (Aprovar libera; Recusar exclui a conta). */
+function PendingUsers({ toast }: { toast: (m: string) => void }) {
+  const [list, setList] = useState<{ id: string; name: string; email: string; created_at: string }[] | null>(null)
+  const load = () => api.rpc<{ id: string; name: string; email: string; created_at: string }[]>('admin_pending_users', {})
+    .then((r) => setList(r ?? [])).catch(() => setList([]))
+  useEffect(() => { void load() }, [])
+  async function decide(u: { id: string; name: string; email: string }, approve: boolean) {
+    if (!approve && !confirm(`Recusar o cadastro de ${u.name || u.email}? A conta será excluída.`)) return
+    try {
+      await api.rpc('admin_set_approval', { p_user: u.id, p_approve: approve })
+      toast(approve ? `${u.name || u.email} aprovado(a)` : 'Cadastro recusado e excluído')
+      await load()
+    } catch (e) { toast((e as Error).message) }
+  }
+  return (
+    <div className="card">
+      <div className="card-head"><h3>Cadastros pendentes</h3>{list && list.length > 0 && <span className="pill warn">{list.length}</span>}</div>
+      {list === null ? <div className="sub">Carregando…</div> : list.length === 0 ? <div className="empty">Nenhum cadastro aguardando aprovação.</div> : list.map((u) => (
+        <div key={u.id} className="mod" style={{ alignItems: 'center' }}>
+          <span className="n"><b>{u.name || '—'}</b><span className="sub"><br />{u.email} · {new Date(u.created_at).toLocaleDateString('pt-BR')}</span></span>
+          <button className="btn small" style={{ width: 'auto', padding: '6px 12px', background: 'var(--ok)', color: '#fff' }} onClick={() => decide(u, true)}>Aprovar</button>
+          <button className="link" style={{ color: 'var(--bad)', marginLeft: 8 }} onClick={() => decide(u, false)}>Recusar</button>
+        </div>
+      ))}
+      <div className="sub" style={{ marginTop: 8 }}>Quem se cadastra pelo app só acessa depois da sua aprovação. Contas criadas por você já entram aprovadas.</div>
+    </div>
+  )
 }
 
 function AdminCreateUser({ toast }: { toast: (m: string) => void }) {

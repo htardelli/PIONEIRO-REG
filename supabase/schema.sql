@@ -176,6 +176,9 @@ begin
     if new.must_change_password and not old.must_change_password then
       raise exception 'Operação não permitida.';
     end if;
+    if new.approved is distinct from old.approved then
+      raise exception 'Somente o administrador aprova cadastros.';
+    end if;
   end if;
   return new;
 end $$;
@@ -218,7 +221,7 @@ begin
           'email', now(), now(), now());
 
   -- o perfil é criado pelo gatilho handle_new_user; marca a troca obrigatória
-  update public.profiles set must_change_password = true where id = uid;
+  update public.profiles set must_change_password = true, approved = true where id = uid; -- criada pelo admin: já aprovada
 
   if share_mine then
     insert into public.shares values (auth.uid(), uid) on conflict do nothing;
@@ -506,3 +509,83 @@ alter table public.day_notes drop constraint if exists day_notes_note_len;
 alter table public.day_notes add constraint day_notes_note_len check (length(note) <= 500) not valid;
 alter table public.day_events drop constraint if exists day_events_len;
 alter table public.day_events add constraint day_events_len check (length(kind) <= 60 and length(title) <= 120) not valid;
+
+-- ============ v0.13: cadastro com aprovação do administrador ============
+-- Contas já existentes ficam aprovadas (default true só nesta criação da coluna); novas nascem pendentes.
+alter table public.profiles add column if not exists approved boolean not null default true;
+alter table public.profiles alter column approved set default false;
+update public.profiles set approved = true where is_admin and not approved;
+
+-- Quem chama está aprovado?
+create or replace function public.is_approved() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select approved from public.profiles where id = auth.uid()), false);
+$$;
+revoke all on function public.is_approved() from public, anon;
+grant execute on function public.is_approved() to authenticated;
+
+-- Conta pendente não lê nem grava nada (só o próprio perfil, para ver o aviso "aguardando aprovação")
+do $$
+declare t text;
+begin
+  foreach t in array array['modalities','month_records','plan_items','entries','day_notes','credits','day_events','event_types'] loop
+    execute format('drop policy if exists read_own_or_shared on public.%I', t);
+    execute format('drop policy if exists write_own on public.%I', t);
+    execute format('create policy read_own_or_shared on public.%I for select using (public.is_approved() and public.can_read(user_id))', t);
+    execute format('create policy write_own on public.%I for all using (user_id = auth.uid() and public.is_approved()) with check (user_id = auth.uid() and public.is_approved())', t);
+  end loop;
+end $$;
+
+-- Compartilhar e escrever no cônjuge também exigem conta aprovada (os dois lados)
+create or replace function public.is_mutual(a uuid, b uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (select 1 from public.shares where owner = a and viewer = b)
+     and exists (select 1 from public.shares where owner = b and viewer = a)
+     and (select count(*) from public.profiles where id in (a, b) and approved) = 2;
+$$;
+revoke all on function public.is_mutual(uuid, uuid) from public, anon, authenticated;
+
+create or replace function public.link_partner(partner_email text) returns uuid
+language plpgsql security definer set search_path = public as $$
+declare pid uuid;
+begin
+  if auth.uid() is null or not public.is_approved() then raise exception 'Conta aguardando aprovação.'; end if;
+  select id into pid from auth.users where lower(email) = lower(trim(partner_email));
+  if pid is null then raise exception 'Nenhuma conta com este e-mail. Peça para a pessoa se cadastrar primeiro.'; end if;
+  if pid = auth.uid() then raise exception 'Informe o e-mail do cônjuge, não o seu.'; end if;
+  insert into public.shares values (auth.uid(), pid) on conflict do nothing;
+  return pid;
+end $$;
+revoke all on function public.link_partner(text) from public, anon;
+grant execute on function public.link_partner(text) to authenticated;
+
+-- Administração dos cadastros pendentes
+create or replace function public.admin_pending_users() returns table (id uuid, name text, email text, created_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin) then
+    raise exception 'Somente administradores.';
+  end if;
+  return query select p.id, p.name, p.email, p.created_at from public.profiles p where not p.approved order by p.created_at;
+end $$;
+
+create or replace function public.admin_set_approval(p_user uuid, p_approve boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin) then
+    raise exception 'Somente administradores.';
+  end if;
+  if exists (select 1 from public.profiles p where p.id = p_user and (p.approved or p.is_admin)) then
+    raise exception 'Esta conta já está aprovada.';
+  end if;
+  if p_approve then
+    update public.profiles set approved = true where id = p_user;
+  else
+    delete from auth.users where id = p_user; -- recusado: remove a conta (perfil e dados saem em cascata)
+  end if;
+end $$;
+
+revoke all on function public.admin_pending_users() from public, anon;
+revoke all on function public.admin_set_approval(uuid, boolean) from public, anon;
+grant execute on function public.admin_pending_users() to authenticated;
+grant execute on function public.admin_set_approval(uuid, boolean) to authenticated;
