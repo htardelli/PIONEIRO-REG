@@ -80,20 +80,16 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             onClick={(e) => { e.stopPropagation(); exportAgenda() }}>📅 Agenda</button>}
         </div>
         <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
-        <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
+        {todayPlan.length ? todayPlan.map((p) => (
+          <div className="sub" key={p.id}>
+            {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && ' 👥'}
+          </div>
+        )) : <div className="sub">Sem plano para hoje</div>}
         <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
       </div>
 
       <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
 
-      {cur && (
-        <div className="card">
-          <h3>{MONTH_NAME[today.getMonth()]}</h3>
-          <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
-          <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
-          <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
-        </div>
-      )}
       <div className="card">
         <div className="card-head">
           <h3>Realizado × planejado · {MONTH_NAME[today.getMonth()].toLowerCase()}</h3>
@@ -137,6 +133,14 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         )}
       </div>
 
+      {cur && (
+        <div className="card">
+          <h3>{MONTH_NAME[today.getMonth()]}</h3>
+          <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
+          <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
+          <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
+        </div>
+      )}
       {ringCard}
 
       <div className="card" style={{ padding: 12 }}>
