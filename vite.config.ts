@@ -13,7 +13,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      workbox: { cleanupOutdatedCaches: true, clientsClaim: true, skipWaiting: true },
+      workbox: { cleanupOutdatedCaches: true, clientsClaim: true, skipWaiting: true, globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
       includeAssets: ['icon.svg'],
       manifest: {
         name: 'Pioneiro-REG',

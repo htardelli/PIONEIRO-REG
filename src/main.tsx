@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
+import '@fontsource-variable/ruda' // fonte Ruda empacotada no app (sem depender do Google Fonts)
 import './styles.css'
 import { registerSW } from 'virtual:pwa-register'
 

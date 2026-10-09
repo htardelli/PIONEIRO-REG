@@ -4,7 +4,7 @@
   --brand: #1F4E79; --brand-2: #2E75B6; --brand-soft: #E6EFF8;
   --ok: #1E8E5A; --ok-soft: #E3F4EC; --warn: #C98A06; --warn-soft: #FDF3DC; --now: #F2B705;
   --bad: #C0392B; --bad-soft: #FBE7E5; --credit: #7A4FC2; --credit-soft: #EFE8FA; --future: #DCE3EC;
-  font-family: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Ruda Variable', Ruda, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--ink);
   -webkit-tap-highlight-color: transparent;
 }
@@ -240,3 +240,8 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 /* Card Hoje em destaque */
 .card.today-card { border: 2px solid var(--today); background: linear-gradient(180deg, var(--today-soft), #fff 70%); }
 .card.today-card h3 { color: var(--today); }
+
+/* Campos lado a lado (ex.: De/Até): dividem a largura sem estourar; data do iOS não força largura mínima */
+.row > .field { flex: 1 1 0; min-width: 0; }
+.field input[type='date'], .field input[type='time'] { min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none; text-align: left; }
+.field input[type='date']::-webkit-date-and-time-value { text-align: left; }
