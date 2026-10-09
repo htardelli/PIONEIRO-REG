@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, toMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
-import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
+import { dayState, pairDay, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, CalLegend, newBlockAfter, useChoice } from '../ui'
 import type { DayItem } from '../types'
 
@@ -64,7 +64,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
 
   /** "+ Atividade não planejada": abre o lançamento do dia com uma atividade nova no fim. */
   function addExtra() {
-    const base = done.length ? toBlocks(done) : withPartner(toBlocks(plan))
+    const base = done.length ? toBlocks(done) : withPartner(toBlocks(plan.filter((p) => !notYet(p.end_time))))
     setBlocks([...base, newBlockAfter(base, data.modalities)])
     setExtra(done.length || !plan.length ? 'done' : 'plan')
     setEditing(true)
@@ -136,7 +136,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
 
   /** "Cumpri o planejado": se houver atividade conjunta ainda não lançada pelo participante, pergunta se ele(a) participou. */
   async function confirmPlanned() {
-    let bs = withPartner(toBlocks(plan))
+    let bs = withPartner(toBlocks(ready))
     const pending = bs.filter((b) => b.with?.length)
     if (pending.length && partner) {
       const desc = pending.map((b) => `${data.modalities.find((m) => m.id === b.modality_id)?.name ?? ''} ${b.start}–${b.end}`).join('\n')
@@ -148,7 +148,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
       if (!r) return
       if (r === 'me') bs = bs.map((b) => ({ ...b, with: [] }))
     }
-    await save(bs, '')
+    await save([...toBlocks(done), ...bs], note?.note ?? '') // mantém o que já foi lançado no dia
   }
 
   const isAbsence = logged && done.length === 0 && (note?.note ?? '').startsWith(ABSENCE_PREFIX)
@@ -159,8 +159,10 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const notYet = (end?: string | null) => date === todayIso && !!end && toMinutes(end.slice(0, 5)) > nowMin
   const errors: Record<number, string> = { ...blockErrors(blocks, nameOf) }
   blocks.forEach((b, i) => { if (!errors[i] && notYet(b.end)) errors[i] = `Termina às ${b.end.slice(0, 5)}: só pode ser lançada depois desse horário.` })
-  const lastEnd = plan.reduce((a, p) => (p.end_time && p.end_time > a ? p.end_time : a), '')
-  const planNotDone = notYet(lastEnd)
+  // Atividades do plano ainda não lançadas: as que já terminaram podem ser lançadas agora; as demais, depois do horário
+  const pending = pairDay(plan, done).filter((r) => r.plan && !r.done).map((r) => r.plan!)
+  const ready = pending.filter((p) => !notYet(p.end_time))
+  const later = pending.filter((p) => notYet(p.end_time))
   const hasErrors = Object.keys(errors).length > 0
   const planTotal = sumMin(plan)
   const doneTotal = sumMin(done)
@@ -212,20 +214,25 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
           </div>
         )}
 
-        {!logged && plan.length > 0 && (
+        {pending.length > 0 && !isAbsence && !editing && (
           <>
             <div className="card">
-              <h3>Planejado para o dia · {fmtH(planTotal)}</h3>
-              {plan.map((p) => <ItemRow key={p.id} item={p} data={data} />)}
+              <h3>{done.length ? 'Ainda a lançar' : 'Planejado para o dia'} · {fmtH(sumMin(pending))}</h3>
+              {pending.map((p) => (
+                <div key={p.id} style={{ opacity: notYet(p.end_time) ? 0.55 : 1 }}>
+                  <ItemRow item={p} data={data} />
+                  {notYet(p.end_time) && <div className="sub" style={{ marginTop: -4, marginBottom: 4 }}>⏳ libera às {p.end_time!.slice(0, 5)}</div>}
+                </div>
+              ))}
             </div>
-            {!editing && !absent && (
+            {!absent && (
               <>
-                <button className="btn primary" disabled={busy || planNotDone} onClick={confirmPlanned}>
-                  {planNotDone ? `✓ Cumpri o planejado · após ${lastEnd.slice(0, 5)}` : '✓ Cumpri o planejado'}
+                <button className="btn primary" disabled={busy || ready.length === 0} onClick={confirmPlanned}>
+                  {ready.length === 0 ? `✓ Cumpri o planejado · após ${later[0].end_time!.slice(0, 5)}`
+                    : later.length ? `✓ Cumpri as que já terminaram (${ready.length})` : '✓ Cumpri o planejado'}
                 </button>
-                {planNotDone && <div className="sub" style={{ textAlign: 'center', marginTop: -4 }}>O lançamento libera quando a última atividade planejada terminar.</div>}
-                <button className="btn outline" onClick={() => { setBlocks(withPartner(toBlocks(plan))); setEditing(true) }}>Fiz diferente ▾</button>
-                <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>
+                <button className="btn outline" onClick={() => { setBlocks([...toBlocks(done), ...withPartner(toBlocks(pending))]); setEditing(true) }}>Fiz diferente ▾</button>
+                {done.length === 0 && <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>}
               </>
             )}
             {absent && (

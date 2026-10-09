@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
 import {
-  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, parseIso, serviceYearMonths, weekDates, type MonthStatus,
+  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, parseIso, serviceYearMonths, toMinutes, weekDates, type MonthStatus,
 } from './domain'
 import type { Credit, DayEvent, EventType, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
@@ -61,6 +61,9 @@ export function useYear(userId: string | null, sy: number) {
   }, [reload])
   return { data, error, reload }
 }
+
+/** Minutos do relógio agora (hora local). */
+const nowMinutes = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() }
 
 // ---------- Estatísticas ----------
 const sum = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
@@ -244,6 +247,13 @@ export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone 
       continue
     }
     const off = cancelledPlan(d)
+    // hoje: atividade que ainda não terminou não entra (nem como plano, nem como falta)
+    if (date === todayIso) {
+      const later = dayPlan.filter((p) => !off.has(p.id) && p.end_time && toMinutes(p.end_time.slice(0, 5)) > nowMinutes()
+        && !d.entries.some((e) => e.date === date && !e.absent && (p.group_id ? e.group_id === p.group_id : e.modality_id === p.modality_id)))
+      r.planned -= later.reduce((a, p) => a + p.minutes, 0)
+      dayPlan.splice(0, dayPlan.length, ...dayPlan.filter((p) => !later.includes(p)))
+    }
     for (const row of pairDay(dayPlan, d.entries.filter((e) => e.date === date))) {
       if (!row.plan) continue // atividade fora do plano não entra na contagem
       if (off.has(row.plan.id) || !row.done || row.done.absent || row.done.minutes === 0) r.acts.miss++
