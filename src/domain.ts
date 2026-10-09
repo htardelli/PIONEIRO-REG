@@ -300,7 +300,18 @@ export const HOLIDAY_LABEL: Record<HolidayKind, string> = { nacional: 'feriado n
 /** Tipos padrão (cadastrados no primeiro acesso; editáveis em Configurações). "Outro" é sempre oferecido. */
 export const DEFAULT_EVENT_TYPES = ['Congresso', 'Assembleia', 'Visita do SC', 'Celebração']
 export const EVENT_OTHER = 'Outro'
-export const eventName = (ev: { kind: string; title: string }) => (ev.title ? (ev.kind === 'Outro' ? ev.title : `${ev.kind} · ${ev.title}`) : ev.kind)
+/** Períodos de um evento: dia inteiro ou manhã/tarde/noite. */
+export const EVENT_PERIODS = [['manha', 'Manhã'], ['tarde', 'Tarde'], ['noite', 'Noite']] as const
+export function periodLabel(periods?: string | null): string {
+  if (!periods || periods === 'dia') return ''
+  const names = EVENT_PERIODS.filter(([k]) => periods.split(',').includes(k)).map(([, n]) => n.toLowerCase())
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}` : names[0] ?? ''
+}
+export const eventName = (ev: { kind: string; title: string; periods?: string | null }) => {
+  const base = ev.title ? (ev.kind === 'Outro' ? ev.title : `${ev.kind} · ${ev.title}`) : ev.kind
+  const p = periodLabel(ev.periods)
+  return p ? `${base} (${p})` : base
+}
 
 /** Junta itens iguais (mesma chave) em dias seguidos: [{from, to, items}]. Entrada em qualquer ordem. */
 export function dateRuns<T extends { date: string }>(items: T[], key: (x: T) => string): { from: string; to: string; items: T[] }[] {

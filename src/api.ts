@@ -228,7 +228,7 @@ function localApi(): Api {
       if (fn === 'partner_events_add') {
         for (const it of args.p_items as Row[]) {
           db.day_events = db.day_events.filter((x) => !(x.user_id === partner && x.date === it.date && x.group_id === it.group_id))
-          db.day_events.push({ id: crypto.randomUUID(), user_id: partner, date: it.date, kind: it.kind, title: it.title ?? '', group_id: it.group_id })
+          db.day_events.push({ id: crypto.randomUUID(), user_id: partner, date: it.date, kind: it.kind, title: it.title ?? '', group_id: it.group_id, periods: it.periods ?? 'dia' })
         }
         save()
       }

@@ -56,6 +56,7 @@ export interface DayEvent {
   kind: string
   title: string
   group_id?: string | null
+  periods?: string // 'dia' (dia inteiro) ou 'manha,tarde,noite' (combinação)
 }
 
 export interface EventType {

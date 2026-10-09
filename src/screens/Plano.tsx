@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import {
-  blockErrors, blockMinutes, dateRuns, fmtRun, DEFAULT_EVENT_TYPES, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
+  blockErrors, blockMinutes, dateRuns, fmtRun, DEFAULT_EVENT_TYPES, EVENT_PERIODS, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock, mondayIndex, WEEK_HEAD,
 } from '../domain'
 import { dayState, monthStats, partnerHasGroup, yearStats, type JointPartner, type YearData } from '../data'
@@ -36,6 +36,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const [picked, setPicked] = useState<string[]>([])
   const [evDates, setEvDates] = useState<string[] | null>(null) // formulário de evento aberto para estas datas
   const [evRange, setEvRange] = useState(false) // formulário com período (data inicial e final)
+  const [editRun, setEditRun] = useState<DayEvent[] | null>(null) // evento (sequência de dias) em edição
 
   useEffect(() => { setGoalH(ms.goal ? fmtH(ms.goal) : ''); setSel(null) }, [month, ms.goal])
   useEffect(() => { setPicked([]); setEvDates(null) }, [month])
@@ -217,8 +218,9 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
     } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
   }
 
-  async function addEvent(dates: string[], kind: string, title: string, both: boolean) {
-    const withPlan = planDates(dates)
+  async function addEvent(dates: string[], kind: string, title: string, both: boolean, periods = 'dia', replace: DayEvent[] = []) {
+    const oldDates = replace.map((e) => e.date)
+    const withPlan = planDates(dates).filter((d) => !oldDates.includes(d)) // na edição, só pergunta pelos dias novos
     let dropPlan = false
     if (withPlan.length) {
       const r = await choice.ask<'keep' | 'drop'>('Já existe plano nesses dias',
@@ -230,13 +232,27 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
     setBusy(true)
     try {
       if (dropPlan && !(await deleteDates(withPlan, false))) return
-      const group_id = both && partner ? crypto.randomUUID() : null
-      await api.insert('day_events', dates.map((date) => ({ user_id: data.userId, date, kind, title, group_id })))
-      if (group_id && partner) await api.rpc('partner_events_add', { p_partner: partner.id, p_items: dates.map((date) => ({ date, kind, title, group_id })) })
+      if (replace.length) { // edição: remove a versão antiga (minha e, se era conjunta, a do cônjuge)
+        const oldGroups = [...new Set(replace.map((e) => e.group_id).filter((g): g is string => !!g))]
+        if (partner && oldGroups.length) await api.rpc('partner_events_delete', { p_partner: partner.id, p_groups: oldGroups, p_dates: oldDates })
+        await api.remove('day_events', { eq: { user_id: data.userId }, in: ['id', replace.map((e) => e.id)] })
+      }
+      const group_id = both && partner ? (replace.find((e) => e.group_id)?.group_id ?? crypto.randomUUID()) : null
+      await api.insert('day_events', dates.map((date) => ({ user_id: data.userId, date, kind, title, group_id, periods })))
+      if (group_id && partner) await api.rpc('partner_events_add', { p_partner: partner.id, p_items: dates.map((date) => ({ date, kind, title, group_id, periods })) })
       await reload()
-      toast(`${kind} marcado em ${dates.length} ${dates.length === 1 ? 'dia' : 'dias'}${group_id ? ` · também para ${pFirst}` : ''}${dropPlan ? ' · plano excluído' : ''}`)
-      setEvDates(null); setEvRange(false); setPicked([]); setMulti(false)
+      toast(replace.length ? 'Evento atualizado' : `${kind} marcado em ${dates.length} ${dates.length === 1 ? 'dia' : 'dias'}${group_id ? ` · também para ${pFirst}` : ''}${dropPlan ? ' · plano excluído' : ''}`)
+      setEvDates(null); setEvRange(false); setEditRun(null); setPicked([]); setMulti(false)
     } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
+  }
+
+  // Sequência de dias seguidos do mesmo evento (mesmo tipo, detalhe e período)
+  const evKey = (e: DayEvent) => `${e.kind}|${e.title}|${e.periods ?? 'dia'}`
+  const runOf = (ev: DayEvent) => dateRuns(data.events, evKey).find((r) => r.items.some((x) => x.id === ev.id))?.items ?? [ev]
+  function startEdit(run: DayEvent[]) {
+    setSel(null); setMulti(false); setPicked([])
+    setEditRun([...run].sort((a, b) => a.date.localeCompare(b.date))); setEvRange(true); setEvDates([])
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function removeEvent(evOrRun: DayEvent | DayEvent[]) {
@@ -267,7 +283,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const monthMarks = [
     ...dateRuns(monthDays.filter((d) => holidayOf(d)).map((d) => ({ date: d, hol: holidayOf(d)! })), (x) => x.hol.name)
       .map((r) => ({ ...r, hol: r.items[0].hol, evs: null as DayEvent[] | null })),
-    ...dateRuns(data.events.filter((e) => e.date.startsWith(month)), (e) => `${e.kind}|${e.title}`)
+    ...dateRuns(data.events.filter((e) => e.date.startsWith(month)), evKey)
       .map((r) => ({ from: r.from, to: r.to, hol: null, evs: r.items })),
   ].sort((a, b) => a.from.localeCompare(b.from))
 
@@ -331,10 +347,11 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
         )}
 
         {evDates && (
-          <EventForm dates={evDates} partnerName={partner ? pFirst : ''} busy={busy} onCancel={() => { setEvDates(null); setEvRange(false) }}
+          <EventForm key={editRun?.[0].id ?? 'novo'} dates={evDates} partnerName={partner ? pFirst : ''} busy={busy} onCancel={() => { setEvDates(null); setEvRange(false); setEditRun(null) }}
             types={data.eventTypes.length ? data.eventTypes.map((t) => t.name) : DEFAULT_EVENT_TYPES}
-            range={evRange ? { start: month === todayIso.slice(0, 7) ? todayIso : `${month}-01`, min: months[0] + '-01', max: `${months[11]}-31` } : undefined}
-            onSave={(k, t, both, dates) => addEvent(dates, k, t, both)} />
+            range={evRange ? { start: editRun ? editRun[0].date : month === todayIso.slice(0, 7) ? todayIso : `${month}-01`, end: editRun?.[editRun.length - 1].date, min: months[0] + '-01', max: `${months[11]}-31` } : undefined}
+            initial={editRun ? { kind: editRun[0].kind, title: editRun[0].title, periods: editRun[0].periods ?? 'dia', both: !!editRun[0].group_id } : undefined}
+            onSave={(k, t, both, dates, periods) => addEvent(dates, k, t, both, periods, editRun ?? [])} />
         )}
 
         {sel ? (
@@ -348,7 +365,8 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               {eventsOn(sel).map((ev) => (
                 <div className="daytag ev" key={ev.id}>
                   <span className="grow">📌 {eventName(ev)}{ev.group_id ? ` · com ${pFirst || 'cônjuge'}` : ''}</span>
-                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(ev)}>Remover</button>
+                  <button className="link" onClick={() => startEdit(runOf(ev))}>Editar</button>
+                  <button className="link" style={{ color: 'var(--bad)', marginLeft: 10 }} onClick={() => removeEvent(ev)}>Remover</button>
                 </div>
               ))}
             </div>
@@ -419,7 +437,8 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                 <div className="daytag hol" key={m.from + 'h'}><span className="grow">{fmtRun(m.from, m.to)} · {m.hol.name}</span><span className="sub">{HOLIDAY_LABEL[m.hol.kind]}</span></div>
               ) : (
                 <div className="daytag ev" key={m.evs![0].id}><span className="grow">{fmtRun(m.from, m.to)} · {eventName(m.evs![0])}</span>
-                  <button className="link" style={{ color: 'var(--bad)' }} onClick={() => removeEvent(m.evs!)}>Remover</button></div>
+                  <button className="link" onClick={() => startEdit(m.evs!)}>Editar</button>
+                  <button className="link" style={{ color: 'var(--bad)', marginLeft: 10 }} onClick={() => removeEvent(m.evs!)}>Remover</button></div>
               ))}
             </div>
           </div>
@@ -452,22 +471,27 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
 
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1)
 
-function EventForm({ dates, types, range, partnerName, busy, onCancel, onSave }: {
-  dates: string[]; types: string[]; range?: { start: string; min: string; max: string }; partnerName: string; busy: boolean
-  onCancel: () => void; onSave: (kind: string, title: string, both: boolean, dates: string[]) => void
+function EventForm({ dates, types, range, initial, partnerName, busy, onCancel, onSave }: {
+  dates: string[]; types: string[]; range?: { start: string; end?: string; min: string; max: string }; partnerName: string; busy: boolean
+  initial?: { kind: string; title: string; periods: string; both: boolean }
+  onCancel: () => void; onSave: (kind: string, title: string, both: boolean, dates: string[], periods: string) => void
 }) {
-  const kinds = [...types, EVENT_OTHER]
-  const [kind, setKind] = useState<string>(kinds[0])
-  const [title, setTitle] = useState('')
-  const [both, setBoth] = useState(!!partnerName)
+  const kinds = [...new Set([...types, ...(initial ? [initial.kind] : []), EVENT_OTHER])]
+  const [kind, setKind] = useState<string>(initial?.kind ?? kinds[0])
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [both, setBoth] = useState(initial ? initial.both : !!partnerName)
   const [from, setFrom] = useState(range?.start ?? '')
-  const [to, setTo] = useState(range?.start ?? '')
+  const [to, setTo] = useState(range?.end ?? range?.start ?? '')
+  // Duração: dia inteiro ou um ou mais períodos
+  const [periods, setPeriods] = useState<string[]>(initial && initial.periods !== 'dia' ? initial.periods.split(',') : [])
+  const togglePeriod = (k: string) => setPeriods((ps) => (ps.includes(k) ? ps.filter((x) => x !== k) : [...ps, k]))
+  const periodsValue = periods.length === 0 || periods.length === 3 ? 'dia' : EVENT_PERIODS.map(([k]) => k).filter((k) => periods.includes(k)).join(',')
   const fmt = (d: string) => d.slice(8) + '/' + d.slice(5, 7)
   const list = range ? datesBetween(from, to) : dates
   const invalid = (kind === EVENT_OTHER && !title.trim()) || list.length === 0 || list.length > 31
   return (
     <div className="card form">
-      <h3 style={{ margin: 0 }}>Marcar evento{!range && ` · ${dates.length === 1 ? fmt(dates[0]) : `${dates.length} dias`}`}</h3>
+      <h3 style={{ margin: 0 }}>{initial ? 'Editar evento' : 'Marcar evento'}{!range && ` · ${dates.length === 1 ? fmt(dates[0]) : `${dates.length} dias`}`}</h3>
       {range && (
         <div className="row" style={{ gap: 10 }}>
           <label className="field">De<input type="date" value={from} min={range.min} max={range.max} onChange={(e) => { setFrom(e.target.value); if (e.target.value > to) setTo(e.target.value) }} /></label>
@@ -480,6 +504,13 @@ function EventForm({ dates, types, range, partnerName, busy, onCancel, onSave }:
         {kinds.map((k) => <button key={k} className={`chip ${kind === k ? 'on' : ''}`} onClick={() => setKind(k)}>{k}</button>)}
       </div>
       <input className="input" placeholder={kind === EVENT_OTHER ? 'Qual evento? (obrigatório)' : 'Detalhe (opcional, ex.: local)'} value={title} onChange={(e) => setTitle(e.target.value)} />
+      <div className="sub" style={{ fontWeight: 700 }}>DURAÇÃO</div>
+      <div className="chips">
+        <button className={`chip ${periodsValue === 'dia' ? 'on' : ''}`} onClick={() => setPeriods([])}>Dia inteiro</button>
+        {EVENT_PERIODS.map(([k, n]) => (
+          <button key={k} className={`chip ${periodsValue !== 'dia' && periods.includes(k) ? 'on' : ''}`} onClick={() => togglePeriod(k)}>{n}</button>
+        ))}
+      </div>
       {partnerName && (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 14, fontWeight: 600 }}>
           <input type="checkbox" checked={both} onChange={(e) => setBoth(e.target.checked)} /> Também para {partnerName}
@@ -488,7 +519,7 @@ function EventForm({ dates, types, range, partnerName, busy, onCancel, onSave }:
       <div className="row" style={{ gap: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Cancelar</button>
         <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || invalid}
-          onClick={() => onSave(kind, title.trim(), both, list)}>Salvar evento</button>
+          onClick={() => onSave(kind, title.trim(), both, list, periodsValue)}>{initial ? 'Salvar alterações' : 'Salvar evento'}</button>
       </div>
     </div>
   )

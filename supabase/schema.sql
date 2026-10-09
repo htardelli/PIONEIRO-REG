@@ -411,6 +411,11 @@ create table if not exists public.day_events (
   group_id uuid
 );
 create index if not exists day_events_user_date on public.day_events (user_id, date);
+-- v0.14: período do evento — 'dia' (dia inteiro) ou combinação de manha/tarde/noite (ex.: 'manha,tarde')
+alter table public.day_events add column if not exists periods text not null default 'dia';
+alter table public.day_events drop constraint if exists day_events_periods_ok;
+alter table public.day_events add constraint day_events_periods_ok
+  check (periods = 'dia' or periods ~ '^(manha|tarde|noite)(,(manha|tarde|noite)){0,2}$');
 grant select, insert, update, delete on public.day_events to authenticated;
 alter table public.day_events enable row level security;
 drop policy if exists read_own_or_shared on public.day_events;
@@ -429,8 +434,9 @@ begin
   perform public.check_partner_items(p_items);
   for it in select * from jsonb_array_elements(p_items) loop
     delete from public.day_events where user_id = p_partner and date = (it->>'date')::date and group_id = (it->>'group_id')::uuid;
-    insert into public.day_events (user_id, date, kind, title, group_id)
-    values (p_partner, (it->>'date')::date, left(it->>'kind', 60), left(coalesce(it->>'title', ''), 120), (it->>'group_id')::uuid);
+    insert into public.day_events (user_id, date, kind, title, group_id, periods)
+    values (p_partner, (it->>'date')::date, left(it->>'kind', 60), left(coalesce(it->>'title', ''), 120), (it->>'group_id')::uuid,
+            coalesce(nullif(it->>'periods', ''), 'dia'));
   end loop;
 end $$;
 
