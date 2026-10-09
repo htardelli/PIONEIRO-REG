@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { blockErrors, blockMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
+import { blockErrors, blockMinutes, toMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
 import { dayState, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, CalLegend, newBlockAfter, useChoice } from '../ui'
 import type { DayItem } from '../types'
@@ -46,6 +46,9 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const [blocks, setBlocks] = useState<TimeBlock[]>([])
   const [text, setText] = useState('')
   const [busy, setBusy] = useState(false)
+  const clock = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() }
+  const [nowMin, setNowMin] = useState(clock)
+  useEffect(() => { const t = setInterval(() => setNowMin(clock()), 30000); return () => clearInterval(t) }, [])
   const [picking, setPicking] = useState(false)
   const [absent, setAbsent] = useState(false)
   const [reason, setReason] = useState('')
@@ -152,7 +155,12 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const absenceNote = () => [ABSENCE_PREFIX + (reason ? ` (${reason.toLowerCase()})` : ''), absText.trim()].filter(Boolean).join(': ')
 
   const nameOf = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
-  const errors = blockErrors(blocks, nameOf)
+  // Não deixa lançar atividade de hoje que ainda não terminou (fim depois do horário atual)
+  const notYet = (end?: string | null) => date === todayIso && !!end && toMinutes(end.slice(0, 5)) > nowMin
+  const errors: Record<number, string> = { ...blockErrors(blocks, nameOf) }
+  blocks.forEach((b, i) => { if (!errors[i] && notYet(b.end)) errors[i] = `Termina às ${b.end.slice(0, 5)}: só pode ser lançada depois desse horário.` })
+  const lastEnd = plan.reduce((a, p) => (p.end_time && p.end_time > a ? p.end_time : a), '')
+  const planNotDone = notYet(lastEnd)
   const hasErrors = Object.keys(errors).length > 0
   const planTotal = sumMin(plan)
   const doneTotal = sumMin(done)
@@ -212,7 +220,10 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
             </div>
             {!editing && !absent && (
               <>
-                <button className="btn primary" disabled={busy} onClick={confirmPlanned}>✓ Cumpri o planejado</button>
+                <button className="btn primary" disabled={busy || planNotDone} onClick={confirmPlanned}>
+                  {planNotDone ? `✓ Cumpri o planejado · após ${lastEnd.slice(0, 5)}` : '✓ Cumpri o planejado'}
+                </button>
+                {planNotDone && <div className="sub" style={{ textAlign: 'center', marginTop: -4 }}>O lançamento libera quando a última atividade planejada terminar.</div>}
                 <button className="btn outline" onClick={() => { setBlocks(withPartner(toBlocks(plan))); setEditing(true) }}>Fiz diferente ▾</button>
                 <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>
               </>
