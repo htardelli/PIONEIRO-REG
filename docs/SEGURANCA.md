@@ -25,15 +25,13 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação).
 | 5 | Baixa | Injeção de fórmula no "Exportar Excel" | **Corrigido**: células iniciadas por `= + - @` são neutralizadas |
 | 6 | Baixa | Quebra de linha não escapada no `.ics` | **Corrigido** |
 | 7 | Baixa | CI com permissão de escrita em todos os jobs; diagnóstico da senha (tamanho/tipos) no log público | **Corrigido**: permissão mínima (escrita só no job de publicação), checkout do banco sem credenciais, diagnóstico removido |
-| 8 | Baixa | Arquivo de teste `erro.txt` com endereço de conexão do banco no **histórico** do repositório público | Arquivo removido. **Pendente (você)**: trocar a senha do banco e atualizar o segredo `SUPABASE_DB_PASSWORD` |
+| 8 | Baixa | Arquivo de teste `erro.txt` com endereço de conexão do banco no **histórico** do repositório público | **Encerrado**: arquivo removido; o endereço do histórico era de teste e não contém a senha real (confirmado pelo responsável) |
 | 9 | Info | Troca obrigatória de senha é imposta no app (não no servidor) | Aceito (contas só do casal) |
 
 ## Ações pendentes (manuais, no painel)
 
 1. **Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" → manter LIGADO** (o cadastro passa pela sua aprovação no app).
-2. **Supabase → Project Settings → Database → Reset database password**, depois atualizar o segredo
-   `SUPABASE_DB_PASSWORD` no GitHub (*Settings → Secrets and variables → Actions*).
-3. (Opcional) Fixar as actions do workflow por SHA em vez de `@v4`.
+2. (Opcional) Fixar as actions do workflow por SHA em vez de `@v4`.
 
 ## Verificado e OK
 
