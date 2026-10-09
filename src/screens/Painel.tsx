@@ -103,7 +103,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
 
       <div className="card">
         <div className="card-head">
-          <h3>Realizado × planejado · {MONTH_NAME[today.getMonth()].toLowerCase()}</h3>
+          <h3>{MONTH_NAME[today.getMonth()]} | Realizado × planejado</h3>
           <span className="sub" style={{ fontWeight: 700 }}>até hoje</span>
         </div>
         {pvd.planned === 0 && pvd.done === 0 ? (
@@ -111,7 +111,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         ) : (
           <>
             <div className="row" style={{ alignItems: 'flex-end' }}>
-              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.planned)}</div></div>
+              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24, color: '#97A3B6' }}>{fmtHours(pvd.planned)}</div></div>
               <div><div className="sub">Realizado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.done)}</div></div>
               <div style={{ textAlign: 'right' }}>
                 <div className="sub">{diff < 0 ? 'Faltam' : diff > 0 ? 'Acima' : 'Coberto'}</div>
