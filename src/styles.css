@@ -226,3 +226,5 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .wday.today .wlbl { color: var(--brand); font-weight: 800; }
 .xclose { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; font-weight: 800; color: #6E4C00; display: grid; place-items: center; }
 .xclose:active { background: rgba(0,0,0,.08); }
+.wleg { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.wleg b { color: var(--ink); }

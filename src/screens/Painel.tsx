@@ -88,7 +88,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
       </div>
 
-      <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
+      <WeekCard week={week} today={todayIso} color={color} />
 
       <div className="card">
         <div className="card-head">
@@ -178,7 +178,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
 }
 
 /** Esta semana (seg–dom): meta pelo ritmo, barra com o ponto ideal e barras por dia (plano tracejado × feito). */
-function WeekCard({ week, today, color, goal }: { week: WeekStats; today: string; color?: string; goal: number }) {
+function WeekCard({ week, today, color }: { week: WeekStats; today: string; color?: string }) {
   const left = week.target - week.done
   const max = Math.max(60, ...week.days.map((x) => Math.max(x.planned, x.done)))
   const pos = (v: number) => `${Math.min(100, (v / Math.max(week.target, week.done, 1)) * 100)}%`
@@ -209,12 +209,13 @@ function WeekCard({ week, today, color, goal }: { week: WeekStats; today: string
           )
         })}
       </div>
-      <div className="sub" style={{ marginTop: 8 }}>Meta: <b style={{ color: 'var(--ink)' }}>{fmtHours(week.target)}</b> por semana para fechar {fmtHours(goal)} no ano.</div>
-      <div className="sub">
-        Seu plano desta semana: <b style={{ color: 'var(--ink)' }}>{fmtHours(week.planned)}</b>{' · '}
+      <div className="wleg">
+        <span>Meta ideal/semana:</span><b>{fmtHours(week.target)}</b>
+        <span>Seu plano/semana:</span><b>{fmtHours(week.planned)}</b>
+        <span>Sugestão:</span>
         {week.planned < week.target
-          ? <b style={{ color: 'var(--bad)' }}>faltam planejar {fmtH(week.target - week.planned)}</b>
-          : <b style={{ color: 'var(--ok)' }}>✓ cobre a meta</b>}
+          ? <b style={{ color: 'var(--bad)' }}>Planeje + {fmtH(week.target - week.planned)}</b>
+          : <b style={{ color: 'var(--ok)' }}>✓ plano cobre a meta</b>}
       </div>
     </div>
   )
