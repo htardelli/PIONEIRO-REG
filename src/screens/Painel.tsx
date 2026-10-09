@@ -210,12 +210,10 @@ function WeekCard({ week, today, color }: { week: WeekStats; today: string; colo
         })}
       </div>
       <div className="wleg">
-        <span>Meta ideal/semana:</span><b>{fmtHours(week.target)}</b>
-        <span>Seu plano/semana:</span><b>{fmtHours(week.planned)}</b>
-        <span>Sugestão:</span>
-        {week.planned < week.target
+        <div>Meta ideal: <b>{fmtHours(week.target)}</b> <span className="sep">|</span> Seu plano: <b>{fmtHours(week.planned)}</b></div>
+        <div>Sugestão: {week.planned < week.target
           ? <b style={{ color: 'var(--bad)' }}>Planeje + {fmtH(week.target - week.planned)}</b>
-          : <b style={{ color: 'var(--ok)' }}>✓ plano cobre a meta</b>}
+          : <b style={{ color: 'var(--ok)' }}>✓ plano cobre a meta</b>}</div>
       </div>
     </div>
   )
