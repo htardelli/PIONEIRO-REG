@@ -127,10 +127,10 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             </div>
             {pvd.acts.pending > 0 && (
               <div className="sub" style={{ marginTop: 8 }}>
-                Inclui {fmtHours(pvd.pendingPlanned)} planejadas em dias ainda não lançados (contam como 0 até você lançar).
+                Inclui {fmtHours(pvd.pendingPlanned)} planejadas em atividades ainda não lançadas (contam como 0 até você lançar).
               </div>
             )}
-            {pvd.acts.pending > 0 && onPickDate && (
+            {pvd.pendingDates.length > 0 && onPickDate && (
               <button className="link" style={{ marginTop: 10, fontSize: 13 }} onClick={() => onPickDate(pvd.pendingDates[0])}>
                 Lançar dias pendentes (a partir de {pvd.pendingDates[0].slice(8)}/{pvd.pendingDates[0].slice(5, 7)}) ›
               </button>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
 import {
-  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, parseIso, serviceYearMonths, toMinutes, weekDates, type MonthStatus,
+  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, parseIso, serviceYearMonths, weekDates, type MonthStatus,
 } from './domain'
 import type { Credit, DayEvent, EventType, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
@@ -61,9 +61,6 @@ export function useYear(userId: string | null, sy: number) {
   }, [reload])
   return { data, error, reload }
 }
-
-/** Minutos do relógio agora (hora local). */
-const nowMinutes = () => { const n = new Date(); return n.getHours() * 60 + n.getMinutes() }
 
 // ---------- Estatísticas ----------
 const sum = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
@@ -228,36 +225,32 @@ export interface PlanVsDone {
 }
 
 /**
- * Realizado × planejado no mês, até hoje. O dia de hoje só entra depois de lançado
- * (para não contar como falta um dia que ainda está em andamento).
+ * Realizado × planejado no mês, até hoje (inclusive o plano de hoje).
+ * Atividade de hoje ainda não lançada conta como pendente, nunca como falta.
  */
 export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone {
   const todayIso = isoDate(today)
   const dates = new Set<string>()
   for (const x of [...d.plan, ...d.entries]) if (x.date.startsWith(month) && x.date <= todayIso) dates.add(x.date)
   const r: PlanVsDone = { planned: 0, done: 0, pct: null, acts: { done: 0, part: 0, miss: 0, pending: 0 }, pendingDates: [], pendingPlanned: 0 }
+  const off = cancelledPlan(d)
   for (const date of [...dates].sort()) {
     const st = dayState(d, date, today)
-    if (date === todayIso && !st.logged) continue
-    r.planned += st.planned
+    const isToday = date === todayIso
+    r.planned += st.planned // hoje entra com todo o plano do dia
     r.done += st.done
     const dayPlan = d.plan.filter((p) => p.date === date)
-    if (!st.logged) { // dia planejado ainda não lançado
-      if (dayPlan.length) { r.acts.pending += dayPlan.length; r.pendingDates.push(date); r.pendingPlanned += st.planned }
+    if (!st.logged) { // dia (ou hoje) ainda sem lançamento
+      if (dayPlan.length) { r.acts.pending += dayPlan.length; r.pendingPlanned += st.planned; if (!isToday) r.pendingDates.push(date) }
       continue
-    }
-    const off = cancelledPlan(d)
-    // hoje: atividade que ainda não terminou não entra (nem como plano, nem como falta)
-    if (date === todayIso) {
-      const later = dayPlan.filter((p) => !off.has(p.id) && p.end_time && toMinutes(p.end_time.slice(0, 5)) > nowMinutes()
-        && !d.entries.some((e) => e.date === date && !e.absent && (p.group_id ? e.group_id === p.group_id : e.modality_id === p.modality_id)))
-      r.planned -= later.reduce((a, p) => a + p.minutes, 0)
-      dayPlan.splice(0, dayPlan.length, ...dayPlan.filter((p) => !later.includes(p)))
     }
     for (const row of pairDay(dayPlan, d.entries.filter((e) => e.date === date))) {
       if (!row.plan) continue // atividade fora do plano não entra na contagem
-      if (off.has(row.plan.id) || !row.done || row.done.absent || row.done.minutes === 0) r.acts.miss++
-      else if (row.done.minutes >= row.plan.minutes) r.acts.done++
+      if (off.has(row.plan.id) || row.done?.absent) r.acts.miss++
+      else if (!row.done || row.done.minutes === 0) {
+        if (isToday) { r.acts.pending++; r.pendingPlanned += row.plan.minutes } // hoje: ainda dá tempo de lançar
+        else r.acts.miss++
+      } else if (row.done.minutes >= row.plan.minutes) r.acts.done++
       else r.acts.part++
     }
   }

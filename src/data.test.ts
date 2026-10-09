@@ -118,8 +118,10 @@ describe('falta zera o planejado (mantendo a justificativa)', () => {
     expect(month(d, '2026-10').planned).toBe(5 * H) // 3 (dia 6) + 2 (dia 7); o dia 5 zerou
     expect(dayState(d, '2026-10-05', today)).toMatchObject({ state: 'miss', planned: 0, absentMin: 2 * H, logged: true })
     const r = planVsDone(d, '2026-10', today)
-    expect(r.planned).toBe(3 * H) // até hoje: dia 6 (dia 7 = hoje, ainda não lançado)
+    expect(r.planned).toBe(5 * H) // até hoje: dia 6 (3) + hoje, dia 7 (2) — o dia 5 zerou pela falta
     expect(r.acts.miss).toBe(1)
+    expect(r.acts.pending).toBe(1) // a atividade de hoje ainda não lançada fica pendente, não é falta
+    expect(r.pendingDates).toEqual([]) // hoje não entra no atalho de dias pendentes
   })
   it('dia passado não lançado continua contando o plano (pendente, não é falta)', () => {
     const d = data({ plan: [p('a', '2026-10-05', 2)] })
