@@ -68,7 +68,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   function requestSave() {
     if (!sel) return
     const sig = blocksSignature(blocks)
-    const conflicting = repeatDates(sel, scope).filter((dt) => {
+    const conflicting = repeatDates(sel, scope, todayIso).filter((dt) => {
       if (dt === sel) return false
       const items = data.plan.filter((p) => p.date === dt)
       return items.length > 0 && blocksSignature(toBlocks(items)) !== sig
@@ -80,7 +80,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   async function savePlan(skip: string[]) {
     if (!sel) return
     setDiffer(null)
-    const dates = repeatDates(sel, scope).filter((dt) => !skip.includes(dt))
+    const dates = repeatDates(sel, scope, todayIso).filter((dt) => !skip.includes(dt))
     const nameOfMod = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
     // Blocos conjuntos ganham um group_id (o mesmo nos dois planos)
     let next: TimeBlock[] = blocks.map((b) => (partner && b.with?.includes(partner.id) && !b.group_id ? { ...b, group_id: crypto.randomUUID() } : b))
@@ -108,6 +108,8 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
         // desvincula: o plano de quem não foi alterado fica como estava
         next = next.map((x) => (x.group_id && changedGroups.includes(x.group_id) ? { ...x, group_id: null, with: [] } : x))
       }
+      // atividade que deixou de ser conjunta (chip desmarcado) perde o vínculo no meu plano
+      next = next.map((x) => (x.group_id && removedGroups.includes(x.group_id) ? { ...x, group_id: null, with: [] } : x))
     }
 
     setBusy(true)
@@ -117,7 +119,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
           .map((x) => ({ date, group_id: x.group_id, modality: nameOfMod(x.modality_id), start: x.start, end: x.end })))
         if (items.length) await api.rpc('partner_plan_upsert', { p_partner: partner.id, p_items: items })
         if (scopeChoice === 'all' && removedGroups.length) {
-          await api.rpc('partner_plan_delete', { p_partner: partner.id, p_groups: removedGroups, p_from: dates[0], p_to: dates[dates.length - 1] })
+          await api.rpc('partner_plan_delete_dates', { p_partner: partner.id, p_groups: removedGroups, p_dates: dates })
         }
       }
       await api.remove('plan_items', { eq: { user_id: data.userId }, in: ['date', dates] })
@@ -302,11 +304,11 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               const evs = eventsOn(date)
               return (
                 <button key={date} title={[hol?.name, ...evs.map(eventName)].filter(Boolean).join(' · ') || undefined}
-                  className={`d ${st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
+                  className={`d ${st.state === 'miss' && !st.logged ? 'pend' : st.state} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${picked.includes(date) ? 'msel' : ''} ${evs.length ? 'evday' : ''}`}
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
                   {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
-                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.absentMin > 0 && st.done === 0 && <em className="off">✗</em>}
+                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.faltou && <em className="off">✗</em>}
                 </button>
               )
             })}
@@ -360,7 +362,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             </div>
             {scope !== 'day' && (
               <div className="sub" style={{ marginTop: 8 }}>
-                Aplica em {repeatDates(sel, scope).length} dias ({scope === 'year' ? 'desta data até 31/ago' : 'neste mês'}). Total do dia: {fmtH(dayTotal)}.
+                Aplica em {repeatDates(sel, scope, todayIso).length} dias ({scope === 'year' ? 'desta data até 31/ago' : 'de hoje até o fim do mês'}). Total do dia: {fmtH(dayTotal)}.
               </div>
             )}
             {hasErrors && <div className="error" style={{ marginTop: 10 }}>Corrija os horários em vermelho para salvar.</div>}

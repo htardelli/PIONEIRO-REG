@@ -50,7 +50,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
               const hol = holidayOf(date)
               const ev = data.events.some((e) => e.date === date)
               const future = date > todayIso
-              const cls = future ? '' : st.state === 'plan' ? '' : st.state
+              const cls = future ? '' : st.state === 'plan' ? '' : st.state === 'miss' && !st.logged ? 'pend' : st.state
               return (
                 <button key={date} onClick={() => pick(date)}
                   className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${ev ? 'evday' : ''}`}>
@@ -87,7 +87,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
     <div className="card">
       <div className="card-head">
         <h3>{WEEKDAY[d.getDay()]}, {date.slice(8)}/{date.slice(5, 7)}</h3>
-        {!future && st.absentMin > 0 && st.done === 0 ? <span className="pill bad">✗ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
+        {!future && st.faltou ? <span className="pill bad">✗ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
           <span className={`pill ${st.planned === 0 || st.done >= st.planned ? 'ok' : st.done > 0 ? 'warn' : 'bad'}`}>
             {st.planned > 0 ? `${fmtH(st.done)} de ${fmtH(st.planned)}` : fmtH(st.done)}
           </span>
@@ -118,7 +118,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
           <div className="drow tot"><span>Total</span><span className="pl">{st.planned ? fmtH(st.planned) : '—'}</span><span className="dn">{future ? '' : fmtH(st.done)}</span></div>
         </>
       ) : <div className="empty">{future ? 'Nada planejado.' : st.logged ? 'Nenhuma hora neste dia.' : 'Nada planejado nem lançado.'}</div>}
-      {note && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{st.absentMin > 0 && st.done === 0 ? 'Justificativa' : 'Obs.'}: {note}</div>}
+      {note && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{st.faltou ? 'Justificativa' : 'Obs.'}: {note}</div>}
       {st.absentMin > 0 && <div className="sub" style={{ marginTop: 4 }}>{fmtH(st.absentMin)} planejadas foram zeradas pela falta (não contam no planejado).</div>}
       {entries.some((e) => e.absent && e.note) && <div className="sub" style={{ marginTop: 6, fontSize: 14 }}>{entries.find((e) => e.absent && e.note)!.note}</div>}
       {!future && <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => onEdit(date)}>{entries.length || st.logged ? 'Editar lançamento' : 'Lançar este dia'}</button>}

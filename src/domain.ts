@@ -102,14 +102,14 @@ export function parseHM(txt: string): number | null {
 export const fmtHours = fmtH
 
 /** Datas do mesmo dia da semana: no mês do dia, ou no ano de serviço inteiro (a partir do dia). */
-export function repeatDates(date: string, scope: 'day' | 'month' | 'year'): string[] {
+export function repeatDates(date: string, scope: 'day' | 'month' | 'year', from = ''): string[] {
   if (scope === 'day') return [date]
   const d = parseIso(date)
   const out: string[] = []
   if (scope === 'month') {
     const first = new Date(d.getFullYear(), d.getMonth(), 1)
     for (let x = new Date(first); x.getMonth() === d.getMonth(); x.setDate(x.getDate() + 1))
-      if (x.getDay() === d.getDay()) out.push(isoDate(x))
+      if (x.getDay() === d.getDay() && (isoDate(x) >= from || isoDate(x) === date)) out.push(isoDate(x)) // não reescreve dias passados
   } else {
     const end = new Date(serviceYearOf(d), 7, 31)
     for (let x = new Date(d); x <= end; x.setDate(x.getDate() + 7)) out.push(isoDate(x))

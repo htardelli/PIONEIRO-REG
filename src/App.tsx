@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
 import { DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, MONTH_NAME, parseIso, serviceYearOf } from './domain'
-import { useYear, type JointPartner } from './data'
+import { useYear, yearRange, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
 import { Avatar, Header, Loading, TabBar, useToast, type Tab } from './ui'
 import { Auth } from './screens/Auth'
@@ -34,15 +34,33 @@ export function App() {
 }
 
 function Main({ user }: { user: AuthUser }) {
-  const today = useMemo(getToday, [])
-  const sy = serviceYearOf(today)
+  const [today, setToday] = useState(getToday)
+  const curSy = serviceYearOf(today)
+  // Ano de serviço exibido: o atual ou o anterior (para lançar/relatar agosto no início de setembro)
+  const [sy, setSy] = useState(curSy)
   const me = useYear(user.id, sy)
   const [partnerId, setPartnerId] = useState<string | null>(null)
   const [sharedOut, setSharedOut] = useState(false)
   const partner = useYear(partnerId, sy)
   const [tab, setTab] = useState<Tab>('painel')
-  const [date, setDate] = useState(isoDate(today))
-  const [month, setMonth] = useState(monthKey(today))
+  const [date, setDateRaw] = useState(isoDate(today))
+  const [month, setMonthRaw] = useState(monthKey(today))
+  const setDate = (dt: string) => { setDateRaw(dt); setSy(serviceYearOf(parseIso(dt))) }
+  const setMonth = (m: string) => { setMonthRaw(m); setSy(serviceYearOf(parseIso(`${m}-01`))) }
+  // Vira o dia com o app aberto (ex.: meia-noite) ou ao voltar para o app: atualiza "hoje"
+  useEffect(() => {
+    const check = () => {
+      const t = getToday()
+      if (isoDate(t) === isoDate(today)) return
+      setToday(t)
+      setDateRaw((d) => (d === isoDate(today) ? isoDate(t) : d))
+      setMonthRaw((m) => (m === monthKey(today) ? monthKey(t) : m))
+      setSy(serviceYearOf(t))
+    }
+    const timer = setInterval(check, 60000)
+    document.addEventListener('visibilitychange', check)
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', check) }
+  }, [today])
   const toast = useToast()
 
   const loadPartner = useCallback(async () => {
@@ -80,7 +98,12 @@ function Main({ user }: { user: AuthUser }) {
 
   const name = me.data?.profile?.name || user.email.split('@')[0]
   const color = me.data?.profile?.color
-  const go = (t: Tab) => { setTab(t); window.scrollTo(0, 0) }
+  const go = (t: Tab) => {
+    setTab(t)
+    // cada aba mostra o ano de serviço do que ela exibe: Lançar → data; Plano/Relatório → mês; demais → ano atual
+    setSy(t === 'lancar' ? serviceYearOf(parseIso(date)) : t === 'plano' || t === 'relatorio' ? serviceYearOf(parseIso(`${month}-01`)) : curSy)
+    window.scrollTo(0, 0)
+  }
   const d = me.data
   // Participante para atividades conjuntas: só com compartilhamento mútuo e dados dele(a) carregados
   const joint: JointPartner | null = partnerId && sharedOut && partner.data
@@ -98,17 +121,17 @@ function Main({ user }: { user: AuthUser }) {
         side={<Avatar name={name} color={color} photo={d.profile?.avatar} size={60} onClick={() => go('config')} />} />
       <div className="main">
         <PainelBody data={d} today={today} color={color}
-          onLaunch={() => { setDate(isoDate(today)); go('lancar') }}
-          onPickMonth={(m) => { setMonth(m); go('relatorio') }}
-          onPickDate={(dt) => { setDate(dt); go('lancar') }}
-          onPlanMonth={(m) => { setMonth(m); go('plano') }} />
+          onLaunch={() => { go('lancar'); setDate(isoDate(today)) }}
+          onPickMonth={(m) => { go('relatorio'); setMonth(m) }}
+          onPickDate={(dt) => { go('lancar'); setDate(dt) }}
+          onPlanMonth={(m) => { go('plano'); setMonth(m) }} />
       </div>
     </>
   )
-  else if (tab === 'lancar') body = <Lancar data={d} today={today} date={date} setDate={setDate} reload={reloadBoth} toast={toast.show} partner={joint} />
-  else if (tab === 'mes') body = <Mes data={d} today={today} onEdit={(dt) => { setDate(dt); go('lancar') }} />
+  else if (tab === 'lancar') body = <Lancar data={d} today={today} minDate={yearRange(curSy - 1)[0]} date={date} setDate={setDate} reload={reloadBoth} toast={toast.show} partner={joint} />
+  else if (tab === 'mes') body = <Mes data={d} today={today} onEdit={(dt) => { go('lancar'); setDate(dt) }} />
   else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={reloadBoth} toast={toast.show} partner={joint} />
-  else if (tab === 'relatorio') body = <Relatorio data={d} today={today} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
+  else if (tab === 'relatorio') body = <Relatorio data={d} today={today} curSy={curSy} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
   else if (tab === 'casal') body = partnerId && !partner.data ? <><Header kicker="" title="Nós dois" /><Loading error={partner.error} /></> : (
     <Casal me={d} partner={partnerId ? partner.data : null} sharedOut={sharedOut} today={today} toast={toast.show}
       onLinked={() => { void loadPartner(); void partner.reload() }} />

@@ -132,3 +132,25 @@ npm run build
 ## 8. Segurança
 
 Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
+
+## 9. Revisão de fluxos (outubro/2026)
+
+**Corrigido**
+- "Fiz diferente" deixava a atividade do plano pendente e "Cumpri" depois somava horas em dobro: dia passado lançado não tem mais pendências, e o "Cumpri" verifica conflito de horário.
+- Ano de serviço anterior: no início de setembro dá para lançar agosto (Lançar volta até 01/09 do ano anterior) e ver o Relatório de agosto (‹ no Relatório).
+- "Hoje" não congela mais com o app aberto (virada do dia e ao voltar ao app).
+- Plano: "Repetir" + "Pular dias" + "Para todos" não apaga mais a atividade do cônjuge nos dias pulados; desmarcar "Com cônjuge" desvincula a atividade.
+- Falta conjunta parcial não aparece mais como "faltou o dia"; conta como falta (não como "não lançada").
+- Falta conjunta lançada pelo cônjuge pode ser desfeita ("Desfazer falta").
+- Dia passado sem lançamento aparece como pendente (tracejado) no Mês e no Plano, não como falta.
+- "Repetir no mês" não reescreve dias passados.
+- A nota "Faltei…" é limpa quando o dia passa a ter horas; o relatório S-4 não mostra "00:00 de crédito".
+- Alerta do Painel do cônjuge não fecha o seu.
+
+**Pendências conhecidas (baixo impacto)**
+- Salvar o dia/plano não é atômico (remove e insere em chamadas separadas): uma queda de rede no meio pode perder o lançamento do dia.
+- Salvar o dia sem nenhuma atividade vira falta sem justificativa.
+- "Excluir planejamento" por semana/ano a partir de um dia passado preserva dias passados (inclusive o escolhido) se "incluir dias que já passaram" não estiver marcado.
+- Dias restantes: o anel não conta hoje; o card do mês conta.
+- Evento que atravessa meses aparece em duas linhas; o mesmo evento pode ser marcado duas vezes no mesmo dia.
+- Meta anual em Configurações em horas inteiras; o .ics exporta também atividades com falta.

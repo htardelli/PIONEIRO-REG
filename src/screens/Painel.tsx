@@ -17,7 +17,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const todayIso = isoDate(today)
   const td = dayState(data, todayIso, today)
   const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
-  const [todayStatus, todayColor] = td.absentMin > 0 && td.done === 0 ? ['✗ faltou', 'var(--bad)']
+  const [todayStatus, todayColor] = td.faltou ? ['✗ faltou', 'var(--bad)']
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
     : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, td.done > 0 ? 'var(--warn)' : 'var(--today)']
     : td.logged ? ['lançado', 'var(--muted)']
@@ -27,8 +27,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const below = plansBelowPace(data, today)
   // Alerta fechado fica oculto até a situação mudar (outro mês abaixo ou plano alterado)
   const alertKey = below.map((m) => `${m.month}:${m.planned}`).join('|')
-  const [closedKey, setClosedKey] = useState(() => { try { return localStorage.getItem('painel-alerta-fechado') ?? '' } catch { return '' } })
-  const closeAlert = () => { setClosedKey(alertKey); try { localStorage.setItem('painel-alerta-fechado', alertKey) } catch { /* sem armazenamento */ } }
+  const [closedKey, setClosedKey] = useState(() => { try { return localStorage.getItem(`painel-alerta-fechado-${data.userId}`) ?? '' } catch { return '' } })
+  const closeAlert = () => { setClosedKey(alertKey); try { localStorage.setItem(`painel-alerta-fechado-${data.userId}`, alertKey) } catch { /* sem armazenamento */ } }
   /** Baixa um .ics com o plano dos próximos 30 dias (abre na agenda do celular / importa no Outlook). */
   function exportAgenda() {
     const to = new Date(today); to.setDate(to.getDate() + 30)

@@ -23,8 +23,8 @@ export const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCo
 const ABSENCE_PREFIX = 'Faltei'
 const ABSENCE_REASONS = ['Saúde', 'Trabalho', 'Família', 'Clima', 'Viagem', 'Outro']
 
-export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
-  data: YearData; today: Date; date: string; setDate: (d: string) => void; reload: () => Promise<void>; toast: (m: string) => void
+export function Lancar({ data, today, minDate, date, setDate, reload, toast, partner }: {
+  data: YearData; today: Date; minDate?: string; date: string; setDate: (d: string) => void; reload: () => Promise<void>; toast: (m: string) => void
   partner: JointPartner | null
 }) {
   const choice = useChoice()
@@ -66,12 +66,12 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   function addExtra() {
     const base = done.length ? toBlocks(done) : withPartner(toBlocks(plan.filter((p) => !notYet(p.end_time))))
     setBlocks([...base, newBlockAfter(base, data.modalities)])
-    setExtra(done.length || !plan.length ? 'done' : 'plan')
+    setExtra(base.length > 0 && !done.length ? 'plan' : 'done')
     setEditing(true)
   }
 
   const d = parseIso(date)
-  const [from] = yearRange(data.sy)
+  const from = minDate ?? yearRange(data.sy)[0] // permite o ano de serviço anterior
   const todayIso = isoDate(today)
   const shift = (n: number) => {
     const x = new Date(d); x.setDate(x.getDate() + n)
@@ -105,6 +105,13 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
     await save([], note)
   }
 
+  async function undoAbsences() {
+    if (!confirm('Desfazer a falta registrada? A atividade volta a ficar pendente para lançar.')) return
+    await api.remove('entries', { eq: { user_id: data.userId, date, absent: true } })
+    await reload()
+    toast('Falta desfeita')
+  }
+
   async function save(items: TimeBlock[], noteText: string) {
     const nameOfMod = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
     const blocks = items.map((b) => (partner && b.with?.includes(partner.id) && !b.group_id ? { ...b, group_id: crypto.randomUUID() } : b))
@@ -124,7 +131,9 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
         user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
         group_id: b.group_id ?? null,
       })))
-      await api.upsert('day_notes', [{ user_id: data.userId, date, note: noteText }], 'user_id,date')
+      // dia com horas deixa de ser falta: a nota "Faltei…" não fica como observação
+      const finalNote = blocks.some((b) => blockMinutes(b) > 0) && noteText.startsWith(ABSENCE_PREFIX) ? '' : noteText
+      await api.upsert('day_notes', [{ user_id: data.userId, date, note: finalNote }], 'user_id,date')
       await reload()
       toast(shared ? `Dia lançado ✓ · também para ${pFirst}` : 'Dia lançado ✓')
     } catch (e) {
@@ -148,7 +157,12 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
       if (!r) return
       if (r === 'me') bs = bs.map((b) => ({ ...b, with: [] }))
     }
-    await save([...toBlocks(done), ...bs], note?.note ?? '') // mantém o que já foi lançado no dia
+    const all = [...toBlocks(done), ...bs] // mantém o que já foi lançado no dia
+    if (Object.keys(blockErrors(all, nameOf)).length) { // horário em conflito com algo já lançado: abre para ajustar
+      setBlocks(all); setEditing(true)
+      return toast('Há conflito de horário com o que já foi lançado. Ajuste e salve.')
+    }
+    await save(all, note?.note ?? '')
   }
 
   const isAbsence = logged && done.length === 0 && (note?.note ?? '').startsWith(ABSENCE_PREFIX)
@@ -160,7 +174,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
   const errors: Record<number, string> = { ...blockErrors(blocks, nameOf) }
   blocks.forEach((b, i) => { if (!errors[i] && notYet(b.end)) errors[i] = `Termina às ${b.end.slice(0, 5)}: só pode ser lançada depois desse horário.` })
   // Atividades do plano ainda não lançadas: as que já terminaram podem ser lançadas agora; as demais, depois do horário
-  const pending = pairDay(plan, done).filter((r) => r.plan && !r.done).map((r) => r.plan!)
+  const pending = !logged || date === todayIso ? pairDay(plan, done).filter((r) => r.plan && !r.done).map((r) => r.plan!) : []
   const ready = pending.filter((p) => !notYet(p.end_time))
   const later = pending.filter((p) => notYet(p.end_time))
   const hasErrors = Object.keys(errors).length > 0
@@ -201,6 +215,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
             </div>
             {done.length === 0 && !isAbsence && <div className="empty">Nenhuma hora neste dia.</div>}
             {[...done, ...absences].sort(byStart).map((e) => <ItemRow key={e.id} item={e} data={data} />)}
+            {absences.length > 0 && <button className="link" style={{ marginTop: 6 }} onClick={undoAbsences}>Desfazer falta da atividade conjunta</button>}
             {note?.note && <div className="sub" style={{ marginTop: 8, fontSize: 14 }}>{isAbsence ? note.note : `Obs.: ${note.note}`}</div>}
             <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => setEditing(true)}>Editar lançamento</button>
           </div>
@@ -211,6 +226,7 @@ export function Lancar({ data, today, date, setDate, reload, toast, partner }: {
             <h3>Falta registrada</h3>
             {absences.map((e) => <ItemRow key={e.id} item={e} data={data} />)}
             {absences[0]?.note && <div className="sub" style={{ marginTop: 6 }}>{absences[0].note}</div>}
+            <button className="link" style={{ marginTop: 8 }} onClick={undoAbsences}>Desfazer falta</button>
           </div>
         )}
 

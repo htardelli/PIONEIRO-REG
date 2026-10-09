@@ -203,7 +203,8 @@ export function dayState(d: YearData, date: string, today: Date) {
   else if (done > 0) state = 'part'
   else if (rawPlanned > 0 && (past || logged)) state = 'miss'
   else if (rawPlanned > 0) state = 'plan'
-  return { planned, rawPlanned, absentMin, done, logged, state }
+  // faltou: dia lançado sem nenhuma hora e com plano zerado pela falta (não é o caso de falta só numa atividade)
+  return { planned, rawPlanned, absentMin, done, logged, state, faltou: logged && done === 0 && absentMin > 0 }
 }
 
 export function byModality(d: YearData, items: DayItem[]) {
@@ -241,7 +242,9 @@ export function planVsDone(d: YearData, month: string, today: Date): PlanVsDone 
     r.done += st.done
     const dayPlan = d.plan.filter((p) => p.date === date)
     if (!st.logged) { // dia (ou hoje) ainda sem lançamento
-      if (dayPlan.length) { r.acts.pending += dayPlan.length; r.pendingPlanned += st.planned; if (!isToday) r.pendingDates.push(date) }
+      const rest = dayPlan.filter((p) => !off.has(p.id)) // falta já registrada numa atividade (conjunta) conta como falta
+      r.acts.miss += dayPlan.length - rest.length
+      if (rest.length) { r.acts.pending += rest.length; r.pendingPlanned += st.planned; if (!isToday) r.pendingDates.push(date) }
       continue
     }
     for (const row of pairDay(dayPlan, d.entries.filter((e) => e.date === date))) {
@@ -354,7 +357,7 @@ export function weekStats(d: YearData, today: Date): WeekStats {
   const dates = weekDates(isoDate(today))
   const days = dates.map((date) => {
     const st = dayState(d, date, today)
-    return { date, planned: st.planned, done: st.done, state: st.state, absent: st.absentMin > 0 && st.done === 0 }
+    return { date, planned: st.planned, done: st.done, state: st.state, absent: st.faltou }
   })
   const done = days.reduce((a, x) => a + x.done, 0)
   const ys = yearStats(d, today)

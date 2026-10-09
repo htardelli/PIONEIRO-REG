@@ -4,8 +4,8 @@ import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_
 import { absencesOf, byModality, closedMonthPace, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthNav, Stepper } from '../ui'
 
-export function Relatorio({ data, today, month, setMonth, reload, toast, name }: {
-  data: YearData; today: Date; month: string; setMonth: (m: string) => void; reload: () => Promise<void>; toast: (m: string) => void; name: string
+export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, name }: {
+  data: YearData; today: Date; curSy?: number; month: string; setMonth: (m: string) => void; reload: () => Promise<void>; toast: (m: string) => void; name: string
 }) {
   const months = serviceYearMonths(data.sy)
   const idx = months.indexOf(month)
@@ -40,7 +40,7 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
     `Relatório de ${MONTH_NAME[mo - 1]} — ${name}`,
     `Horas: ${fmtHours(ms.ministry)}`,
     `Estudos bíblicos: ${ms.studies}`,
-    ms.credit > 0 ? `Observações: ${fmtHours(ms.creditUsed)} de crédito (${credits.map((c) => c.type).join(', ')})` : '',
+    ms.creditUsed > 0 ? `Observações: ${fmtHours(ms.creditUsed)} de crédito (${credits.map((c) => c.type).join(', ')})` : '',
   ].filter(Boolean).join('\n')
 
   async function copy() {
@@ -69,8 +69,8 @@ export function Relatorio({ data, today, month, setMonth, reload, toast, name }:
   return (
     <>
       <Header kicker={`Relatório · AS ${data.sy}`} title={
-        <MonthNav label={monthLabel(month)} onPrev={() => setMonth(months[idx - 1])} onNext={() => setMonth(months[idx + 1])}
-          prevDisabled={idx <= 0} nextDisabled={idx >= 11}
+        <MonthNav label={monthLabel(month)} onPrev={() => setMonth(idx > 0 ? months[idx - 1] : `${data.sy - 1}-08`)} onNext={() => setMonth(idx < 11 ? months[idx + 1] : `${data.sy}-09`)}
+          prevDisabled={idx <= 0 && data.sy <= (curSy ?? data.sy) - 1} nextDisabled={idx >= 11 && data.sy >= (curSy ?? data.sy)}
           months={months} current={month} onPick={setMonth} todayMonth={isoDate(today).slice(0, 7)}
           info={(m) => { const x = ys.months.find((k) => k.month === m)!; return { line: fmtH(x.counted), status: x.status } }} />
       } />
