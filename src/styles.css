@@ -226,3 +226,4 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .wday.today .wlbl { color: var(--brand); font-weight: 800; }
 .xclose { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; border-radius: 50%; font-size: 15px; font-weight: 800; color: #6E4C00; display: grid; place-items: center; }
 .xclose:active { background: rgba(0,0,0,.08); }
+.psec { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); margin: 6px 4px -4px; }

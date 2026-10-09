@@ -73,52 +73,30 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         </div>
       )}
 
-      <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
-
-      {cur && (
-        <div className="row">
-          <div className="card">
-            <h3>{MONTH_NAME[today.getMonth()]}</h3>
-            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
-            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
-            <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
-          </div>
-          <div className="card" role={onLaunch ? 'button' : undefined} style={{ cursor: onLaunch ? 'pointer' : undefined }} onClick={onLaunch}>
-            <div className="card-head" style={{ marginBottom: 6 }}>
-              <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
-              {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
-                onClick={(e) => { e.stopPropagation(); exportAgenda() }}>📅 Agenda</button>}
-            </div>
-            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
-            <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
-            <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
-          </div>
+      <div className="psec">Dia</div>
+      <div className="card" role={onLaunch ? 'button' : undefined} style={{ cursor: onLaunch ? 'pointer' : undefined }} onClick={onLaunch}>
+        <div className="card-head" style={{ marginBottom: 6 }}>
+          <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
+          {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
+            onClick={(e) => { e.stopPropagation(); exportAgenda() }}>📅 Agenda</button>}
         </div>
-      )}
-
-      {ringCard}
-
-      <div className="card" style={{ padding: 12 }}>
-        <button className="card-head expander" onClick={toggleMonths} aria-expanded={monthsOpen}>
-          <h3>Meses do ano de serviço</h3>
-          <span className="xbtn">{monthsOpen ? 'Ocultar' : 'Ver meses'}<span className={`chev ${monthsOpen ? 'open' : ''}`}>▾</span></span>
-        </button>
-        {monthsOpen && <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />}
-        <div className="ytotal">
-          <div className="ytop">
-            <span>Planejamento anual</span>
-            <span><b>{fmtHours(ys.plannedSum)}</b><span className="muted"> / {fmtHours(ys.goal)}</span></span>
-          </div>
-          <span className="bar"><i style={{ width: `${Math.min(100, (ys.plannedSum / ys.goal) * 100)}%`, background: ys.plannedSum >= ys.goal ? 'var(--ok)' : 'var(--brand-2)' }} /></span>
-          <div className="ybot">
-            <span>{ys.plannedMonths} de 12 meses planejados</span>
-            {ys.plannedSum < ys.goal
-              ? <span>faltam planejar <b style={{ color: 'var(--bad)' }}>{fmtHours(ys.goal - ys.plannedSum)}</b></span>
-              : <span style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ cobre a meta anual</span>}
-          </div>
-        </div>
+        <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
+        <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
+        <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
       </div>
 
+      <div className="psec">Semana</div>
+      <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
+
+      <div className="psec">Mês</div>
+      {cur && (
+        <div className="card">
+          <h3>{MONTH_NAME[today.getMonth()]}</h3>
+          <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
+          <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
+          <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
+        </div>
+      )}
       <div className="card">
         <div className="card-head">
           <h3>Realizado × planejado · {MONTH_NAME[today.getMonth()].toLowerCase()}</h3>
@@ -160,6 +138,30 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             )}
           </>
         )}
+      </div>
+
+      <div className="psec">Ano</div>
+      {ringCard}
+
+      <div className="card" style={{ padding: 12 }}>
+        <button className="card-head expander" onClick={toggleMonths} aria-expanded={monthsOpen}>
+          <h3>Meses do ano de serviço</h3>
+          <span className="xbtn">{monthsOpen ? 'Ocultar' : 'Ver meses'}<span className={`chev ${monthsOpen ? 'open' : ''}`}>▾</span></span>
+        </button>
+        {monthsOpen && <MonthGrid months={ys.months} today={today} needed={ys.needed} onPick={onPickMonth} />}
+        <div className="ytotal">
+          <div className="ytop">
+            <span>Planejamento anual</span>
+            <span><b>{fmtHours(ys.plannedSum)}</b><span className="muted"> / {fmtHours(ys.goal)}</span></span>
+          </div>
+          <span className="bar"><i style={{ width: `${Math.min(100, (ys.plannedSum / ys.goal) * 100)}%`, background: ys.plannedSum >= ys.goal ? 'var(--ok)' : 'var(--brand-2)' }} /></span>
+          <div className="ybot">
+            <span>{ys.plannedMonths} de 12 meses planejados</span>
+            {ys.plannedSum < ys.goal
+              ? <span>faltam planejar <b style={{ color: 'var(--bad)' }}>{fmtHours(ys.goal - ys.plannedSum)}</b></span>
+              : <span style={{ color: 'var(--ok)', fontWeight: 700 }}>✓ cobre a meta anual</span>}
+          </div>
+        </div>
       </div>
 
       {ys.freeMonths === 0 && ys.committed < ys.goal && (
