@@ -453,3 +453,7 @@ drop policy if exists read_own_or_shared on public.event_types;
 drop policy if exists write_own on public.event_types;
 create policy read_own_or_shared on public.event_types for select using (public.can_read(user_id));
 create policy write_own on public.event_types for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+-- ============ v0.11: foto de perfil ============
+-- Imagem pequena (JPEG 256×256 em data URL) gerada no próprio app.
+alter table public.profiles add column if not exists avatar text;

@@ -7,6 +7,7 @@ export interface Profile {
   min_goal_min: number
   is_admin?: boolean
   must_change_password?: boolean
+  avatar?: string | null // foto (data URL JPEG 256×256)
 }
 
 export interface Modality {

@@ -91,7 +91,7 @@ function Main({ user }: { user: AuthUser }) {
   else if (tab === 'painel') body = (
     <>
       <Header kicker={`Ano de serviço ${sy} · mês ${((today.getMonth() + 4) % 12) + 1} de 12`} title={`Olá, ${name.split(' ')[0]}!`}
-        right={<Avatar name={name} color={color} onClick={() => go('config')} />} />
+        side={<Avatar name={name} color={color} photo={d.profile?.avatar} size={60} onClick={() => go('config')} />} />
       <div className="main">
         <PainelBody data={d} today={today} color={color}
           onLaunch={() => { setDate(isoDate(today)); go('lancar') }}

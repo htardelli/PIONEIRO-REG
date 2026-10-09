@@ -78,7 +78,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
               {people.map(({ ys, name, color }, i) => (
                 <div key={i} style={{ marginBottom: i === 0 ? 18 : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                    <Avatar name={name} color={color} />
+                    <Avatar name={name} color={color} photo={(i === 0 ? me : partner).profile?.avatar} />
                     <div style={{ flex: 1 }}><b>{name}</b><div className="sub">{fmtHours(ys.total)} · ritmo {fmtHours(ys.pace)}</div></div>
                     <DiffPill diff={ys.diff} level={ys.level} />
                   </div>

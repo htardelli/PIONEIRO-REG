@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import type { YearData } from '../data'
-import { Header } from '../ui'
+import { Avatar, Header } from '../ui'
 
 export function Config({ data, reload, toast, onBack }: {
   data: YearData; reload: () => Promise<void>; toast: (m: string) => void; onBack: () => void
@@ -22,6 +22,22 @@ export function Config({ data, reload, toast, onBack }: {
     toast('Perfil salvo')
   }
 
+  /** Recorta no centro (quadrado), reduz para 256×256 e salva como JPEG no perfil. */
+  async function savePhoto(file: File) {
+    try {
+      const img = await createImageBitmap(file)
+      const side = Math.min(img.width, img.height)
+      const c = document.createElement('canvas'); c.width = c.height = 256
+      c.getContext('2d')!.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 256, 256)
+      await savePhotoUrl(c.toDataURL('image/jpeg', 0.85))
+    } catch { toast('Não foi possível ler essa imagem') }
+  }
+  async function savePhotoUrl(url: string | null) {
+    await api.update('profiles', { id: data.userId }, { avatar: url })
+    await reload()
+    toast(url ? 'Foto salva' : 'Foto removida')
+  }
+
   async function addMod() {
     if (!newMod.trim()) return
     await api.insert('modalities', [{ user_id: data.userId, name: newMod.trim(), color: '#97A3B6', active: true, sort: data.modalities.length }])
@@ -33,6 +49,18 @@ export function Config({ data, reload, toast, onBack }: {
     <>
       <Header kicker={<button className="link" onClick={onBack} style={{ fontSize: 12 }}>‹ VOLTAR</button>} title="Configurações" />
       <div className="main">
+        <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <Avatar name={p?.name ?? ''} color={p?.color} photo={p?.avatar} size={72} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <h3 style={{ margin: 0 }}>Foto do perfil</h3>
+            <label className="btn brand small" style={{ cursor: 'pointer' }}>
+              {p?.avatar ? 'Trocar foto' : 'Escolher foto'}
+              <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => e.target.files?.[0] && savePhoto(e.target.files[0])} />
+            </label>
+            {p?.avatar && <button className="link" style={{ color: 'var(--bad)', alignSelf: 'flex-start' }} onClick={() => savePhotoUrl(null)}>Remover foto</button>}
+          </div>
+        </div>
+
         <div className="card form">
           <h3>Perfil e metas</h3>
           <label className="field">Nome<input value={name} onChange={(e) => setName(e.target.value)} /></label>

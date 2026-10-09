@@ -21,7 +21,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
     : td.done > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, 'var(--warn)']
     : td.logged ? ['lançado', 'var(--muted)']
-    : todayPlan.length ? [onLaunch ? 'a lançar ›' : 'a lançar', 'var(--brand)'] : ['', '']
+    : ['', '']
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
   const week = weekStats(data, today)
   const below = plansBelowPace(data, today)
@@ -73,19 +73,24 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         </div>
       )}
 
-      <div className="card" role={onLaunch ? 'button' : undefined} style={{ cursor: onLaunch ? 'pointer' : undefined }} onClick={onLaunch}>
+      <div className="card">
         <div className="card-head" style={{ marginBottom: 6 }}>
           <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
           {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
-            onClick={(e) => { e.stopPropagation(); exportAgenda() }}>📅 Agenda</button>}
+            onClick={exportAgenda}>📅 Agenda</button>}
         </div>
-        <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
-        {todayPlan.length ? todayPlan.map((p) => (
-          <div className="sub" key={p.id}>
-            {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && ' 👥'}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
+            {todayPlan.length ? todayPlan.map((p) => (
+              <div className="sub" key={p.id}>
+                {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && ' 👥'}
+              </div>
+            )) : <div className="sub">Sem plano para hoje</div>}
+            <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''}`}{todayStatus && <>{todayPlan.length > 0 && ' · '}<b style={{ color: todayColor }}>{todayStatus}</b></>}</div>
           </div>
-        )) : <div className="sub">Sem plano para hoje</div>}
-        <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
+          {onLaunch && <button className="btn brand small" style={{ width: 'auto', padding: '10px 18px', flexShrink: 0 }} onClick={onLaunch}>Lançar</button>}
+        </div>
       </div>
 
       <WeekCard week={week} today={todayIso} color={color} />
@@ -205,6 +210,7 @@ function WeekCard({ week, today, color }: { week: WeekStats; today: string; colo
                 {x.absent && <span className="wx">✗</span>}
               </div>
               <span className="wlbl">{WEEKDAY_SHORT[d.getDay()][0].toUpperCase()} {x.date.slice(8)}</span>
+              <span className="wplanh">{x.planned > 0 ? fmtH(x.planned) : ''}</span>
             </div>
           )
         })}

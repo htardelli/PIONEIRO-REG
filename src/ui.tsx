@@ -35,15 +35,22 @@ export function initials(name: string) {
   return ((p[0]?.[0] ?? '?') + (p.length > 1 ? p[p.length - 1][0] : (p[0]?.[1] ?? ''))).toUpperCase()
 }
 
-export function Avatar({ name, color, onClick }: { name: string; color?: string; onClick?: () => void }) {
+export function Avatar({ name, color, photo, size, onClick }: { name: string; color?: string; photo?: string | null; size?: number; onClick?: () => void }) {
+  const st = { background: color, ...(size ? { width: size, height: size, fontSize: size * 0.36 } : {}) }
   return (
-    <button className="avatar" style={{ background: color }} onClick={onClick} aria-label="Configurações">
-      {initials(name)}
+    <button className="avatar" style={st} onClick={onClick} aria-label="Configurações">
+      {photo ? <img src={photo} alt={name} /> : initials(name)}
     </button>
   )
 }
 
-export function Header({ kicker, title, right }: { kicker: ReactNode; title: ReactNode; right?: ReactNode }) {
+export function Header({ kicker, title, right, side }: { kicker: ReactNode; title: ReactNode; right?: ReactNode; side?: ReactNode }) {
+  if (side) return ( // "side" ocupa a altura das duas linhas (ex.: foto do perfil)
+    <header className="top top-side">
+      <div><div className="kicker">{kicker}</div><div className="title">{title}</div></div>
+      {side}
+    </header>
+  )
   return (
     <header className="top">
       <div className="kicker">{kicker}</div>
