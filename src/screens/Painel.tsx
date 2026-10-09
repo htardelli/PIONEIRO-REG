@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, WEEKDAY_SHORT } from '../domain'
-import { dayState, planVsDone, yearStats, type YearData } from '../data'
+import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, monthLabel, parseIso, WEEKDAY_SHORT } from '../domain'
+import { dayState, plansBelowPace, planToIcs, planVsDone, weekStats, yearStats, type WeekStats, type YearData } from '../data'
 import { DiffPill, GoalBar, MonthGrid, Ring } from '../ui'
 
-export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, color }: {
-  data: YearData; today: Date; onLaunch?: () => void; onPickMonth?: (m: string) => void; onPickDate?: (d: string) => void; color?: string
+export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onPlanMonth, color }: {
+  data: YearData; today: Date; onLaunch?: () => void; onPickMonth?: (m: string) => void; onPickDate?: (d: string) => void
+  onPlanMonth?: (m: string) => void; color?: string
 }) {
   const ys = yearStats(data, today)
   const cur = ys.months.find((m) => m.month === monthKey(today))
@@ -22,12 +23,76 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
     : td.logged ? ['lançado', 'var(--muted)']
     : todayPlan.length ? [onLaunch ? 'a lançar ›' : 'a lançar', 'var(--brand)'] : ['', '']
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
+  const week = weekStats(data, today)
+  const below = plansBelowPace(data, today)
+  /** Baixa um .ics com o plano dos próximos 30 dias (abre na agenda do celular / importa no Outlook). */
+  function exportAgenda() {
+    const to = new Date(today); to.setDate(to.getDate() + 30)
+    const ics = planToIcs(data, todayIso, isoDate(to))
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar;charset=utf-8' }))
+    a.download = `pioneiro-plano-${todayIso}.ics`
+    a.click()
+  }
   const toggleMonths = () => setMonthsOpen((o) => !o)
   const diff = pvd.done - pvd.planned
   const actsTotal = pvd.acts.done + pvd.acts.part + pvd.acts.miss + pvd.acts.pending // atividades planejadas até hoje
 
+  const ringCard = (
+      <div className="card">
+        <div className="ring-wrap">
+          <Ring value={ys.total} max={ys.goal} label={fmtHours(ys.total)} sub={`de ${fmtHours(ys.goal)}`} color={color} />
+          <div>
+            <DiffPill diff={ys.diff} level={ys.level} />
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
+              Ritmo ideal hoje: <b style={{ color: 'var(--ink)' }}>{fmtHours(ys.pace)}</b><br />
+              Faltam <b style={{ color: 'var(--ink)' }}>{fmtHours(Math.max(0, ys.goal - ys.total))}</b> em {daysLeft} dias
+            </div>
+          </div>
+        </div>
+        <GoalBar total={ys.total} goal={ys.goal} minGoal={ys.minGoal} color={color} pace={ys.pace} />
+      </div>
+  )
+
   return (
     <>
+      {below.length > 0 && (
+        <div className="alert" style={{ display: 'flex', gap: 10 }}>
+          <span style={{ fontSize: 18 }}>⚠</span>
+          <div>
+            Plano de <b>{monthLabel(below[0].month).split(' ')[0].toLowerCase()}</b> ({fmtHours(below[0].planned)}) está abaixo do ritmo necessário (<b>{fmtHours(below[0].needed)}</b>).
+            Faltam planejar <b>{fmtHours(below[0].needed - below[0].planned)}</b>.
+            {below.length > 1 && <> Mais {below.length - 1} {below.length === 2 ? 'mês está' : 'meses estão'} abaixo.</>}
+            {onPlanMonth && <div style={{ marginTop: 8 }}><button className="pill" style={{ background: 'var(--warn)', color: '#fff' }} onClick={() => onPlanMonth(below[0].month)}>Ajustar plano ›</button></div>}
+          </div>
+        </div>
+      )}
+
+      <WeekCard week={week} today={todayIso} color={color} goal={ys.goal} />
+
+      {cur && (
+        <div className="row">
+          <div className="card">
+            <h3>{MONTH_NAME[today.getMonth()]}</h3>
+            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
+            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
+            <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
+          </div>
+          <div className="card" role={onLaunch ? 'button' : undefined} style={{ cursor: onLaunch ? 'pointer' : undefined }} onClick={onLaunch}>
+            <div className="card-head" style={{ marginBottom: 6 }}>
+              <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
+              {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
+                onClick={(e) => { e.stopPropagation(); exportAgenda() }}>📅 Agenda</button>}
+            </div>
+            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
+            <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
+            <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
+          </div>
+        </div>
+      )}
+
+      {ringCard}
+
       <div className="card" style={{ padding: 12 }}>
         <button className="card-head expander" onClick={toggleMonths} aria-expanded={monthsOpen}>
           <h3>Meses do ano de serviço</h3>
@@ -48,37 +113,6 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
           </div>
         </div>
       </div>
-
-      <div className="card">
-        <div className="ring-wrap">
-          <Ring value={ys.total} max={ys.goal} label={fmtHours(ys.total)} sub={`de ${fmtHours(ys.goal)}`} color={color} />
-          <div>
-            <DiffPill diff={ys.diff} level={ys.level} />
-            <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 8, lineHeight: 1.5 }}>
-              Ritmo ideal hoje: <b style={{ color: 'var(--ink)' }}>{fmtHours(ys.pace)}</b><br />
-              Faltam <b style={{ color: 'var(--ink)' }}>{fmtHours(Math.max(0, ys.goal - ys.total))}</b> em {daysLeft} dias
-            </div>
-          </div>
-        </div>
-        <GoalBar total={ys.total} goal={ys.goal} minGoal={ys.minGoal} color={color} pace={ys.pace} />
-      </div>
-
-      {cur && (
-        <div className="row">
-          <div className="card">
-            <h3>{MONTH_NAME[today.getMonth()]}</h3>
-            <div className="big">{fmtHours(cur.counted)}<small> / {fmtHours(cur.target)}</small></div>
-            <div className="sub">{cur.targetKind === 'plano' ? 'plano do mês' : cur.targetKind === 'meta' ? 'meta do mês (sem plano)' : 'rateio (sem plano e sem meta)'}</div>
-            <div className="sub">{curLeft > 0 ? `Faltam ${fmtHours(curLeft)} em ${lastDay - today.getDate() + 1} dias` : 'Meta do mês atingida ✓'}</div>
-          </div>
-          <button className="card" style={{ textAlign: 'left', font: 'inherit', color: 'inherit' }} onClick={onLaunch} disabled={!onLaunch}>
-            <h3>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
-            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
-            <div className="sub">{todayPlan.length ? `${todayPlan[0].start_time?.slice(0, 5) ?? ''}–${todayPlan[todayPlan.length - 1].end_time?.slice(0, 5) ?? ''}` : 'Sem plano para hoje'}</div>
-            <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''} · `}<b style={{ color: todayColor }}>{todayStatus}</b></div>
-          </button>
-        </div>
-      )}
 
       <div className="card">
         <div className="card-head">
@@ -133,5 +167,45 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, col
         </button>
       )}
     </>
+  )
+}
+
+/** Esta semana (seg–dom): meta pelo ritmo, barra com o ponto ideal e barras por dia (plano tracejado × feito). */
+function WeekCard({ week, today, color, goal }: { week: WeekStats; today: string; color?: string; goal: number }) {
+  const left = week.target - week.done
+  const max = Math.max(60, ...week.days.map((x) => Math.max(x.planned, x.done)))
+  const pos = (v: number) => `${Math.min(100, (v / Math.max(week.target, week.done, 1)) * 100)}%`
+  const fill: Record<string, string> = { done: 'var(--ok)', part: 'var(--warn)', miss: 'var(--bad)' }
+  return (
+    <div className="card">
+      <div className="card-head"><h3>Esta semana · {week.from.slice(8)} a {week.to.slice(8)}/{week.to.slice(5, 7)}</h3></div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div className="big">{fmtHours(week.done)}<small> / {fmtHours(week.target)}</small></div>
+        <span className={`pill ${left > 0 ? 'bad' : 'ok'}`}>{left > 0 ? `▼ faltam ${fmtH(left)}` : '✓ meta da semana'}</span>
+      </div>
+      <div className="bar" style={{ margin: '10px 4px 14px' }}>
+        <i style={{ width: pos(week.done), background: color }} />
+        <b className="gdot" style={{ left: pos(week.ideal), background: 'var(--credit)' }} title={`Ideal até hoje ${fmtHours(week.ideal)}`} />
+      </div>
+      <div className="wbars">
+        {week.days.map((x) => {
+          const d = parseIso(x.date)
+          return (
+            <div key={x.date} className={`wday ${x.date === today ? 'today' : ''}`}>
+              <div className="wcol">
+                {x.planned > 0 && <span className="wplan" style={{ height: `${(x.planned / max) * 100}%` }} />}
+                {x.done > 0 && <span className="wdone" style={{ height: `${(x.done / max) * 100}%`, background: fill[x.state] ?? 'var(--brand-2)' }} />}
+                {x.absent && <span className="wx">✗</span>}
+              </div>
+              <span className="wlbl">{WEEKDAY_SHORT[d.getDay()][0].toUpperCase()} {x.date.slice(8)}</span>
+            </div>
+          )
+        })}
+      </div>
+      <div className="sub" style={{ marginTop: 8 }}>
+        Meta da semana = ritmo para {fmtHours(goal)} no ano. Planejado na semana: <b style={{ color: week.planned < week.target ? 'var(--bad)' : 'var(--ink)' }}>{fmtHours(week.planned)}</b>
+        {week.planned < week.target && ' — abaixo da meta'}.
+      </div>
+    </div>
   )
 }

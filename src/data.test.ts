@@ -156,3 +156,33 @@ describe('alerta de ritmo só no mês fechado', () => {
     expect(p.cum < p.ideal).toBe(true)
   })
 })
+
+import { plansBelowPace, planToIcs, weekStats } from './data'
+
+describe('modelo A: semana, alerta do plano e agenda', () => {
+  const wd = new Date(2026, 9, 9) // sex 09/10
+  it('semana de segunda a domingo com meta pelo ritmo', () => {
+    const d = data({ plan: [{ ...item('2026-10-06', 2), start_time: '08:00', end_time: '10:00' }], entries: [item('2026-10-06', 1.5), item('2026-09-10', 20)] })
+    const w = weekStats(d, wd)
+    expect([w.from, w.to]).toEqual(['2026-10-05', '2026-10-11'])
+    expect(w.done).toBe(1.5 * H)
+    expect(w.planned).toBe(2 * H)
+    // (600 h − 20 h feitas antes da semana) ÷ semanas de 05/10 a 31/08 (331 dias)
+    expect(w.target).toBeCloseTo((580 * H) / (331 / 7))
+    expect(w.ideal).toBeCloseTo((w.target * 5) / 7) // seg..sex
+  })
+  it('alerta só para mês em aberto com plano abaixo do necessário', () => {
+    const d = data({ plan: [item('2026-11-03', 40), item('2026-12-03', 60)], entries: [item('2026-09-10', 20)] })
+    const r = plansBelowPace(d, wd)
+    expect(r.map((x) => x.month)).toEqual(['2026-11']) // ritmo ≈ 52:43/mês; dezembro (60) cobre
+  })
+  it('exporta o plano para .ics', () => {
+    const d = data({ modalities: [{ id: 'm', user_id: 'u', name: 'Casa em Casa', color: '', active: true, sort: 0 }],
+      plan: [{ ...item('2026-10-09', 1.5), id: 'p1', start_time: '08:00', end_time: '09:30' }] })
+    const ics = planToIcs(d, '2026-10-09', '2026-10-31')
+    expect(ics).toContain('DTSTART:20261009T080000')
+    expect(ics).toContain('DTEND:20261009T093000')
+    expect(ics).toContain('SUMMARY:Serviço · Casa em Casa')
+    expect(ics).toContain('UID:p1@pioneiro-reg')
+  })
+})

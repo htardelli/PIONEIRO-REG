@@ -214,3 +214,13 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .xbtn { display: inline-flex; align-items: center; gap: 6px; background: var(--brand); color: #fff; font-size: 14px; font-weight: 800; padding: 8px 14px; border-radius: 999px; white-space: nowrap; }
 .chev { display: inline-block; font-size: 16px; line-height: 1; transition: transform .2s; }
 .chev.open { transform: rotate(180deg); }
+
+/* Esta semana: barras por dia (plano tracejado × feito) */
+.wbars { display: flex; gap: 6px; align-items: flex-end; }
+.wday { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.wcol { position: relative; width: 100%; height: 64px; }
+.wplan { position: absolute; bottom: 0; left: 0; right: 0; border: 1.5px dashed #B9C3D1; border-radius: 7px; }
+.wdone { position: absolute; bottom: 0; left: 4px; right: 4px; border-radius: 5px; }
+.wx { position: absolute; bottom: 4px; width: 100%; text-align: center; color: var(--bad); font-weight: 800; font-size: 13px; }
+.wlbl { font-size: 10px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.wday.today .wlbl { color: var(--brand); font-weight: 800; }

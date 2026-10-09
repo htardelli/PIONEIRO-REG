@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from './api'
 import {
-  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, serviceYearMonths, type MonthStatus,
+  fmtHours, countedMinutes, idealPace, isoDate, monthKey, monthStatus, neededPerMonth, parseIso, serviceYearMonths, weekDates, type MonthStatus,
 } from './domain'
 import type { Credit, DayEvent, EventType, DayItem, DayNote, Modality, MonthRecord, Profile } from './types'
 
@@ -342,4 +342,48 @@ export function closedMonthPace(d: YearData, month: string, today: Date): { cum:
   const ys = yearStats(d, today)
   const cum = ys.months.filter((x) => x.month <= month).reduce((a, x) => a + x.counted, 0)
   return { cum, ideal: idealPace(ys.goal, d.sy, new Date(y, m, 0)) }
+}
+
+/** Semana (segunda a domingo) que contém hoje: meta semanal pelo ritmo, dias com plano × feito. */
+export interface WeekDay { date: string; planned: number; done: number; state: DayState; absent: boolean }
+export interface WeekStats { from: string; to: string; days: WeekDay[]; done: number; planned: number; target: number; ideal: number }
+export function weekStats(d: YearData, today: Date): WeekStats {
+  const dates = weekDates(isoDate(today))
+  const days = dates.map((date) => {
+    const st = dayState(d, date, today)
+    return { date, planned: st.planned, done: st.done, state: st.state, absent: st.absentMin > 0 && st.done === 0 }
+  })
+  const done = days.reduce((a, x) => a + x.done, 0)
+  const ys = yearStats(d, today)
+  // meta da semana: o que falta para a meta anual (sem contar esta semana) ÷ semanas restantes
+  const end = new Date(d.sy, 7, 31)
+  const weeksLeft = Math.max(1, (Math.round((end.getTime() - parseIso(dates[0]).getTime()) / 86400000) + 1) / 7)
+  const target = Math.max(0, ys.goal - (ys.total - done)) / weeksLeft
+  const elapsed = dates.filter((x) => x <= isoDate(today)).length
+  return { from: dates[0], to: dates[6], days, done, planned: days.reduce((a, x) => a + x.planned, 0), target, ideal: (target * elapsed) / 7 }
+}
+
+/** Meses em aberto com plano abaixo do ritmo necessário (média que falta por mês para a meta anual). */
+export function plansBelowPace(d: YearData, today: Date): { month: string; planned: number; needed: number }[] {
+  const ys = yearStats(d, today)
+  const cur = monthKey(today)
+  return ys.months
+    .filter((m) => m.month >= cur && m.planned > 0 && m.planned < ys.needed - 30) // tolerância de 30 min
+    .map((m) => ({ month: m.month, planned: m.planned, needed: ys.needed }))
+}
+
+/** Arquivo .ics (agenda do celular/Outlook) com as atividades planejadas de [from, to]. */
+export function planToIcs(d: YearData, from: string, to: string): string {
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '')
+  const dt = (date: string, t: string) => `${date.replace(/-/g, '')}T${t.slice(0, 5).replace(':', '')}00`
+  const esc = (s: string) => s.replace(/[\\,;]/g, (c) => '\\' + c)
+  const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pioneiro-REG//PT-BR', 'CALSCALE:GREGORIAN']
+  for (const p of d.plan.filter((x) => x.date >= from && x.date <= to && x.start_time && x.end_time).sort((a, b) => a.date.localeCompare(b.date))) {
+    const name = d.modalities.find((m) => m.id === p.modality_id)?.name ?? 'Serviço'
+    lines.push('BEGIN:VEVENT', `UID:${p.id}@pioneiro-reg`, `DTSTAMP:${stamp}`,
+      `DTSTART:${dt(p.date, p.start_time!)}`, `DTEND:${dt(p.date, p.end_time!)}`,
+      `SUMMARY:${esc(`Serviço · ${name}${p.group_id ? ' (juntos)' : ''}`)}`, 'END:VEVENT')
+  }
+  lines.push('END:VCALENDAR')
+  return lines.join('\r\n')
 }

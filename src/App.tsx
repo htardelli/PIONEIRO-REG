@@ -96,7 +96,8 @@ function Main({ user }: { user: AuthUser }) {
         <PainelBody data={d} today={today} color={color}
           onLaunch={() => { setDate(isoDate(today)); go('lancar') }}
           onPickMonth={(m) => { setMonth(m); go('relatorio') }}
-          onPickDate={(dt) => { setDate(dt); go('lancar') }} />
+          onPickDate={(dt) => { setDate(dt); go('lancar') }}
+          onPlanMonth={(m) => { setMonth(m); go('plano') }} />
       </div>
     </>
   )
