@@ -19,7 +19,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
   const [todayStatus, todayColor] = td.absentMin > 0 && td.done === 0 ? ['✗ faltou', 'var(--bad)']
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
-    : td.done > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, 'var(--warn)']
+    : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, td.done > 0 ? 'var(--warn)' : 'var(--today)']
     : td.logged ? ['lançado', 'var(--muted)']
     : ['', '']
   const [monthsOpen, setMonthsOpen] = useState(false) // sempre inicia oculto
@@ -81,7 +81,8 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div className="big">{td.done > 0 ? <>{fmtHours(td.done)}<small> / {fmtHours(td.planned)}</small></> : td.rawPlanned ? fmtHours(td.planned) : '—'}</div>
+            <div className="big">{fmtHours(td.done)}<small> / {td.rawPlanned ? fmtHours(td.planned) : '—'}</small></div>
+            {td.planned > 0 && <div className="bar" style={{ margin: '6px 0 8px', height: 8 }}><i style={{ width: `${Math.min(100, (td.done / td.planned) * 100)}%`, background: td.done >= td.planned ? 'var(--ok)' : 'var(--today)' }} /></div>}
             {todayPlan.length ? todayPlan.map((p) => (
               <div className="sub" key={p.id}>
                 {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && ' 👥'}
