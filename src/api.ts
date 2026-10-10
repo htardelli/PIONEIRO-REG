@@ -238,6 +238,24 @@ function localApi(): Api {
         db[t] = db[t].filter((x) => !(x.user_id === partner && groups.includes(String(x.group_id)) && dates.includes(String(x.date))))
         save()
       }
+      // como no banco real: sem internet, o salvamento falha (e o app guarda o rascunho)
+      if ((fn === 'save_day' || fn === 'save_plan') && typeof navigator !== 'undefined' && !navigator.onLine) throw new Error('Sem conexão com a internet')
+      if (fn === 'save_day') { // transação no banco; aqui, troca o dia do usuário de uma vez
+        const d = args.p_date, rel = (args.p_relaunched as string[]) ?? []
+        db.entries = db.entries.filter((x) => !(x.user_id === DEMO_ME && x.date === d && (!x.absent || rel.includes(String(x.group_id)))))
+        for (const it of args.p_items as Row[]) db.entries.push({ id: crypto.randomUUID(), user_id: DEMO_ME, date: d, modality_id: it.modality_id,
+          minutes: it.minutes, start_time: it.start, end_time: it.end, group_id: it.group_id ?? null, absent: false, note: '' })
+        db.day_notes = db.day_notes.filter((x) => !(x.user_id === DEMO_ME && x.date === d))
+        db.day_notes.push({ user_id: DEMO_ME, date: d, note: args.p_note ?? '' })
+        save()
+      }
+      if (fn === 'save_plan') {
+        const dates = args.p_dates as string[]
+        db.plan_items = db.plan_items.filter((x) => !(x.user_id === DEMO_ME && dates.includes(String(x.date))))
+        for (const d of dates) for (const it of args.p_items as Row[]) db.plan_items.push({ id: crypto.randomUUID(), user_id: DEMO_ME, date: d,
+          modality_id: it.modality_id, minutes: it.minutes, start_time: it.start, end_time: it.end, group_id: it.group_id ?? null })
+        save()
+      }
       if (fn === 'admin_pending_users') return [] as T // demonstração: nenhum cadastro pendente
       if (fn === 'partner_plan_delete') {
         const groups = args.p_groups as string[]

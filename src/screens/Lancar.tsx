@@ -18,6 +18,8 @@ export function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   )
 }
 
+type Draft = { items: TimeBlock[]; note: string; at: string }
+
 export const byStart = (a: DayItem, b: DayItem) => (a.start_time ?? '').localeCompare(b.start_time ?? '')
 
 const ABSENCE_PREFIX = 'Faltei'
@@ -53,6 +55,13 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
   const [absent, setAbsent] = useState(false)
   const [reason, setReason] = useState('')
   const [absText, setAbsText] = useState('')
+  // Rascunho local: se o salvamento falhar (sem internet), o que foi digitado fica neste aparelho
+  const draftKey = `pioneiro-rascunho-${data.userId}-${date}`
+  const readDraft = (): Draft | null => { try { return JSON.parse(localStorage.getItem(draftKey) ?? 'null') } catch { return null } }
+  const writeDraft = (v: Draft) => { try { localStorage.setItem(draftKey, JSON.stringify(v)) } catch { /* sem armazenamento */ } }
+  const clearDraft = () => { try { localStorage.removeItem(draftKey) } catch { /* idem */ } setDraft(null) }
+  const [draft, setDraft] = useState<Draft | null>(readDraft)
+  useEffect(() => setDraft(readDraft()), [draftKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     setEditing(false); setExtra(null)
@@ -123,21 +132,27 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
           .map((b) => ({ date, group_id: b.group_id, modality: nameOfMod(b.modality_id), start: b.start, end: b.end }))
         if (pItems.length) shared = Number(await api.rpc('partner_entries_add', { p_partner: partner.id, p_items: pItems })) || 0
       }
+      // tudo numa transação só (save_day): ou grava o dia inteiro, ou nada muda.
       // mantém as faltas por atividade, exceto das atividades que agora foram lançadas
-      await api.remove('entries', { eq: { user_id: data.userId, date, absent: false } })
       const relaunched = blocks.map((b) => b.group_id).filter((g): g is string => !!g && absentGroups.has(g))
-      if (relaunched.length) await api.remove('entries', { eq: { user_id: data.userId, date, absent: true }, in: ['group_id', relaunched] })
-      await api.insert('entries', blocks.filter((b) => blockMinutes(b) > 0).map((b) => ({
-        user_id: data.userId, date, modality_id: b.modality_id, minutes: blockMinutes(b), start_time: b.start, end_time: b.end,
-        group_id: b.group_id ?? null,
-      })))
       // dia com horas deixa de ser falta: a nota "Faltei…" não fica como observação
       const finalNote = blocks.some((b) => blockMinutes(b) > 0) && noteText.startsWith(ABSENCE_PREFIX) ? '' : noteText
-      await api.upsert('day_notes', [{ user_id: data.userId, date, note: finalNote }], 'user_id,date')
+      await api.rpc('save_day', {
+        p_date: date, p_note: finalNote, p_relaunched: relaunched,
+        p_items: blocks.filter((b) => blockMinutes(b) > 0).map((b) => ({
+          modality_id: b.modality_id, minutes: blockMinutes(b), start: b.start, end: b.end, group_id: b.group_id ?? null,
+        })),
+      })
+      clearDraft()
       await reload()
       toast(shared ? `Dia lançado ✓ · também para ${pFirst}` : 'Dia lançado ✓')
     } catch (e) {
-      toast((e as Error).message)
+      // sem conexão ou erro do servidor: nada foi gravado; guarda o que foi digitado para não perder
+      // guarda os blocos já com group_id: ao reenviar, o cônjuge não recebe a atividade em dobro
+      const dr = { items: blocks, note: noteText, at: new Date().toISOString() }
+      writeDraft(dr)
+      setDraft(dr)
+      toast(`Não foi salvo: ${(e as Error).message} — rascunho guardado neste aparelho.`)
     } finally {
       setBusy(false)
     }
@@ -199,6 +214,18 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
         </div>
       </header>
       <div className="main">
+        {draft && (
+          <div className="alert">
+            <div className="grow">
+              <b>Lançamento não salvo</b>
+              <div className="sub">Rascunho de {fmtH(draft.items.reduce((a, b) => a + blockMinutes(b), 0))} guardado neste aparelho em {new Date(draft.at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.</div>
+              <div className="row" style={{ gap: 8, marginTop: 8 }}>
+                <button className="btn small primary" onClick={() => { setBlocks(draft.items); setText(draft.note); setExtra(null); setEditing(true) }}>Recuperar</button>
+                <button className="btn small ghost" onClick={() => { if (confirm('Descartar o rascunho?')) clearDraft() }}>Descartar</button>
+              </div>
+            </div>
+          </div>
+        )}
         {(holidayOf(date) || data.events.some((e) => e.date === date)) && (
           <div className="daytags" style={{ marginBottom: 0 }}>
             {holidayOf(date) && <div className="daytag hol"><span className="grow">🇧🇷 {holidayOf(date)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(date)!.kind]}</span></div>}

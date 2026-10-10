@@ -595,3 +595,43 @@ revoke all on function public.admin_pending_users() from public, anon;
 revoke all on function public.admin_set_approval(uuid, boolean) from public, anon;
 grant execute on function public.admin_pending_users() to authenticated;
 grant execute on function public.admin_set_approval(uuid, boolean) to authenticated;
+
+-- ============ v0.15: salvamento atômico (tudo ou nada) ============
+-- Rodam como quem chama (security invoker): o RLS continua valendo. Uma função = uma transação.
+-- Lançar o dia: troca os lançamentos do dia, remove as faltas das atividades relançadas e grava a observação.
+create or replace function public.save_day(p_date date, p_items jsonb, p_note text, p_relaunched uuid[] default '{}')
+returns void language plpgsql security invoker set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sessão expirada. Entre novamente.'; end if;
+  if jsonb_array_length(coalesce(p_items, '[]')) > 50 then raise exception 'Itens demais para um dia.'; end if;
+  delete from public.entries where user_id = auth.uid() and date = p_date and not absent;
+  if coalesce(array_length(p_relaunched, 1), 0) > 0 then
+    delete from public.entries where user_id = auth.uid() and date = p_date and absent and group_id = any(p_relaunched);
+  end if;
+  insert into public.entries (user_id, date, modality_id, minutes, start_time, end_time, group_id)
+  select auth.uid(), p_date, (x->>'modality_id')::uuid, (x->>'minutes')::int,
+         nullif(x->>'start', '')::time, nullif(x->>'end', '')::time, nullif(x->>'group_id', '')::uuid
+  from jsonb_array_elements(coalesce(p_items, '[]')) x
+  where (x->>'minutes')::int > 0;
+  insert into public.day_notes (user_id, date, note) values (auth.uid(), p_date, left(coalesce(p_note, ''), 500))
+  on conflict (user_id, date) do update set note = excluded.note;
+end $$;
+revoke all on function public.save_day(date, jsonb, text, uuid[]) from public, anon;
+grant execute on function public.save_day(date, jsonb, text, uuid[]) to authenticated;
+
+-- Planejar: substitui o plano das datas pelo mesmo conjunto de atividades em cada uma.
+create or replace function public.save_plan(p_dates date[], p_items jsonb)
+returns void language plpgsql security invoker set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'Sessão expirada. Entre novamente.'; end if;
+  if coalesce(array_length(p_dates, 1), 0) > 400 or jsonb_array_length(coalesce(p_items, '[]')) > 50 then
+    raise exception 'Seleção grande demais.';
+  end if;
+  delete from public.plan_items where user_id = auth.uid() and date = any(p_dates);
+  insert into public.plan_items (user_id, date, modality_id, minutes, start_time, end_time, group_id)
+  select auth.uid(), d, (x->>'modality_id')::uuid, (x->>'minutes')::int,
+         nullif(x->>'start', '')::time, nullif(x->>'end', '')::time, nullif(x->>'group_id', '')::uuid
+  from unnest(p_dates) d cross join jsonb_array_elements(coalesce(p_items, '[]')) x;
+end $$;
+revoke all on function public.save_plan(date[], jsonb) from public, anon;
+grant execute on function public.save_plan(date[], jsonb) to authenticated;

@@ -123,12 +123,12 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
           await api.rpc('partner_plan_delete_dates', { p_partner: partner.id, p_groups: removedGroups, p_dates: dates })
         }
       }
-      await api.remove('plan_items', { eq: { user_id: data.userId }, in: ['date', dates] })
-      const rows = dates.flatMap((date) => next.map((x) => ({
-        user_id: data.userId, date, modality_id: x.modality_id, minutes: blockMinutes(x), start_time: x.start, end_time: x.end,
-        group_id: x.group_id ?? null,
-      })))
-      for (let i = 0; i < rows.length; i += 500) await api.insert('plan_items', rows.slice(i, i + 500))
+      // tudo numa transação só (save_plan): ou o plano de todas as datas é trocado, ou nada muda
+      for (let i = 0; i < dates.length; i += 366) {
+        await api.rpc('save_plan', { p_dates: dates.slice(i, i + 366), p_items: next.map((x) => ({
+          modality_id: x.modality_id, minutes: blockMinutes(x), start: x.start, end: x.end, group_id: x.group_id ?? null,
+        })) })
+      }
       await reload()
       const joint = next.some((x) => partner && x.with?.includes(partner.id))
       toast((dates.length > 1 ? `Plano aplicado em ${dates.length} dias` : 'Plano salvo') + (joint ? ` · incluído no plano de ${pFirst}` : ''))
