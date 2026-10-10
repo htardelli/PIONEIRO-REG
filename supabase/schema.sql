@@ -604,6 +604,10 @@ returns void language plpgsql security invoker set search_path = public as $$
 begin
   if auth.uid() is null then raise exception 'Sessão expirada. Entre novamente.'; end if;
   if jsonb_array_length(coalesce(p_items, '[]')) > 50 then raise exception 'Itens demais para um dia.'; end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(p_items, '[]')) x
+             where not exists (select 1 from public.modalities m where m.id = (x->>'modality_id')::uuid and m.user_id = auth.uid())) then
+    raise exception 'Modalidade inválida.';
+  end if;
   delete from public.entries where user_id = auth.uid() and date = p_date and not absent;
   if coalesce(array_length(p_relaunched, 1), 0) > 0 then
     delete from public.entries where user_id = auth.uid() and date = p_date and absent and group_id = any(p_relaunched);
@@ -626,6 +630,10 @@ begin
   if auth.uid() is null then raise exception 'Sessão expirada. Entre novamente.'; end if;
   if coalesce(array_length(p_dates, 1), 0) > 400 or jsonb_array_length(coalesce(p_items, '[]')) > 50 then
     raise exception 'Seleção grande demais.';
+  end if;
+  if exists (select 1 from jsonb_array_elements(coalesce(p_items, '[]')) x
+             where not exists (select 1 from public.modalities m where m.id = (x->>'modality_id')::uuid and m.user_id = auth.uid())) then
+    raise exception 'Modalidade inválida.';
   end if;
   delete from public.plan_items where user_id = auth.uid() and date = any(p_dates);
   insert into public.plan_items (user_id, date, modality_id, minutes, start_time, end_time, group_id)

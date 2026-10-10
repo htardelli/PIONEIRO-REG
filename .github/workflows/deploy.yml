@@ -1,6 +1,7 @@
 name: Publicar no GitHub Pages
 
 # A cada push em main:
+#   0) testa o schema num Postgres local (permissões do casal, RLS, aprovação, salvamento atômico)
 #   1) se supabase/ mudou (ou execução manual), aplica schema.sql no banco (idempotente, numa única transação)
 #   2) testa, compila e grava o app no branch gh-pages (servido pelo GitHub Pages)
 # Se a etapa do banco falhar, o app novo NÃO é publicado.
@@ -17,8 +18,35 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  testes-banco:
+    name: Testar banco (Postgres local)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: teste
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: teste
+      PGOPTIONS: -c client_min_messages=warning
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Aplicar schema duas vezes (idempotente) e rodar os testes
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -f supabase/tests/pre.sql
+          psql -v ON_ERROR_STOP=1 -q --single-transaction -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -q --single-transaction -f supabase/schema.sql
+          psql -v ON_ERROR_STOP=1 -q -o /dev/null -f supabase/tests/casal.sql
+
   banco:
     name: Atualizar banco (Supabase)
+    needs: testes-banco
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

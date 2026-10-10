@@ -154,7 +154,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 ```bash
 npm install
 npm run dev     # http://localhost:5173/PIONEIRO-REG/?demo
-npm test        # regras de negócio
+npm test        # regras de negócio + consistência dos indicadores (Painel × Mês × Relatório)
 npm run build
 ```
 
@@ -179,6 +179,7 @@ Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
 **Resolvido depois (v0.15)**
 - Salvar o dia/plano agora é atômico, com rascunho local em caso de falha; backup semanal criptografado.
 - Salvar o dia sem horas pergunta "Foi falta?" com o motivo (dia sem plano: oferece apagar o lançamento).
+- Testes automáticos no CI: `supabase/tests/casal.sql` (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico) num Postgres local antes de tocar no banco real; o deploy só segue se passarem.
 - Troca obrigatória de senha imposta no servidor (v0.16): com senha provisória a conta não lê nem grava dados; a marca só cai quando a senha realmente muda.
 
 **Pendências conhecidas (baixo impacto)**
