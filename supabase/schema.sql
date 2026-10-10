@@ -681,3 +681,28 @@ create or replace function public.is_approved() returns boolean
 language sql stable security definer set search_path = public as $$
   select coalesce((select approved and not must_change_password from public.profiles where id = auth.uid()), false);
 $$;
+
+-- ============ v0.17: o mesmo evento não se repete no mesmo dia ============
+-- Remove repetições já gravadas (mantém a que está ligada ao cônjuge) e impede novas.
+delete from public.day_events where id in (
+  select id from (select id, row_number() over (partition by user_id, date, kind, title order by (group_id is null), id) rn
+                  from public.day_events) x where rn > 1);
+create unique index if not exists day_events_unique on public.day_events (user_id, date, kind, title);
+
+-- Evento conjunto: se o cônjuge já tinha o mesmo evento no dia, ele passa a ser o evento do casal (sem duplicar)
+create or replace function public.partner_events_add(p_partner uuid, p_items jsonb) returns void
+language plpgsql security definer set search_path = public as $$
+declare it jsonb;
+begin
+  if not public.is_mutual(auth.uid(), p_partner) then
+    raise exception 'Para marcar eventos juntos, os dois precisam ter compartilhado um com o outro na aba Casal.';
+  end if;
+  perform public.check_partner_items(p_items);
+  for it in select * from jsonb_array_elements(p_items) loop
+    delete from public.day_events where user_id = p_partner and date = (it->>'date')::date and group_id = (it->>'group_id')::uuid;
+    insert into public.day_events (user_id, date, kind, title, group_id, periods)
+    values (p_partner, (it->>'date')::date, left(it->>'kind', 60), left(coalesce(it->>'title', ''), 120), (it->>'group_id')::uuid,
+            coalesce(nullif(it->>'periods', ''), 'dia'))
+    on conflict (user_id, date, kind, title) do update set group_id = excluded.group_id, periods = excluded.periods;
+  end loop;
+end $$;

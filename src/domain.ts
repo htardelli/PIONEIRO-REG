@@ -68,9 +68,11 @@ export function idealPace(goalMin: number, sy: number, today: Date): number {
   return (goalMin * elapsed) / total
 }
 
+/** Dias que faltam no ano de serviço, contando hoje (mesma regra do card do mês). */
 export function daysLeftInYear(sy: number, today: Date): number {
   const end = new Date(sy, 7, 31)
-  return Math.max(0, Math.round((end.getTime() - today.getTime()) / 86400000))
+  const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate())
+  return Math.max(0, Math.round((end.getTime() - t0.getTime()) / 86400000) + 1)
 }
 
 /** Média mensal necessária nos meses restantes (incluindo o atual), a partir do que já foi feito. */

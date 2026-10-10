@@ -140,7 +140,7 @@ describe('feriados', () => {
   })
 })
 
-import { dateRuns, fmtRun } from './domain'
+import { dateRuns, daysLeftInYear, fmtRun } from './domain'
 
 describe('eventos em dias seguidos numa linha só', () => {
   it('agrupa dias consecutivos com a mesma chave', () => {
@@ -149,4 +149,10 @@ describe('eventos em dias seguidos numa linha só', () => {
     expect(r.map((x) => `${fmtRun(x.from, x.to)} ${x.items[0].k} ${x.items.length}`)).toEqual(['01 - 03/10 A 3', '02/10 B 1', '05/10 A 1'])
     expect(fmtRun('2026-09-30', '2026-10-02')).toBe('30/09 - 02/10')
   })
+})
+
+describe('dias restantes no ano (contando hoje, como o card do mês)', () => {
+  it('último dia do ano de serviço = 1 dia', () => expect(daysLeftInYear(2027, new Date(2027, 7, 31, 15))).toBe(1))
+  it('primeiro dia = 365', () => expect(daysLeftInYear(2027, new Date(2026, 8, 1, 8))).toBe(365))
+  it('após o fim = 0', () => expect(daysLeftInYear(2027, new Date(2027, 8, 2))).toBe(0))
 })

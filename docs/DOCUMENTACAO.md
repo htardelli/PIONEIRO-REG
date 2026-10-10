@@ -39,9 +39,11 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/api.ts` | Camada de dados: Supabase (produção) e local (demonstração) com a mesma interface |
 | `src/ui.tsx` | Componentes: barra de abas, cabeçalho, avatar, navegação de mês (grade dos 12 meses), editor de blocos, diálogo de múltipla escolha, legendas |
 | `src/screens/` | Telas: `Painel`, `Lancar`, `Mes` (aba com o nome do mês), `Plano`, `Relatorio`, `Casal`, `Config`, `Auth`, `ChangePassword` |
-| `src/*.test.ts` | Testes (vitest) das regras de negócio |
-| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.14, idempotente) |
-| `.github/workflows/deploy.yml` | Atualização do banco + publicação |
+| `src/*.test.ts` | Testes (vitest) das regras de negócio e da consistência dos indicadores |
+| `supabase/tests/` | Testes do banco (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico), rodados no CI |
+| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.17, idempotente) |
+| `.github/workflows/deploy.yml` | Testes do banco + atualização do banco + publicação |
+| `.github/workflows/backup.yml` | Backup semanal criptografado do banco |
 | `docs/` | Esta documentação e os protótipos de layout |
 
 ## 3. Modelo de dados (Supabase)
@@ -176,14 +178,14 @@ Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
 - A nota "Faltei…" é limpa quando o dia passa a ter horas; o relatório S-4 não mostra "00:00 de crédito".
 - Alerta do Painel do cônjuge não fecha o seu.
 
-**Resolvido depois (v0.15)**
+**Resolvido depois (v0.15 – v0.17)**
 - Salvar o dia/plano agora é atômico, com rascunho local em caso de falha; backup semanal criptografado.
 - Salvar o dia sem horas pergunta "Foi falta?" com o motivo (dia sem plano: oferece apagar o lançamento).
 - Testes automáticos no CI: `supabase/tests/casal.sql` (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico) num Postgres local antes de tocar no banco real; o deploy só segue se passarem.
+- Evento que atravessa meses aparece numa linha só (ex.: 29/09 - 02/10) e editar/remover vale para a sequência inteira; o mesmo evento não se repete no dia (índice único, v0.17).
+- Dias restantes contam hoje no anel e no card do mês.
 - Troca obrigatória de senha imposta no servidor (v0.16): com senha provisória a conta não lê nem grava dados; a marca só cai quando a senha realmente muda.
 
 **Pendências conhecidas (baixo impacto)**
 - "Excluir planejamento" por semana/ano a partir de um dia passado preserva dias passados (inclusive o escolhido) se "incluir dias que já passaram" não estiver marcado.
-- Dias restantes: o anel não conta hoje; o card do mês conta.
-- Evento que atravessa meses aparece em duas linhas; o mesmo evento pode ser marcado duas vezes no mesmo dia.
 - Meta anual em Configurações em horas inteiras; o .ics exporta também atividades com falta.

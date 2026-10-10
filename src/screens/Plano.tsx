@@ -220,6 +220,13 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
 
   async function addEvent(dates: string[], kind: string, title: string, both: boolean, periods = 'dia', replace: DayEvent[] = []) {
     const oldDates = replace.map((e) => e.date)
+    // o mesmo evento não é marcado duas vezes no mesmo dia
+    const already = (d: string) => data.events.some((e) => e.date === d && e.kind === kind && e.title === title && !replace.some((r) => r.id === e.id))
+    const dup = dates.filter(already)
+    if (dup.length) {
+      dates = dates.filter((d) => !already(d))
+      if (!dates.length) return toast(`"${kind}" já está marcado ${dup.length === 1 ? 'neste dia' : 'nesses dias'}.`)
+    }
     const withPlan = planDates(dates).filter((d) => !oldDates.includes(d)) // na edição, só pergunta pelos dias novos
     let dropPlan = false
     if (withPlan.length) {
@@ -283,7 +290,8 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
   const monthMarks = [
     ...dateRuns(monthDays.filter((d) => holidayOf(d)).map((d) => ({ date: d, hol: holidayOf(d)! })), (x) => x.hol.name)
       .map((r) => ({ ...r, hol: r.items[0].hol, evs: null as DayEvent[] | null })),
-    ...dateRuns(data.events.filter((e) => e.date.startsWith(month)), evKey)
+    // sequência inteira, mesmo que comece ou termine em outro mês (editar/remover vale para todos os dias)
+    ...dateRuns(data.events, evKey).filter((r) => r.from <= `${month}-31` && r.to >= `${month}-01`)
       .map((r) => ({ from: r.from, to: r.to, hol: null, evs: r.items })),
   ].sort((a, b) => a.from.localeCompare(b.from))
 

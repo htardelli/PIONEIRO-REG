@@ -69,6 +69,16 @@ select t_ok((select count(*) from entries where user_id = '22222222-2222-2222-22
 select partner_events_add('22222222-2222-2222-2222-222222222222', jsonb_build_array(t_item(2, 'cccccccc-0000-0000-0000-000000000001', '', '', '{"kind":"Assembleia"}')));
 select partner_events_add('22222222-2222-2222-2222-222222222222', jsonb_build_array(t_item(2, 'cccccccc-0000-0000-0000-000000000001', '', '', '{"kind":"Assembleia"}')));
 select t_ok((select count(*) from day_events where user_id = '22222222-2222-2222-2222-222222222222') = 1, 'evento conjunto não duplica');
+-- J já tinha o mesmo evento por conta própria: o conjunto não duplica, passa a ser do casal
+reset role;
+insert into public.day_events (user_id, date, kind) values ('22222222-2222-2222-2222-222222222222', current_date + 6, 'Congresso');
+set role authenticated; set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
+select partner_events_add('22222222-2222-2222-2222-222222222222', jsonb_build_array(t_item(6, 'cccccccc-0000-0000-0000-000000000002', '', '', '{"kind":"Congresso"}')));
+select t_ok((select count(*) from day_events where user_id = '22222222-2222-2222-2222-222222222222' and date = current_date + 6) = 1, 'evento igual do cônjuge vira o conjunto');
+select t_fails($$insert into day_events (date, kind) values (current_date + 7, 'Visita'), (current_date + 7, 'Visita')$$, 'mesmo evento duas vezes no dia', 'day_events_unique');
+reset role;
+delete from public.day_events where user_id = '22222222-2222-2222-2222-222222222222' and date = current_date + 6;
+set role authenticated; set request.jwt.claim.sub = '11111111-1111-1111-1111-111111111111';
 select partner_events_delete('22222222-2222-2222-2222-222222222222', array['cccccccc-0000-0000-0000-000000000001']::uuid[], array[current_date + 2]);
 select t_ok((select count(*) from day_events where user_id = '22222222-2222-2222-2222-222222222222') = 0, 'evento conjunto removido');
 select partner_plan_delete_dates('22222222-2222-2222-2222-222222222222', array['bbbbbbbb-0000-0000-0000-000000000001']::uuid[], array[current_date + 1]);
