@@ -178,9 +178,10 @@ Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
 
 **Resolvido depois (v0.15)**
 - Salvar o dia/plano agora é atômico, com rascunho local em caso de falha; backup semanal criptografado.
+- Salvar o dia sem horas pergunta "Foi falta?" com o motivo (dia sem plano: oferece apagar o lançamento).
+- Troca obrigatória de senha imposta no servidor (v0.16): com senha provisória a conta não lê nem grava dados; a marca só cai quando a senha realmente muda.
 
 **Pendências conhecidas (baixo impacto)**
-- Salvar o dia sem nenhuma atividade vira falta sem justificativa.
 - "Excluir planejamento" por semana/ano a partir de um dia passado preserva dias passados (inclusive o escolhido) se "incluir dias que já passaram" não estiver marcado.
 - Dias restantes: o anel não conta hoje; o card do mês conta.
 - Evento que atravessa meses aparece em duas linhas; o mesmo evento pode ser marcado duas vezes no mesmo dia.

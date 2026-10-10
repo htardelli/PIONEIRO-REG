@@ -158,6 +158,26 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
     }
   }
 
+  /** Salvar do editor: dia sem nenhuma hora não vira falta "muda" — pergunta o motivo (ou apaga o lançamento). */
+  async function saveEditor() {
+    if (blocks.some((b) => blockMinutes(b) > 0) || text.startsWith(ABSENCE_PREFIX)) return save(blocks, text)
+    if (planAll.length) {
+      const r = await choice.ask<string>('Nenhuma hora lançada. Foi falta?',
+        ABSENCE_REASONS.map((x) => ({ label: `Faltei · ${x}`, value: x, kind: 'outline' as const })),
+        'Escolha o motivo para registrar a falta. Para lançar horas, toque em Cancelar e adicione as atividades.')
+      if (!r) return
+      return save([], [`${ABSENCE_PREFIX} (${r.toLowerCase()})`, text.trim()].filter(Boolean).join(': '))
+    }
+    if (!logged) return toast('Nada para salvar: adicione uma atividade com horário.')
+    if (!confirm('Apagar o lançamento deste dia? Ele volta a ficar sem lançamento.')) return
+    setBusy(true)
+    try {
+      await api.remove('entries', { eq: { user_id: data.userId, date, absent: false } })
+      await api.remove('day_notes', { eq: { user_id: data.userId, date } })
+      clearDraft(); await reload(); toast('Lançamento apagado')
+    } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
+  }
+
   /** "Cumpri o planejado": se houver atividade conjunta ainda não lançada pelo participante, pergunta se ele(a) participou. */
   async function confirmPlanned() {
     let bs = withPartner(toBlocks(ready))
@@ -331,7 +351,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
               <input className="input" placeholder="Motivo / observação (opcional)" value={text} onChange={(e) => setText(e.target.value)} />
             </div>
             {hasErrors && <div className="error">Corrija os horários em vermelho para salvar.</div>}
-            <button className="btn brand" disabled={busy || hasErrors} onClick={() => save(blocks, text)}>{busy ? 'Salvando…' : 'Salvar'}</button>
+            <button className="btn brand" disabled={busy || hasErrors} onClick={saveEditor}>{busy ? 'Salvando…' : 'Salvar'}</button>
             {editing && <button className="btn ghost small" onClick={() => { setEditing(false); setExtra(null); setBlocks(done.length ? toBlocks(done) : withPartner(toBlocks(plan))) }}>Cancelar</button>}
           </>
         )}

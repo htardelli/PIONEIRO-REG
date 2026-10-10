@@ -15,9 +15,7 @@ export function ChangePassword({ name, onDone }: { name: string; onDone: () => P
     if (pw !== pw2) return setErr('As senhas não conferem.')
     setBusy(true)
     try {
-      await api.updatePassword(pw)
-      const user = await api.getUser()
-      if (user) await api.update('profiles', { id: user.id }, { must_change_password: false })
+      await api.updatePassword(pw) // o banco desliga a troca obrigatória ao registrar a nova senha
       await onDone()
     } catch (e) {
       setErr((e as Error).message)

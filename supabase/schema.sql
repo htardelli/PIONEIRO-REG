@@ -635,3 +635,41 @@ begin
 end $$;
 revoke all on function public.save_plan(date[], jsonb) from public, anon;
 grant execute on function public.save_plan(date[], jsonb) to authenticated;
+
+-- ============ v0.16: troca obrigatória de senha imposta no servidor ============
+-- A marca só é desligada quando a senha realmente muda (gatilho em auth.users); o app não consegue desligá-la sozinho.
+create or replace function public.password_changed() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  update public.profiles set must_change_password = false where id = new.id and must_change_password;
+  return new;
+end $$;
+revoke all on function public.password_changed() from public, anon, authenticated;
+drop trigger if exists on_auth_password_changed on auth.users;
+create trigger on_auth_password_changed after update of encrypted_password on auth.users
+  for each row when (new.encrypted_password is distinct from old.encrypted_password)
+  execute function public.password_changed();
+
+create or replace function public.protect_profile_flags() returns trigger
+language plpgsql as $$
+begin
+  -- Só restringe chamadas feitas pelo app (papéis authenticated/anon); funções internas e migrações passam.
+  if current_user in ('authenticated', 'anon') then
+    if new.is_admin is distinct from old.is_admin then
+      raise exception 'Não é permitido alterar o papel de administrador.';
+    end if;
+    if new.must_change_password is distinct from old.must_change_password then
+      raise exception 'A troca de senha é confirmada automaticamente ao definir a nova senha.';
+    end if;
+    if new.approved is distinct from old.approved then
+      raise exception 'Somente o administrador aprova cadastros.';
+    end if;
+  end if;
+  return new;
+end $$;
+
+-- Com senha provisória pendente, a conta não lê nem grava dados (todas as políticas usam is_approved)
+create or replace function public.is_approved() returns boolean
+language sql stable security definer set search_path = public as $$
+  select coalesce((select approved and not must_change_password from public.profiles where id = auth.uid()), false);
+$$;

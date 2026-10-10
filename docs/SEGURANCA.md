@@ -1,6 +1,6 @@
 # Segurança — Pioneiro-REG
 
-Revisão de outubro/2026 (banco, funções, front-end e publicação) — atualizada até a versão v0.14 do banco.
+Revisão de outubro/2026 (banco, funções, front-end e publicação) — atualizada até a versão v0.16 do banco.
 
 ## Modelo de proteção
 
@@ -26,7 +26,7 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação) — atuali
 | 6 | Baixa | Quebra de linha não escapada no `.ics` | **Corrigido** |
 | 7 | Baixa | CI com permissão de escrita em todos os jobs; diagnóstico da senha (tamanho/tipos) no log público | **Corrigido**: permissão mínima (escrita só no job de publicação), checkout do banco sem credenciais, diagnóstico removido |
 | 8 | Baixa | Arquivo de teste `erro.txt` com endereço de conexão do banco no **histórico** do repositório público | **Encerrado**: arquivo removido; o endereço do histórico era de teste e não contém a senha real (confirmado pelo responsável) |
-| 9 | Info | Troca obrigatória de senha é imposta no app (não no servidor) | Aceito (contas só do casal) |
+| 9 | Info | Troca obrigatória de senha era imposta só no app | **Corrigido (v0.16)**: `is_approved()` exige a troca feita; a marca só é desligada por gatilho quando a senha muda em `auth.users`; o app não consegue alterá-la |
 
 ## Ações pendentes (manuais, no painel)
 
