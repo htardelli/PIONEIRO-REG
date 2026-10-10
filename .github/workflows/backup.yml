@@ -1,0 +1,56 @@
+name: Backup do banco
+
+# Toda semana (domingo, 03:17 de Fortaleza) e quando executado manualmente:
+# copia os dados do Supabase, CRIPTOGRAFA com a senha BACKUP_PASSPHRASE e guarda como artefato por 90 dias.
+# O repositório é público: o arquivo sem criptografia nunca sai da máquina do GitHub Actions.
+# Como restaurar: docs/DOCUMENTACAO.md → "Backup e restauração".
+on:
+  schedule:
+    - cron: '17 6 * * 0'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Copiar e criptografar
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gerar cópia criptografada
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          PGHOST: aws-1-ca-central-1.pooler.supabase.com
+          PGUSER: postgres.dlrcvcjqofxkdyujfzhy
+        run: |
+          if [ -z "$PGPASSWORD" ]; then echo "::error::Segredo SUPABASE_DB_PASSWORD não configurado."; exit 1; fi
+          if [ ${#BACKUP_PASSPHRASE} -lt 12 ]; then
+            echo "::error::Crie o segredo BACKUP_PASSPHRASE (12+ caracteres) em Settings → Secrets and variables → Actions. Sem ele o backup não é gerado."
+            exit 1
+          fi
+          PGPASSWORD=$(printf '%s' "$PGPASSWORD" | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
+          echo "::add-mask::$PGPASSWORD"
+          mkdir -p out && chmod 700 out
+          dump() { docker run --rm -e PGPASSWORD -e PGHOST -e PGUSER -e PGPORT=5432 -e PGDATABASE=postgres postgres:17 pg_dump --no-owner --no-privileges "$@"; }
+          # Dados do app (tabelas, funções e regras de acesso)
+          if ! dump --schema=public > out/app.sql 2> out/erro.txt; then
+            sed -E 's#"[^"]*"#"<oculto>"#g' out/erro.txt; echo "::error::Falha ao copiar o banco."; exit 1
+          fi
+          # Contas (logins): só os dados, para restaurar no mesmo projeto ou num novo
+          dump --data-only --table=auth.users --table=auth.identities > out/contas.sql 2>> out/erro.txt \
+            || { echo "::warning::Não foi possível copiar as contas (auth). A cópia dos dados do app foi feita."; : > out/contas.sql; }
+          linhas=$(grep -c '' out/app.sql)
+          [ "$linhas" -lt 50 ] && { echo "::error::Cópia suspeita (muito pequena)."; exit 1; }
+          stamp=$(date -u +%Y-%m-%d)
+          tar -C out -czf - app.sql contas.sql \
+            | openssl enc -aes-256-cbc -pbkdf2 -iter 600000 -salt -pass env:BACKUP_PASSPHRASE -out "pioneiro-backup-$stamp.tar.gz.enc"
+          shred -u out/*.sql out/erro.txt 2>/dev/null || rm -f out/*
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+          echo "Backup gerado e criptografado ($linhas linhas de dados do app)."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pioneiro-backup-${{ env.STAMP }}
+          path: pioneiro-backup-*.tar.gz.enc
+          retention-days: 90
+          if-no-files-found: error

@@ -30,8 +30,9 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação) — atuali
 
 ## Ações pendentes (manuais, no painel)
 
-1. **Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" → manter LIGADO** (o cadastro passa pela sua aprovação no app).
-2. (Opcional) Fixar as actions do workflow por SHA em vez de `@v4`.
+1. **Criar o segredo `BACKUP_PASSPHRASE`** (12+ caracteres) no GitHub e guardar a senha fora do GitHub. O backup só é gerado criptografado: como o repositório é público, um artefato sem criptografia poderia ser baixado por terceiros.
+2. **Supabase → Authentication → Sign In / Providers → "Allow new users to sign up" → manter LIGADO** (o cadastro passa pela sua aprovação no app).
+3. (Opcional) Fixar as actions do workflow por SHA em vez de `@v4`.
 
 ## Verificado e OK
 
@@ -39,5 +40,6 @@ Revisão de outubro/2026 (banco, funções, front-end e publicação) — atuali
 - `shares` sem política de inserção direta; `profiles` sem inserção/remoção direta.
 - `admin_create_user`: exige `is_admin`, valida e-mail e senha (8+), senha com bcrypt, indisponível ao anônimo.
 - Funções `security definer` com `search_path` fixo e sem SQL dinâmico com entrada do usuário.
+- Lançar/planejar: funções `save_day`/`save_plan` em `security invoker` (o RLS continua valendo) e com limites de tamanho.
 - Modo demonstração (`?demo`) totalmente local; service worker só guarda o app (não a API).
 - Segredo do banco mascarado no log; publicação só por `push` em `main` ou execução manual.

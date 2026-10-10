@@ -135,6 +135,19 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - **Push em `main`** → GitHub Actions aplica o banco (se `supabase/` mudou) e publica o app.
 - **Segredo**: `SUPABASE_DB_PASSWORD` (só a senha). O log nunca exibe a senha (máscara); permissões mínimas no workflow.
 - **PWA**: atualiza sozinho ao abrir (verifica a cada 30 min e ao voltar ao app); a versão aparece em Configurações.
+- **Salvamento atômico (v0.15)**: lançar o dia (`save_day`) e salvar o plano (`save_plan`) rodam numa única transação no banco — ou grava tudo, ou nada muda. Se falhar (sem internet), o que foi digitado fica como **rascunho neste aparelho**; ao abrir o dia aparece "Lançamento não salvo · Recuperar / Descartar".
+
+### Backup e restauração
+
+- **Automático**: workflow `Backup do banco` todo domingo (03:17 de Fortaleza) e sob demanda (Actions → Backup do banco → Run workflow).
+- Gera `pioneiro-backup-AAAA-MM-DD.tar.gz.enc` (dados do app + contas), **criptografado com AES-256** usando o segredo `BACKUP_PASSPHRASE`, guardado 90 dias como artefato da execução.
+- **Segredo obrigatório**: `BACKUP_PASSPHRASE` (12+ caracteres) em Settings → Secrets and variables → Actions. **Guarde essa senha fora do GitHub** (gerenciador de senhas): sem ela o backup não abre.
+- Restaurar (computador com `openssl` e `psql`):
+  1. Baixe o artefato na execução do Actions e descompacte o `.zip`.
+  2. `openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -in pioneiro-backup-AAAA-MM-DD.tar.gz.enc | tar -xzf -` (pede a senha) → `contas.sql` e `app.sql`.
+  3. Num projeto Supabase **novo** (ou após apagar o schema `public` no atual): `psql "<endereço do Session pooler>" --single-transaction -f contas.sql -f app.sql`.
+  4. Rode `supabase/schema.sql` em seguida (recria o gatilho de cadastro e confirma permissões) e atualize `src/config.ts` se o projeto mudou.
+- Efeito colateral útil: o acesso semanal evita que o Supabase gratuito pause o projeto por inatividade. O GitHub desativa agendamentos após 60 dias sem atividade no repositório — nesse caso, reative em Actions.
 
 ## 8. Desenvolvimento
 
@@ -163,8 +176,10 @@ Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
 - A nota "Faltei…" é limpa quando o dia passa a ter horas; o relatório S-4 não mostra "00:00 de crédito".
 - Alerta do Painel do cônjuge não fecha o seu.
 
+**Resolvido depois (v0.15)**
+- Salvar o dia/plano agora é atômico, com rascunho local em caso de falha; backup semanal criptografado.
+
 **Pendências conhecidas (baixo impacto)**
-- Salvar o dia/plano não é atômico (remove e insere em chamadas separadas): uma queda de rede no meio pode perder o lançamento do dia.
 - Salvar o dia sem nenhuma atividade vira falta sem justificativa.
 - "Excluir planejamento" por semana/ano a partir de um dia passado preserva dias passados (inclusive o escolhido) se "incluir dias que já passaram" não estiver marcado.
 - Dias restantes: o anel não conta hoje; o card do mês conta.
