@@ -4,6 +4,7 @@ import { blockErrors, blockMinutes, toMinutes, eventName, fmtH, HOLIDAY_LABEL, h
 import { dayState, pairDay, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, CalLegend, newBlockAfter, useChoice } from '../ui'
 import type { DayItem } from '../types'
+import { Icon } from '../icons'
 
 const sumMin = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
 
@@ -12,8 +13,8 @@ export function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   return (
     <div className="mod">
       <i className="dot" style={{ background: m?.color }} />
-      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{item.group_id && <span className="sub"> · 👥</span>}</span>
-      {item.absent ? <span className="pill bad">✗ falta</span> : <b>{fmtH(item.minutes)}</b>}
+      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{item.group_id && <span className="sub"> · <Icon name="users" size={14} label="atividade conjunta" /></span>}</span>
+      {item.absent ? <span className="pill bad">✕ falta</span> : <b>{fmtH(item.minutes)}</b>}
     </div>
   )
 }
@@ -248,8 +249,8 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
         )}
         {(holidayOf(date) || data.events.some((e) => e.date === date)) && (
           <div className="daytags" style={{ marginBottom: 0 }}>
-            {holidayOf(date) && <div className="daytag hol"><span className="grow">🇧🇷 {holidayOf(date)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(date)!.kind]}</span></div>}
-            {data.events.filter((e) => e.date === date).map((e) => <div className="daytag ev" key={e.id}>📌 {eventName(e)}</div>)}
+            {holidayOf(date) && <div className="daytag hol"><span className="grow"><Icon name="flag" /> {holidayOf(date)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(date)!.kind]}</span></div>}
+            {data.events.filter((e) => e.date === date).map((e) => <div className="daytag ev" key={e.id}><Icon name="pin" /> {eventName(e)}</div>)}
           </div>
         )}
         {logged && !editing && (
@@ -257,7 +258,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
             <div className="card-head">
               <h3>Lançado · {fmtH(doneTotal)}</h3>
               {isAbsence
-                ? <span className="pill bad">✗ Faltei</span>
+                ? <span className="pill bad">✕ Faltei</span>
                 : <span className={`pill ${doneTotal >= planTotal ? 'ok' : 'warn'}`}>{planTotal ? `plano ${fmtH(planTotal)}` : 'sem plano'}</span>}
             </div>
             {done.length === 0 && !isAbsence && <div className="empty">Nenhuma hora neste dia.</div>}
@@ -284,7 +285,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
               {pending.map((p) => (
                 <div key={p.id} style={{ opacity: notYet(p.end_time) ? 0.55 : 1 }}>
                   <ItemRow item={p} data={data} />
-                  {notYet(p.end_time) && <div className="sub" style={{ marginTop: -4, marginBottom: 4 }}>⏳ libera às {p.end_time!.slice(0, 5)}</div>}
+                  {notYet(p.end_time) && <div className="sub" style={{ marginTop: -4, marginBottom: 4 }}><Icon name="clock" size={13} /> libera às {p.end_time!.slice(0, 5)}</div>}
                 </div>
               ))}
             </div>
@@ -295,7 +296,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
                     : later.length ? `✓ Cumpri as que já terminaram (${ready.length})` : '✓ Cumpri o planejado'}
                 </button>
                 <button className="btn outline" onClick={() => { setBlocks([...toBlocks(done), ...withPartner(toBlocks(pending))]); setEditing(true) }}>Fiz diferente ▾</button>
-                {done.length === 0 && <button className="btn danger" onClick={() => setAbsent(true)}>✗ Faltei</button>}
+                {done.length === 0 && <button className="btn danger" onClick={() => setAbsent(true)}>✕ Faltei</button>}
               </>
             )}
             {absent && (

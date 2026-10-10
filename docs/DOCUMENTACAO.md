@@ -129,7 +129,12 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 ## 6. Identidade visual
 
 - **Fonte Ruda**, empacotada no app (funciona sem internet, sem depender do Google Fonts).
-- **Cores com significado**: verde = feito · amarelo = parcial · vermelho = falta/feriado · roxo = evento/ideal · azul = plano · **turquesa = hoje**.
+- **Cada cor com um só significado**:
+  - azul-marinho = botões e navegação · azul = horas feitas · cinza/tracejado = planejado;
+  - verde = cumprido · âmbar = parcial · vermelho = falta (sempre com ✓ / ◐ / ✕, não só a cor);
+  - turquesa = **hoje** (e o mês em andamento) · roxo = evento · rosa = crédito de horas · azul-marinho sublinhado = feriado;
+  - ritmo ideal = marcador contornado (◯) na barra.
+- **Ícones de traço** num só estilo (`src/icons.tsx`), no lugar de emojis; cinza de texto com contraste legível (≥ 4,5:1); números com largura fixa (as horas alinham).
 - Horas sempre em **hh:mm**; semana de **segunda a domingo**; números do dia no canto superior esquerdo e contorno nos dias lançados.
 
 ## 7. Publicação e operação

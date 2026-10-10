@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
+import { Icon } from '../icons'
 import {
   blockErrors, blockMinutes, dateRuns, fmtRun, DEFAULT_EVENT_TYPES, EVENT_PERIODS, EVENT_OTHER, eventName, holidayOf, HOLIDAY_LABEL, blocksSignature, daysInMonth, deleteRange, fmtH, fmtHours, isoDate, parseHM, monthLabel, parseIso, repeatDates,
   serviceYearMonths, toBlocks, WEEKDAY_PLURAL, WEEKDAY_SHORT, type DeleteScope, type TimeBlock, mondayIndex, WEEK_HEAD,
@@ -311,10 +312,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
         <div className="card" style={{ padding: 12 }}>
           <div className="card-head" style={{ marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
             {multi ? <span className="sub" style={{ fontWeight: 700 }}>Toque nos dias para selecionar</span> : (
-              <button className="link" style={{ color: 'var(--credit)' }} onClick={() => { setSel(null); setEvRange(true); setEvDates([]) }}>📌 Marcar evento</button>
+              <button className="link" style={{ color: 'var(--event)' }} onClick={() => { setSel(null); setEvRange(true); setEvDates([]) }}><Icon name="pin" /> Marcar evento</button>
             )}
             <button className="link" onClick={() => { setMulti(!multi); setPicked([]); setSel(null); setEvDates(null) }}>
-              {multi ? 'Cancelar seleção' : '☐ Selecionar vários dias'}
+              {multi ? 'Cancelar seleção' : <><Icon name="select" /> Selecionar vários dias</>}
             </button>
           </div>
           <div className="cal">
@@ -332,7 +333,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
                   {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
-                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.faltou && <em className="off">✗</em>}
+                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.faltou && <em className="off">✕</em>}
                 </button>
               )
             })}
@@ -348,7 +349,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             <button className="btn small" style={{ background: '#fff', color: 'var(--bad)' }} disabled={busy || planDates(picked).length === 0} onClick={deletePicked}>
               Excluir plano{planDates(picked).length ? ` (${planDates(picked).length})` : ''}
             </button>
-            <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || picked.length === 0} onClick={() => { setEvRange(false); setEvDates(picked) }}>
+            <button className="btn small" style={{ background: 'var(--event)', color: '#fff' }} disabled={busy || picked.length === 0} onClick={() => { setEvRange(false); setEvDates(picked) }}>
               Marcar evento
             </button>
           </div>
@@ -369,10 +370,10 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
               <button className="link" onClick={() => setSel(null)}>Fechar</button>
             </div>
             <div className="daytags">
-              {holidayOf(sel) && <div className="daytag hol"><span className="grow">🇧🇷 {holidayOf(sel)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(sel)!.kind]}</span></div>}
+              {holidayOf(sel) && <div className="daytag hol"><span className="grow"><Icon name="flag" /> {holidayOf(sel)!.name}</span><span className="sub">{HOLIDAY_LABEL[holidayOf(sel)!.kind]}</span></div>}
               {eventsOn(sel).map((ev) => (
                 <div className="daytag ev" key={ev.id}>
-                  <span className="grow">📌 {eventName(ev)}{ev.group_id ? ` · com ${pFirst || 'cônjuge'}` : ''}</span>
+                  <span className="grow"><Icon name="pin" /> {eventName(ev)}{ev.group_id ? ` · com ${pFirst || 'cônjuge'}` : ''}</span>
                   <button className="link" onClick={() => startEdit(runOf(ev))}>Editar</button>
                   <button className="link" style={{ color: 'var(--bad)', marginLeft: 10 }} onClick={() => removeEvent(ev)}>Remover</button>
                 </div>
@@ -395,7 +396,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
             {differ ? (
               <div className="alert" style={{ marginTop: 12 }}>
                 <div style={{ marginBottom: 6 }}>
-                  ⚠ {differ.length} {differ.length === 1 ? 'dia já tem' : 'dias já têm'} um plano diferente:{' '}
+                  <Icon name="alert" size={15} /> {differ.length} {differ.length === 1 ? 'dia já tem' : 'dias já têm'} um plano diferente:{' '}
                   {differ.slice(0, 6).map((dt) => dt.slice(8) + '/' + dt.slice(5, 7)).join(', ')}{differ.length > 6 ? '…' : ''}.
                   O que fazer com {differ.length === 1 ? 'ele' : 'eles'}?
                 </div>
@@ -526,7 +527,7 @@ function EventForm({ dates, types, range, initial, partnerName, busy, onCancel, 
       )}
       <div className="row" style={{ gap: 10 }}>
         <button className="btn ghost small" onClick={onCancel}>Cancelar</button>
-        <button className="btn small" style={{ background: 'var(--credit)', color: '#fff' }} disabled={busy || invalid}
+        <button className="btn small" style={{ background: 'var(--event)', color: '#fff' }} disabled={busy || invalid}
           onClick={() => onSave(kind, title.trim(), both, list, periodsValue)}>{initial ? 'Salvar alterações' : 'Salvar evento'}</button>
       </div>
     </div>

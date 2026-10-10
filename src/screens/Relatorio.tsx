@@ -3,6 +3,7 @@ import { api } from '../api'
 import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
 import { absencesOf, byModality, closedMonthPace, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthNav, Stepper } from '../ui'
+import { Icon } from '../icons'
 
 export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, name }: {
   data: YearData; today: Date; curSy?: number; month: string; setMonth: (m: string) => void; reload: () => Promise<void>; toast: (m: string) => void; name: string
@@ -99,7 +100,7 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
             <i style={{ width: capPct(ms.creditUsed), background: 'var(--credit)' }} />
           </div>
           <div className="legend"><span><i style={{ background: 'var(--brand-2)' }} />Ministério</span><span><i style={{ background: 'var(--credit)' }} />Crédito</span></div>
-          {ms.creditLost > 0 && <div style={{ fontSize: 13, color: 'var(--bad)', fontWeight: 600, marginTop: 8 }}>⚠ {fmtH(ms.creditLost)} de crédito acima do teto — não conta e não transfere.</div>}
+          {ms.creditLost > 0 && <div style={{ fontSize: 13, color: 'var(--bad)', fontWeight: 600, marginTop: 8 }}><Icon name="alert" size={14} /> {fmtH(ms.creditLost)} de crédito acima do teto — não conta e não transfere.</div>}
           {credits.map((c) => (
             <div className="mod" key={c.id}>
               <i className="dot" style={{ background: 'var(--credit)' }} />
@@ -137,7 +138,7 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
           <div className="card-head"><h3>Faltas do ano</h3>{faltas.length > 0 && <span className="pill bad">{faltas.length} · {fmtH(faltas.reduce((a, f) => a + f.planned, 0))} zeradas</span>}</div>
           {faltas.length === 0 ? <div className="empty">Nenhuma falta lançada neste ano de serviço.</div> : faltas.map((f) => (
             <div className="mod" key={f.date}>
-              <span className="n">{f.date.slice(8)}/{f.date.slice(5, 7)}{f.joint && ' 👥'}<span className="sub"> · {f.reason || 'sem justificativa'}</span></span>
+              <span className="n">{f.date.slice(8)}/{f.date.slice(5, 7)}{f.joint && <> <Icon name="users" size={14} label="atividade conjunta" /></>}<span className="sub"> · {f.reason || 'sem justificativa'}</span></span>
               <b style={{ color: 'var(--bad)' }}><s>{fmtH(f.planned)}</s></b>
             </div>
           ))}

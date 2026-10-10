@@ -128,7 +128,7 @@ function EventTypes({ data, reload, toast }: { data: YearData; reload: () => Pro
       <h3>Tipos de evento</h3>
       {types.map((t) => (
         <div className="mod" key={t.id}>
-          <i className="dot" style={{ background: 'var(--credit)' }} />
+          <i className="dot" style={{ background: 'var(--event)' }} />
           <input className="n input" style={{ padding: 8, border: 0 }} defaultValue={t.name}
             onBlur={async (e) => { const v = e.target.value.trim(); if (v && v !== t.name) { await api.update('event_types', { id: t.id }, { name: v }); await reload(); toast('Tipo renomeado') } }} />
           <button className="link" style={{ color: 'var(--bad)' }} onClick={() => remove(t.id, t.name)} aria-label={`Excluir ${t.name}`}>✕</button>

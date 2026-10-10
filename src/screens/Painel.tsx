@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { daysLeftInYear, fmtH, fmtHours, isoDate, MONTH_NAME, monthKey, monthLabel, parseIso, WEEKDAY_SHORT } from '../domain'
 import { cancelledPlan, dayState, pairDay, plansBelowPace, planToIcs, planVsDone, weekStats, yearStats, type WeekStats, type YearData } from '../data'
 import { DiffPill, GoalBar, MonthGrid, Ring } from '../ui'
+import { Icon } from '../icons'
 
 export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onPlanMonth, color }: {
   data: YearData; today: Date; onLaunch?: () => void; onPickMonth?: (m: string) => void; onPickDate?: (d: string) => void
@@ -17,7 +18,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const todayIso = isoDate(today)
   const td = dayState(data, todayIso, today)
   const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
-  const [todayStatus, todayColor] = td.faltou ? ['✗ faltou', 'var(--bad)']
+  const [todayStatus, todayColor] = td.faltou ? ['✕ faltou', 'var(--bad)']
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
     : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, td.done > 0 ? 'var(--warn)' : 'var(--today)']
     : td.logged ? ['lançado', 'var(--muted)']
@@ -67,7 +68,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
       {below.length > 0 && closedKey !== alertKey && (
         <div className="alert" style={{ display: 'flex', gap: 10, position: 'relative', paddingRight: 36 }}>
           <button className="xclose" aria-label="Fechar alerta" onClick={closeAlert}>✕</button>
-          <span style={{ fontSize: 18 }}>⚠</span>
+          <Icon name="alert" size={20} style={{ marginTop: 1 }} />
           <div>
             Plano de <b>{monthLabel(below[0].month).split(' ')[0].toLowerCase()}</b> ({fmtHours(below[0].planned)}) está abaixo do ritmo necessário (<b>{fmtHours(below[0].needed)}</b>).
             Faltam planejar <b>{fmtHours(below[0].needed - below[0].planned)}</b>.
@@ -81,7 +82,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         <div className="card-head" style={{ marginBottom: 6 }}>
           <h3 style={{ whiteSpace: 'nowrap' }}>Hoje · {WEEKDAY_SHORT[today.getDay()]}</h3>
           {onLaunch && <button className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)', fontSize: 11, padding: '3px 7px' }} title="Enviar o plano dos próximos 30 dias para a agenda"
-            onClick={exportAgenda}>📅 Agenda</button>}
+            onClick={exportAgenda}><Icon name="calendarDown" size={13} /> Agenda</button>}
         </div>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -89,7 +90,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             {td.planned > 0 && <div className="bar" style={{ margin: '6px 0 8px', height: 8 }}><i style={{ width: `${Math.min(100, (td.done / td.planned) * 100)}%`, background: td.done >= td.planned ? 'var(--ok)' : 'var(--today)' }} /></div>}
             {todayPlan.length ? todayPlan.map((p) => (
               <div className="sub" key={p.id}>
-                {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && ' 👥'}
+                {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}
               </div>
             )) : <div className="sub">Sem plano para hoje</div>}
             <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''}`}{todayStatus && <>{todayPlan.length > 0 && ' · '}<b style={{ color: todayColor }}>{todayStatus}</b></>}</div>
@@ -111,7 +112,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
         ) : (
           <>
             <div className="row" style={{ alignItems: 'flex-end' }}>
-              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24, color: '#97A3B6' }}>{fmtHours(pvd.planned)}</div></div>
+              <div><div className="sub">Planejado</div><div className="big" style={{ fontSize: 24, color: 'var(--muted)' }}>{fmtHours(pvd.planned)}</div></div>
               <div><div className="sub">Realizado</div><div className="big" style={{ fontSize: 24 }}>{fmtHours(pvd.done)}</div></div>
               <div style={{ textAlign: 'right' }}>
                 <div className="sub">{diff < 0 ? 'Faltam' : diff > 0 ? 'Acima' : 'Coberto'}</div>
@@ -124,10 +125,10 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
               <i style={{ width: `${Math.min(100, (pvd.done / Math.max(pvd.planned, pvd.done, 1)) * 100)}%`, background: color }} />
             </div>
             <div className="chips" style={{ marginTop: 10 }}>
-              <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>📋 {actsTotal} planejada{actsTotal === 1 ? '' : 's'}</span>
+              <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="list" size={13} /> {actsTotal} planejada{actsTotal === 1 ? '' : 's'}</span>
               <span className="pill ok">✓ {pvd.acts.done} cumprida{pvd.acts.done === 1 ? '' : 's'}</span>
               <span className="pill warn">◐ {pvd.acts.part} parcia{pvd.acts.part === 1 ? 'l' : 'is'}</span>
-              <span className="pill bad">✗ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
+              <span className="pill bad">✕ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
               {pvd.acts.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>? {pvd.acts.pending} não lançada{pvd.acts.pending === 1 ? '' : 's'}</span>}
             </div>
             {pvd.acts.pending > 0 && (
@@ -176,7 +177,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
       </div>
 
       {ys.freeMonths === 0 && ys.committed < ys.goal && (
-        <div className="alert">⚠ Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} — menos que a meta anual de {fmtHours(ys.goal)}. Ajuste no Plano.</div>
+        <div className="alert"><Icon name="alert" size={15} /> Com os planos e metas atuais, o ano fecha em {fmtHours(ys.committed)} — menos que a meta anual de {fmtHours(ys.goal)}. Ajuste no Plano.</div>
       )}
 
       {onLaunch && (
@@ -203,7 +204,7 @@ function WeekCard({ week, today, color }: { week: WeekStats; today: string; colo
       </div>
       <div className="bar" style={{ margin: '10px 4px 14px' }}>
         <i style={{ width: pos(week.done), background: color }} />
-        <b className="gdot" style={{ left: pos(week.ideal), background: 'var(--credit)' }} title={`Ideal até hoje ${fmtHours(week.ideal)}`} />
+        <b className="gdot ideal" style={{ left: pos(week.ideal), }} title={`Ideal até hoje ${fmtHours(week.ideal)}`} />
       </div>
       <div className="wbars">
         {week.days.map((x) => {
@@ -213,7 +214,7 @@ function WeekCard({ week, today, color }: { week: WeekStats; today: string; colo
               <div className="wcol">
                 {x.planned > 0 && <span className="wplan" style={{ height: `${(x.planned / max) * 100}%` }} />}
                 {x.done > 0 && <span className="wdone" style={{ height: `${(x.done / max) * 100}%`, background: fill[x.state] ?? 'var(--brand-2)' }} />}
-                {x.absent && <span className="wx">✗</span>}
+                {x.absent && <span className="wx">✕</span>}
               </div>
               <span className="wlbl">{WEEKDAY_SHORT[d.getDay()][0].toUpperCase()} {x.date.slice(8)}</span>
               <span className="wplanh">{x.planned > 0 ? fmtH(x.planned) : ''}</span>

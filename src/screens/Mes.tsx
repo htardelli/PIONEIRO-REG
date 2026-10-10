@@ -3,6 +3,7 @@ import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabe
 import { cancelledPlan, dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
 import { CalLegend, Header, MonthNav } from '../ui'
 import { byStart } from './Lancar'
+import { Icon } from '../icons'
 
 /** Realizado dia a dia: calendário do mês e, ao tocar num dia, o detalhe das atividades logo abaixo. */
 export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEdit: (date: string) => void }) {
@@ -56,7 +57,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
                   className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${ev ? 'evday' : ''}`}>
                   {i + 1}
                   {(hol || ev) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span>}
-                  {st.done > 0 ? <em>{fmtH(st.done)}</em> : st.absentMin > 0 && <em className="off">✗</em>}
+                  {st.done > 0 ? <em>{fmtH(st.done)}</em> : st.absentMin > 0 && <em className="off">✕</em>}
                 </button>
               )
             })}
@@ -87,7 +88,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
     <div className="card">
       <div className="card-head">
         <h3>{WEEKDAY[d.getDay()]}, {date.slice(8)}/{date.slice(5, 7)}</h3>
-        {!future && st.faltou ? <span className="pill bad">✗ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
+        {!future && st.faltou ? <span className="pill bad">✕ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
           <span className={`pill ${st.planned === 0 || st.done >= st.planned ? 'ok' : st.done > 0 ? 'warn' : 'bad'}`}>
             {st.planned > 0 ? `${fmtH(st.done)} de ${fmtH(st.planned)}` : fmtH(st.done)}
           </span>
@@ -95,8 +96,8 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
       </div>
       {(hol || events.length > 0) && (
         <div className="daytags">
-          {hol && <div className="daytag hol"><span className="grow">🇧🇷 {hol.name}</span><span className="sub">{HOLIDAY_LABEL[hol.kind]}</span></div>}
-          {events.map((e) => <div className="daytag ev" key={e.id}>📌 {eventName(e)}</div>)}
+          {hol && <div className="daytag hol"><span className="grow"><Icon name="flag" /> {hol.name}</span><span className="sub">{HOLIDAY_LABEL[hol.kind]}</span></div>}
+          {events.map((e) => <div className="daytag ev" key={e.id}><Icon name="pin" /> {eventName(e)}</div>)}
         </div>
       )}
       {rows.length > 0 ? (
@@ -109,9 +110,9 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
             return (
               <div className="drow" key={i}>
                 <span className="n"><i className="dot" style={{ background: m?.color }} />
-                  <span>{m?.name}{it.group_id && ' 👥'}{t && <span className="sub"><br />{t}</span>}</span></span>
+                  <span>{m?.name}{it.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}{t && <span className="sub"><br />{t}</span>}</span></span>
                 <span className="pl">{!r.plan ? '—' : off.has(r.plan.id) ? <s title="Falta: não conta no planejado">{fmtH(r.plan.minutes)}</s> : fmtH(r.plan.minutes)}</span>
-                <span className="dn">{r.done?.absent ? <span className="pill bad">✗ falta</span> : r.done ? fmtH(r.done.minutes) : future ? '' : <span className="miss">—</span>}</span>
+                <span className="dn">{r.done?.absent ? <span className="pill bad">✕ falta</span> : r.done ? fmtH(r.done.minutes) : future ? '' : <span className="miss">—</span>}</span>
               </div>
             )
           })}

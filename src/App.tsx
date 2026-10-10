@@ -13,6 +13,7 @@ import { Relatorio } from './screens/Relatorio'
 import { Casal } from './screens/Casal'
 import { Config } from './screens/Config'
 import { ChangePassword } from './screens/ChangePassword'
+import { Icon } from './icons'
 
 function getToday(): Date {
   // ?hoje=AAAA-MM-DD permite simular uma data (útil para testes)
@@ -131,7 +132,7 @@ function Main({ user }: { user: AuthUser }) {
       <div className="main">
         {pendingCount > 0 && (
           <button className="alert" style={{ textAlign: 'left', font: 'inherit' }} onClick={() => go('config')}>
-            👤 {pendingCount} {pendingCount === 1 ? 'cadastro aguardando' : 'cadastros aguardando'} sua aprovação · <b>ver ›</b>
+            <Icon name="user" /> {pendingCount} {pendingCount === 1 ? 'cadastro aguardando' : 'cadastros aguardando'} sua aprovação · <b>ver ›</b>
           </button>
         )}
         <PainelBody data={d} today={today} color={color}
@@ -167,7 +168,7 @@ function Pending({ name }: { name: string }) {
   return (
     <div className="center">
       <div className="card form" style={{ width: '100%', maxWidth: 380, textAlign: 'center' }}>
-        <div style={{ fontSize: 40 }}>⏳</div>
+        <div style={{ color: 'var(--muted)' }}><Icon name="hourglass" size={40} /></div>
         <div className="title" style={{ justifyContent: 'center' }}>Aguardando aprovação</div>
         <div className="sub" style={{ fontSize: 14 }}>
           Olá, {name.split(' ')[0]}! Seu cadastro foi recebido. Assim que o administrador aprovar, o app libera o acesso — é só abrir de novo.

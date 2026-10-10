@@ -4,6 +4,7 @@ import { fmtHours, isoDate, monthKey, weekDates } from '../domain'
 import { yearStats, type YearData } from '../data'
 import { Avatar, DiffPill, Header, initials } from '../ui'
 import { PainelBody } from './Painel'
+import { Icon } from '../icons'
 
 const LEVEL_TXT = { ok: 'No ritmo de 600 h', warn: 'Entre 560 e 600 h', bad: 'Abaixo de 560 h' }
 
@@ -32,7 +33,7 @@ export function Casal({ me, partner, sharedOut, today, onLinked, toast }: {
     <div className="card form">
       <h3>Compartilhar meu desempenho</h3>
       <div className="sub" style={{ fontSize: 14 }}>
-        Informe o e-mail da conta do cônjuge para que ele(a) possa ver os seus dados. Quando os dois compartilham, cada um também pode incluir no plano e no lançamento do outro as atividades feitas juntos (👥).
+        Informe o e-mail da conta do cônjuge para que ele(a) possa ver os seus dados. Quando os dois compartilham, cada um também pode incluir no plano e no lançamento do outro as atividades feitas juntos (<Icon name="users" size={14} />).
         Só você pode liberar o acesso aos seus dados: para os dois se verem, cada um compartilha com o outro.
       </div>
       <input className="input" type="email" placeholder="email@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} />

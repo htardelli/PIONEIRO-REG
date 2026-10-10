@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { blockMinutes, fmtH, fmtHours, fromMinutes, MONTH_ABBR, toMinutes, type TimeBlock } from './domain'
 import { monthCard, TARGET_LABEL, type MonthStats } from './data'
 import type { Modality } from './types'
+import { Icon } from './icons'
 
 export type Tab = 'painel' | 'lancar' | 'mes' | 'plano' | 'relatorio' | 'casal' | 'config'
 
@@ -135,11 +136,11 @@ export function GoalBar({ total, goal, minGoal, color, pace }: { total: number; 
         <i style={{ width: pos(total), background: color }} />
         <b className="gdot" style={{ left: pos(minGoal), background: 'var(--warn)' }} title={`Mínimo ${fmtHours(minGoal)}`} />
         <b className="gdot" style={{ left: pos(goal), background: 'var(--ink)' }} title={`Meta ${fmtHours(goal)}`} />
-        {pace !== undefined && <b className="gdot" style={{ left: pos(pace), background: 'var(--credit)' }} title={`Ritmo ideal hoje ${fmtHours(pace)}`} />}
+        {pace !== undefined && <b className="gdot ideal" style={{ left: pos(pace) }} title={`Ritmo ideal hoje ${fmtHours(pace)}`} />}
       </div>
       <div className="legend" style={{ marginTop: 10, flexWrap: 'nowrap', justifyContent: 'space-between' }}>
         <span><i style={{ background: color ?? 'var(--brand-2)', borderRadius: '50%' }} />Feito</span>
-        {pace !== undefined && <span><i style={{ background: 'var(--credit)', borderRadius: '50%' }} />Ideal</span>}
+        {pace !== undefined && <span><i className="ideal" />Ideal</span>}
         <span><i style={{ background: 'var(--warn)', borderRadius: '50%' }} />Mínimo</span>
         <span><i style={{ background: 'var(--ink)', borderRadius: '50%' }} />Meta</span>
       </div>
@@ -147,7 +148,7 @@ export function GoalBar({ total, goal, minGoal, color, pace }: { total: number; 
   )
 }
 
-const STATUS_COLOR: Record<string, string> = { ok: 'var(--ok)', bad: 'var(--bad)', now: 'var(--now)', future: 'var(--future)' }
+const STATUS_COLOR: Record<string, string> = { ok: 'var(--ok)', bad: 'var(--bad)', now: 'var(--today)', future: 'var(--future)' }
 
 /** Meses do ano de serviço: grade de 3 colunas; cada card mostra realizado / alvo, barra de progresso e ✓/▲/▼. */
 export function MonthGrid({ months, today, needed, onPick }: {
@@ -179,7 +180,7 @@ export function MonthGrid({ months, today, needed, onPick }: {
       <div className="legend">
         <span><i style={{ background: 'var(--ok)' }} />Coberto</span>
         <span><i style={{ background: 'var(--bad)' }} />Abaixo</span>
-        <span><i style={{ background: 'var(--now)' }} />Em andamento</span>
+        <span><i style={{ background: 'var(--today)' }} />Em andamento</span>
         <span><i style={{ background: 'var(--future)' }} />A vir</span>
       </div>
       <div className="sub" style={{ marginTop: 4, fontSize: 11 }}>Realizado / alvo do mês. Alvo = plano; sem plano, a meta; sem plano e sem meta, o rateio (horas que faltam para a meta anual ÷ meses livres).</div>
@@ -255,13 +256,13 @@ export function BlocksEditor({ modalities, value, onChange, errors, partners = [
                     <button key={pt.id} className={`chip ${on ? 'on' : ''}`} onClick={() => set(i, {
                       with: on ? (b.with ?? []).filter((x) => x !== pt.id) : [...(b.with ?? []), pt.id],
                     })}>
-                      👥 {partnerHint ? partnerHint.replace('{nome}', pt.name.split(' ')[0]) : `Com ${pt.name.split(' ')[0]}`}{on ? ' ✓' : ''}
+                      <Icon name="users" size={14} /> {partnerHint ? partnerHint.replace('{nome}', pt.name.split(' ')[0]) : `Com ${pt.name.split(' ')[0]}`}{on ? ' ✓' : ''}
                     </button>
                   )
                 })}
               </div>
             )}
-            {err && <div style={{ color: 'var(--bad)', fontSize: 12, fontWeight: 700, marginTop: 6 }}>⚠ {err}</div>}
+            {err && <div style={{ color: 'var(--bad)', fontSize: 12, fontWeight: 700, marginTop: 6 }}><Icon name="alert" size={13} /> {err}</div>}
           </div>
         )
       })}
@@ -304,7 +305,7 @@ export function CalLegend({ pending }: { pending?: boolean }) {
       <span><i style={{ background: 'var(--bad-soft)', border: '1px solid var(--bad)' }} />Faltou</span>
       {pending
         ? <span><i style={{ background: '#fff', border: '1.5px dashed var(--muted)' }} />Plano sem lançamento</span>
-        : <span><i style={{ background: '#F7F9FB', border: '1px solid var(--line)' }} />Plano</span>}
+        : <span><i style={{ background: '#F7F9FB', border: '1px solid #8A96A8' }} />Plano</span>}
       <span><i className="hol" style={{ borderRadius: '50%' }} />Feriado</span>
       <span><i className="ev" style={{ borderRadius: '50%' }} />Evento</span>
     </>
