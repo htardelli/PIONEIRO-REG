@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
-import { DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, MONTH_NAME, parseIso, serviceYearOf } from './domain'
+import { DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, parseIso, serviceYearOf } from './domain'
 import { useYear, yearRange, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
-import { Avatar, Header, Loading, TabBar, useToast, type Tab } from './ui'
+import { Avatar, Header, Loading, Seg, TabBar, useToast, type Tab } from './ui'
 import { Auth } from './screens/Auth'
 import { PainelBody } from './screens/Painel'
 import { Lancar } from './screens/Lancar'
@@ -12,8 +12,9 @@ import { Plano } from './screens/Plano'
 import { Relatorio } from './screens/Relatorio'
 import { Casal } from './screens/Casal'
 import { Config } from './screens/Config'
+import { Ajuda, Mais } from './screens/Mais'
 import { ChangePassword } from './screens/ChangePassword'
-import { Icon } from './icons'
+import { Icon, Logo } from './icons'
 
 function getToday(): Date {
   // ?hoje=AAAA-MM-DD permite simular uma data (útil para testes)
@@ -29,7 +30,7 @@ export function App() {
     return api.onAuthChange(refresh)
   }, [])
 
-  if (user === undefined) return <div className="center"><div className="empty">Carregando…</div></div>
+  if (user === undefined) return <Splash />
   if (!user) return <Auth />
   return <Main user={user} />
 }
@@ -44,6 +45,11 @@ function Main({ user }: { user: AuthUser }) {
   const [sharedOut, setSharedOut] = useState(false)
   const partner = useYear(partnerId, sy)
   const [tab, setTab] = useState<Tab>('painel')
+  // Aba Plano: "Realizado" (calendário do que foi feito) ou "Planejar"; lembra a última escolha neste aparelho
+  const [planoMode, setPlanoModeRaw] = useState<'realizado' | 'planejar'>(() => {
+    try { return localStorage.getItem('plano-modo') === 'realizado' ? 'realizado' : 'planejar' } catch { return 'planejar' }
+  })
+  const setPlanoMode = (m: 'realizado' | 'planejar') => { setPlanoModeRaw(m); try { localStorage.setItem('plano-modo', m) } catch { /* sem armazenamento */ } }
   const [date, setDateRaw] = useState(isoDate(today))
   const [month, setMonthRaw] = useState(monthKey(today))
   const setDate = (dt: string) => { setDateRaw(dt); setSy(serviceYearOf(parseIso(dt))) }
@@ -139,26 +145,41 @@ function Main({ user }: { user: AuthUser }) {
           onLaunch={() => { go('lancar'); setDate(isoDate(today)) }}
           onPickMonth={(m) => { go('relatorio'); setMonth(m) }}
           onPickDate={(dt) => { go('lancar'); setDate(dt) }}
-          onPlanMonth={(m) => { go('plano'); setMonth(m) }} />
+          onPlanMonth={(m) => { go('plano'); setPlanoMode('planejar'); setMonth(m) }} />
       </div>
     </>
   )
   else if (tab === 'lancar') body = <Lancar data={d} today={today} minDate={yearRange(curSy - 1)[0]} date={date} setDate={setDate} reload={reloadBoth} toast={toast.show} partner={joint} />
-  else if (tab === 'mes') body = <Mes data={d} today={today} onEdit={(dt) => { go('lancar'); setDate(dt) }} />
-  else if (tab === 'plano') body = <Plano data={d} today={today} month={month} setMonth={setMonth} reload={reloadBoth} toast={toast.show} partner={joint} />
+  else if (tab === 'plano') {
+    const top = <Seg value={planoMode} onChange={setPlanoMode} options={[['realizado', 'Realizado × plano'], ['planejar', 'Planejar']]} />
+    body = planoMode === 'realizado'
+      ? <Mes data={d} today={today} month={month} setMonth={setMonth} top={top} onEdit={(dt) => { go('lancar'); setDate(dt) }} />
+      : <Plano data={d} today={today} month={month} setMonth={setMonth} reload={reloadBoth} toast={toast.show} partner={joint} top={top} />
+  }
   else if (tab === 'relatorio') body = <Relatorio data={d} today={today} curSy={curSy} month={month} setMonth={setMonth} reload={me.reload} toast={toast.show} name={name} />
   else if (tab === 'casal') body = partnerId && !partner.data ? <><Header kicker="" title="Nós dois" /><Loading error={partner.error} /></> : (
     <Casal me={d} partner={partnerId ? partner.data : null} sharedOut={sharedOut} today={today} toast={toast.show}
       onLinked={() => { void loadPartner(); void partner.reload() }} />
   )
-  else body = <Config data={d} reload={me.reload} toast={toast.show} onBack={() => go('painel')} />
+  else if (tab === 'mais') body = <Mais data={d} name={name} color={color} partnerName={joint?.name} pendingCount={pendingCount} go={go} />
+  else if (tab === 'ajuda') body = <Ajuda onBack={() => go('mais')} />
+  else body = <Config data={d} reload={me.reload} toast={toast.show} onBack={() => go('mais')} />
 
   return (
     <div className="app">
       {api.demo && <div className="banner">MODO DEMONSTRAÇÃO · dados de exemplo, salvos só neste aparelho</div>}
       {body}
-      <TabBar tab={tab} onTab={go} monthName={MONTH_NAME[today.getMonth()]} />
+      <TabBar tab={tab} onTab={go} badge={pendingCount} />
       {toast.node}
+    </div>
+  )
+}
+
+/** Abertura: logo sobre o azul-marinho enquanto a sessão é verificada. */
+function Splash() {
+  return (
+    <div className="auth splash">
+      <div className="auth-hero"><Logo size={96} /><div className="auth-name">Pioneiro-REG</div><div className="auth-tag">Organização · Disciplina · Constância</div></div>
     </div>
   )
 }

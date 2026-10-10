@@ -14,19 +14,19 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       workbox: { cleanupOutdatedCaches: true, clientsClaim: true, skipWaiting: true, globPatterns: ['**/*.{js,css,html,svg,png,woff2}'] },
-      includeAssets: ['icon.svg'],
+      includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Pioneiro-REG',
         short_name: 'Pioneiro',
         description: 'Registro e acompanhamento de horas do pioneiro regular',
         lang: 'pt-BR',
-        theme_color: '#1F4E79',
-        background_color: '#EEF1F5',
+        theme_color: '#13304F',
+        background_color: '#13304F', // tela de abertura azul-marinho com o logo
         display: 'standalone',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
     }),

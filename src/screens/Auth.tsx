@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api } from '../api'
+import { Logo } from '../icons'
 
 /** Entrar ou pedir cadastro. Cadastro novo só acessa depois da aprovação do administrador. */
 export function Auth() {
@@ -26,13 +27,13 @@ export function Auth() {
   }
 
   return (
-    <div className="center">
-      <form className="card form" style={{ width: '100%', maxWidth: 380 }} onSubmit={submit}>
-        <div style={{ textAlign: 'center', marginBottom: 4 }}>
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} width={64} height={64} alt="" />
-          <div className="title" style={{ justifyContent: 'center', marginTop: 8 }}>Pioneiro-REG</div>
-          <div className="sub">Registro e acompanhamento das horas</div>
-        </div>
+    <div className="auth">
+      <div className="auth-hero">
+        <Logo size={84} />
+        <div className="auth-name">Pioneiro-REG</div>
+        <div className="auth-tag">Organização · Disciplina · Constância</div>
+      </div>
+      <form className="card form auth-card" onSubmit={submit}>
         <div className="seg">
           <button type="button" className={mode === 'in' ? 'on' : ''} onClick={() => setMode('in')}>Entrar</button>
           <button type="button" className={mode === 'up' ? 'on' : ''} onClick={() => setMode('up')}>Pedir cadastro</button>
@@ -45,6 +46,7 @@ export function Auth() {
         {info && <div className="info">{info}</div>}
         <button className="btn brand" disabled={busy}>{busy ? 'Aguarde…' : mode === 'in' ? 'Entrar' : 'Enviar cadastro'}</button>
       </form>
+      <a className="auth-demo" href={`${import.meta.env.BASE_URL}?demo`}>Ver demonstração com dados de exemplo ›</a>
     </div>
   )
 }

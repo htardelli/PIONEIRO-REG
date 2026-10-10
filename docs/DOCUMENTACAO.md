@@ -38,7 +38,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/data.ts` | Carga do ano (`loadYear`) e estatísticas: mês, ano, rateio, estado do dia, faltas, realizado × planejado, semana, alerta de plano abaixo do ritmo, exportação `.ics` |
 | `src/api.ts` | Camada de dados: Supabase (produção) e local (demonstração) com a mesma interface |
 | `src/ui.tsx` | Componentes: barra de abas, cabeçalho, avatar, navegação de mês (grade dos 12 meses), editor de blocos, diálogo de múltipla escolha, legendas |
-| `src/screens/` | Telas: `Painel`, `Lancar`, `Mes` (aba com o nome do mês), `Plano`, `Relatorio`, `Casal`, `Config`, `Auth`, `ChangePassword` |
+| `src/screens/` | Telas: `Painel` (Início), `Lancar`, `Mes` e `Plano` (as duas visões da aba Plano), `Relatorio` (mensal e anual), `Mais` (e Ajuda), `Casal`, `Config`, `Auth`, `ChangePassword` |
 | `src/*.test.ts` | Testes (vitest) das regras de negócio e da consistência dos indicadores |
 | `supabase/tests/` | Testes do banco (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico), rodados no CI |
 | `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.17, idempotente) |
@@ -89,9 +89,11 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 
 ## 5. Telas e fluxos
 
-### Painel (ordem: dia → semana → mês → ano)
+**Navegação (5 abas):** Início · Lançar · Plano · Relatório · Mais. Cabeçalho azul-marinho em todas as telas; o selo vermelho em "Mais" mostra cadastros aguardando aprovação.
+
+### Início (ordem: dia → semana → mês → ano)
 1. **Alertas**: cadastros aguardando aprovação (administrador) e plano abaixo do ritmo (com ✕ e "Ajustar plano ›").
-2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição, situação, botões **Lançar** e **📅 Agenda** (.ics dos próximos 30 dias). Com tudo do dia lançado, o botão fica inativo (**Lançado ✓**).
+2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição, situação, botões **Lançar** e **Agenda** (.ics dos próximos 30 dias). Com tudo do dia lançado, o botão fica inativo (**Lançado ✓**).
 3. **Esta semana**: feito / meta, ponto ideal, barras por dia (plano tracejado × feito) com horas planejadas; "Meta ideal | Seu plano" e "Sugestão".
 4. **Mês | Realizado × planejado** até hoje (inclui o plano de hoje; planejado em cinza, realizado em destaque), com contagem por atividade e atalho para dias pendentes.
 5. **Mês atual**: feito / alvo e quanto falta.
@@ -103,18 +105,22 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - **✓ Cumpri o planejado** (ou "as que já terminaram"), **Fiz diferente**, **✗ Faltei** (motivo), **+ Atividade não planejada**, **Editar lançamento**.
 - Atividade conjunta: "Jessika também participou?" / "também faltou?" — lança para o cônjuge só o que ele(a) ainda não lançou.
 
-### Aba do mês (nome do mês vigente)
-- Calendário do realizado (cores por situação, contorno nos dias lançados, feriados/eventos) e detalhe do dia com **Plano | Realizado** lado a lado.
+### Plano → "Realizado × plano"
+- Chave no topo da aba Plano (o app lembra a última escolha). Calendário do realizado (cores por situação, contorno nos dias lançados, feriados/eventos) e detalhe do dia com **Plano | Realizado** lado a lado.
 
-### Plano
+### Plano → "Planejar"
 - Calendário (semana começa na segunda), grade dos 12 meses ao tocar no nome do mês.
 - Editor de blocos com horário, sem conflito; repetir no mês/ano (avisa e pergunta antes de substituir); excluir por dia/semana/mês/ano.
-- **Selecionar vários dias**: excluir plano ou marcar evento. **📌 Marcar evento** com datas (De/Até), tipo, detalhe e **duração** (dia inteiro ou manhã/tarde/noite).
+- **Selecionar vários dias**: excluir plano ou marcar evento. **Marcar evento** com datas (De/Até), tipo, detalhe e **duração** (dia inteiro ou manhã/tarde/noite).
 - **Editar** e **Remover** evento (a sequência inteira de dias; vale também para o cônjuge quando o evento é do casal).
 - Feriados e eventos do mês (dias seguidos do mesmo evento numa linha), meta do mês (hh:mm), alvo, planejado no mês e anual.
 
 ### Relatório
-- Texto do relatório (S-4), estudos, créditos com teto de 55 h, exportação para Excel (CSV), justificativa, **Faltas do ano**, alerta de mês fechado abaixo do ritmo.
+- **Mensal**: texto do relatório (S-4), estudos, créditos com teto de 55 h, por modalidade, justificativa e alerta de mês fechado abaixo do ritmo.
+- **Anual**: total, média mensal, ritmo ideal, quanto falta e projeção do ano; **gráfico mês a mês** (realizado × alvo, linha de 50:00/mês); meses do ano de serviço (tocar abre o mês); **Faltas do ano**; exportar Excel (CSV).
+
+### Mais
+- Perfil (abre Configurações), **Casal**, **Configurações**, **Ajuda** (perguntas frequentes sobre as regras de contagem), sair e versão.
 
 ### Casal
 - Compartilhar os **meus** dados (consentimento de cada um), comparativo, semana do casal e painel do cônjuge.
@@ -123,7 +129,8 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - Foto do perfil (recortada e reduzida no aparelho), nome, metas, cor, modalidades, **tipos de evento**,
   **cadastros pendentes** (aprovar/recusar) e criação de conta com senha provisória (somente administrador), sair, versão.
 
-### Login e cadastro
+### Abertura, login e cadastro
+- Tela de abertura e login com o logo sobre o azul-marinho; atalho **Ver demonstração**.
 - **Entrar** ou **Pedir cadastro**. O cadastro fica "Aguardando aprovação" até o administrador aprovar; o Painel do administrador avisa quantos aguardam.
 
 ## 6. Identidade visual
@@ -134,6 +141,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
   - verde = cumprido · âmbar = parcial · vermelho = falta (sempre com ✓ / ◐ / ✕, não só a cor);
   - turquesa = **hoje** (e o mês em andamento) · roxo = evento · rosa = crédito de horas · azul-marinho sublinhado = feriado;
   - ritmo ideal = marcador contornado (◯) na barra.
+- **Logo**: anel dourado (progresso rumo à meta) com uma asa subindo, sobre azul-marinho; dourado só no logo e na tela de abertura, nunca nos dados. Ícone do app na tela inicial do celular atualizado.
 - **Ícones de traço** num só estilo (`src/icons.tsx`), no lugar de emojis; cinza de texto com contraste legível (≥ 4,5:1); números com largura fixa (as horas alinham).
 - Horas sempre em **hh:mm**; semana de **segunda a domingo**; números do dia no canto superior esquerdo e contorno nos dias lançados.
 

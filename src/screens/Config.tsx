@@ -47,7 +47,7 @@ export function Config({ data, reload, toast, onBack }: {
 
   return (
     <>
-      <Header kicker={<button className="link" onClick={onBack} style={{ fontSize: 12 }}>‹ VOLTAR</button>} title="Configurações" />
+      <Header kicker={<button className="link" onClick={onBack} style={{ fontSize: 12 }}>‹ MAIS</button>} title="Configurações" />
       <div className="main">
         <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <Avatar name={p?.name ?? ''} color={p?.color} photo={p?.avatar} size={72} />

@@ -1,7 +1,7 @@
 :root {
   --today: #0E8FA3; --today-soft: #E0F3F6; /* destaque do dia de hoje */
   --bg: #EEF1F5; --card: #FFFFFF; --ink: #0F1B2D; --muted: #5B677A; --line: #E3E8EF;
-  --brand: #1F4E79; --brand-2: #2E75B6; --brand-soft: #E6EFF8;
+  --brand: #1F4E79; --brand-dark: #13304F; --brand-2: #2E75B6; --brand-soft: #E6EFF8;
   --ok: #1E8E5A; --ok-soft: #E3F4EC; --warn: #B7791F; --warn-soft: #FDF3DC; --now: #F2B705;
   --bad: #C0392B; --bad-soft: #FBE7E5; --credit: #B4458A; --credit-soft: #F8E6F0; /* crédito de horas (S-4) */
   --event: #7A4FC2; --event-soft: #EFE8FA; /* eventos (congresso, assembleia…) */ --future: #DCE3EC;
@@ -251,3 +251,42 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 /* Ritmo ideal: marcador contornado (não compete com as cores de status) */
 .bar .gdot.ideal { background: #fff; border: 3px solid var(--ink); box-shadow: none; }
 .legend i.ideal { background: #fff; border: 2px solid var(--ink); border-radius: 50%; box-sizing: border-box; }
+
+/* ---------- Cabeçalho azul-marinho (identidade do app) ---------- */
+.app::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--brand-dark); z-index: 20; }
+.top { background: var(--brand-dark); color: #fff; padding: calc(env(safe-area-inset-top) + 14px) 18px 16px; margin-bottom: 14px; border-radius: 0 0 22px 22px; }
+.top .kicker { color: rgba(255, 255, 255, .72); }
+.top .arrow { color: #fff; }
+.top .arrow:disabled { color: rgba(255, 255, 255, .3); }
+.top .link { color: #fff; }
+.top .date-pick .caret { color: rgba(255, 255, 255, .8); }
+.top .avatar { box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
+.top .brandmark { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- Barra de abas ---------- */
+.tabbar .ti { position: relative; display: inline-grid; }
+.tabbar button.on { font-weight: 800; }
+.badge { position: absolute; top: -4px; right: -10px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--bad); color: #fff; font-size: 10px; font-weight: 800; font-style: normal; display: grid; place-items: center; }
+.badge.static { position: static; }
+
+/* ---------- Listas (Mais, Ajuda) ---------- */
+.card.list { padding: 4px 0; }
+.lrow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+.card.list > :last-child, .card.list > :last-child .lrow { border-bottom: 0; }
+.faq { border-bottom: 1px solid var(--line); }
+.faq .lrow { border-bottom: 0; }
+.lrow .grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 15px; }
+.lic { width: 38px; height: 38px; border-radius: 11px; background: var(--brand-soft); color: var(--brand); display: grid; place-items: center; flex-shrink: 0; }
+.chev { color: var(--muted); font-size: 22px; font-weight: 700; line-height: 1; }
+.card.prof { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; font: inherit; }
+.card.prof .grow { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.faq-a { padding: 0 16px 14px; font-size: 14px; color: var(--muted); line-height: 1.45; }
+
+/* ---------- Abertura e login ---------- */
+.auth { min-height: 100dvh; background: linear-gradient(180deg, var(--brand-dark) 0 46%, var(--bg) 46%); display: flex; flex-direction: column; align-items: center; padding: calc(env(safe-area-inset-top) + 40px) 18px 32px; gap: 18px; }
+.auth.splash { background: var(--brand-dark); justify-content: center; }
+.auth-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; color: #fff; text-align: center; }
+.auth-name { font-size: 30px; font-weight: 900; letter-spacing: -.02em; margin-top: 8px; }
+.auth-tag { font-size: 13px; color: #D4A54A; font-weight: 700; letter-spacing: .04em; }
+.auth-card { width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(15, 27, 45, .18); }
+.auth-demo { font-size: 14px; font-weight: 700; color: var(--brand); text-decoration: none; }

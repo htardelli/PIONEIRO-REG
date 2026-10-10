@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabel, mondayIndex, serviceYearMonths, WEEK_HEAD, WEEKDAY } from '../domain'
 import { cancelledPlan, dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
 import { CalLegend, Header, MonthNav } from '../ui'
@@ -6,10 +6,11 @@ import { byStart } from './Lancar'
 import { Icon } from '../icons'
 
 /** Realizado dia a dia: calendário do mês e, ao tocar num dia, o detalhe das atividades logo abaixo. */
-export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEdit: (date: string) => void }) {
+export function Mes({ data, today, onEdit, month, setMonth, top }: {
+  data: YearData; today: Date; onEdit: (date: string) => void; month: string; setMonth: (m: string) => void; top?: ReactNode
+}) {
   const todayIso = isoDate(today)
   const months = serviceYearMonths(data.sy)
-  const [month, setMonth] = useState(monthKey(today))
   const [sel, setSel] = useState<string | null>(todayIso)
   useEffect(() => { setSel(month === monthKey(today) ? todayIso : null) }, [month]) // eslint-disable-line react-hooks/exhaustive-deps
   const detailRef = useRef<HTMLDivElement>(null)
@@ -33,6 +34,7 @@ export function Mes({ data, today, onEdit }: { data: YearData; today: Date; onEd
           info={(m) => { const x = ys.months.find((k) => k.month === m)!; return { line: fmtH(x.counted), status: x.status } }} />
       } />
       <div className="main">
+        {top}
         <div className="card" style={{ padding: '12px 16px' }}>
           <div className="kv"><span>Realizado no mês</span><b>{fmtH(ms.ministry)}</b></div>
           {ms.creditUsed > 0 && <div className="kv"><span>Crédito considerado</span><b style={{ color: 'var(--credit)' }}>{fmtH(ms.creditUsed)}</b></div>}

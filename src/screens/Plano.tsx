@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { api } from '../api'
 import { Icon } from '../icons'
 import {
@@ -13,9 +13,9 @@ type Scope = 'all' | 'me'
 
 const DELETE_LABEL: Record<DeleteScope, string> = { day: 'Dia', week: 'Semana', month: 'Mês', year: 'Ano' }
 
-export function Plano({ data, today, month, setMonth, reload, toast, partner }: {
+export function Plano({ data, today, month, setMonth, reload, toast, partner, top }: {
   data: YearData; today: Date; month: string; setMonth: (m: string) => void; reload: () => Promise<void>; toast: (m: string) => void
-  partner: JointPartner | null
+  partner: JointPartner | null; top?: ReactNode
 }) {
   const choice = useChoice()
   const pFirst = partner?.name.split(' ')[0] ?? ''
@@ -309,6 +309,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner }: 
           info={(m) => { const x = ys.months.find((k) => k.month === m)!; return { line: x.planned ? fmtH(x.planned) : '—', status: x.planned ? undefined : 'future' } }} />
       } />
       <div className="main">
+        {top}
         <div className="card" style={{ padding: 12 }}>
           <div className="card-head" style={{ marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
             {multi ? <span className="sub" style={{ fontWeight: 700 }}>Toque nos dias para selecionar</span> : (
