@@ -1,10 +1,10 @@
 # Segurança — Pioneiro-REG
 
-Revisão de outubro/2026 (banco, funções, front-end e publicação).
+Revisão de outubro/2026 (banco, funções, front-end e publicação) — atualizada até a versão v0.14 do banco.
 
 ## Modelo de proteção
 
-- **Dados no Supabase (Postgres) com RLS em todas as 10 tabelas**: cada pessoa grava só os próprios dados
+- **Dados no Supabase (Postgres) com RLS em todas as 10 tabelas** (e só para contas **aprovadas**): cada pessoa grava só os próprios dados
   (`user_id = auth.uid()`) e lê os próprios e os de quem **compartilhou com ela** (`can_read`).
 - **Compartilhamento por consentimento**: cada um compartilha os **seus** dados (`link_partner` grava sempre
   `owner = quem chamou`). Ninguém consegue se colocar como leitor de outra pessoa.

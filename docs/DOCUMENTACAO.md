@@ -40,7 +40,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/ui.tsx` | Componentes: barra de abas, cabeçalho, avatar, navegação de mês (grade dos 12 meses), editor de blocos, diálogo de múltipla escolha, legendas |
 | `src/screens/` | Telas: `Painel`, `Lancar`, `Mes` (aba com o nome do mês), `Plano`, `Relatorio`, `Casal`, `Config`, `Auth`, `ChangePassword` |
 | `src/*.test.ts` | Testes (vitest) das regras de negócio |
-| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.11, idempotente) |
+| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.14, idempotente) |
 | `.github/workflows/deploy.yml` | Atualização do banco + publicação |
 | `docs/` | Esta documentação e os protótipos de layout |
 
@@ -56,13 +56,17 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `entries` | Realizado: idem + `absent`/`note` (falta por atividade) | idem |
 | `day_notes` | Observação do dia / falta do dia ("Faltei · motivo") | idem |
 | `credits` | Créditos de horas do mês (tipo, minutos, observação) | idem |
-| `day_events` | Eventos do dia (congresso, assembleia…), `group_id` quando vale para o casal | idem |
+| `day_events` | Eventos do dia (congresso, assembleia…), `periods` (dia inteiro ou manhã/tarde/noite), `group_id` quando vale para o casal | idem |
 | `event_types` | Tipos de evento cadastrados em Configurações | idem |
 
-Funções principais: `can_read`, `is_mutual`, `link_partner`, `unlink_partner`, `admin_create_user`,
-`partner_plan_upsert`, `partner_plan_delete(_dates)`, `partner_entries_add`, `partner_absence_add`,
-`partner_events_add`, `partner_events_delete`, `partner_modality`. Todas as que escrevem no cônjuge exigem
-**compartilhamento mútuo** e não estão disponíveis para o papel anônimo.
+Funções principais:
+- **Acesso**: `can_read`, `is_approved` (conta aprovada), `is_mutual` (compartilhamento mútuo entre contas aprovadas).
+- **Casal**: `link_partner`, `unlink_partner`, `partner_plan_upsert`, `partner_plan_delete(_dates)`, `partner_entries_add`,
+  `partner_absence_add`, `partner_events_add`, `partner_events_delete` (com validação em `check_partner_items`).
+- **Administração**: `admin_create_user`, `admin_pending_users`, `admin_set_approval` (aprovar / recusar e excluir).
+
+Todas as que escrevem no cônjuge exigem **compartilhamento mútuo**, só aceitam **atividades conjuntas** e não estão
+disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`, `check_partner_items`) não podem ser chamadas pelo app.
 
 ## 4. Regras de negócio
 
@@ -78,14 +82,16 @@ Funções principais: `can_read`, `is_mutual`, `link_partner`, `unlink_partner`,
 - **Contagem cumpridas/parciais/faltas**: por **atividade planejada** (pareia o realizado com o plano pela atividade conjunta ou pela modalidade).
 - **Alerta de ritmo no Relatório**: só para **mês fechado** cujo acumulado do ano ficou abaixo do ritmo ideal no último dia do mês.
 - **Feriados**: nacionais (incl. Sexta-feira Santa), Ceará (19/03 e 25/03) e pontos facultativos (Carnaval, Corpus Christi).
+- **Eventos**: dia inteiro ou um ou mais períodos (manhã, tarde, noite); dias seguidos do mesmo evento aparecem numa linha (ex.: 16 - 19/10).
+- **Cadastro**: conta criada pelo app só acessa depois da aprovação do administrador; recusar exclui a conta.
 
 ## 5. Telas e fluxos
 
 ### Painel (ordem: dia → semana → mês → ano)
-1. **Alerta** de plano abaixo do ritmo (com ✕ e "Ajustar plano ›").
-2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição, situação, botões **Lançar** e **📅 Agenda** (.ics dos próximos 30 dias).
+1. **Alertas**: cadastros aguardando aprovação (administrador) e plano abaixo do ritmo (com ✕ e "Ajustar plano ›").
+2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição, situação, botões **Lançar** e **📅 Agenda** (.ics dos próximos 30 dias). Com tudo do dia lançado, o botão fica inativo (**Lançado ✓**).
 3. **Esta semana**: feito / meta, ponto ideal, barras por dia (plano tracejado × feito) com horas planejadas; "Meta ideal | Seu plano" e "Sugestão".
-4. **Realizado × planejado** do mês até hoje (inclui o plano de hoje), com contagem por atividade e atalho para dias pendentes.
+4. **Mês | Realizado × planejado** até hoje (inclui o plano de hoje; planejado em cinza, realizado em destaque), com contagem por atividade e atalho para dias pendentes.
 5. **Mês atual**: feito / alvo e quanto falta.
 6. **Ano**: anel (adiantado/atrasado) e barra com Feito · Ideal · Mínimo · Meta.
 7. **Meses do ano de serviço** (expansível, inicia oculto) + Planejamento anual.
@@ -101,7 +107,8 @@ Funções principais: `can_read`, `is_mutual`, `link_partner`, `unlink_partner`,
 ### Plano
 - Calendário (semana começa na segunda), grade dos 12 meses ao tocar no nome do mês.
 - Editor de blocos com horário, sem conflito; repetir no mês/ano (avisa e pergunta antes de substituir); excluir por dia/semana/mês/ano.
-- **Selecionar vários dias**: excluir plano ou marcar evento. **📌 Marcar evento** com período (De/Até).
+- **Selecionar vários dias**: excluir plano ou marcar evento. **📌 Marcar evento** com datas (De/Até), tipo, detalhe e **duração** (dia inteiro ou manhã/tarde/noite).
+- **Editar** e **Remover** evento (a sequência inteira de dias; vale também para o cônjuge quando o evento é do casal).
 - Feriados e eventos do mês (dias seguidos do mesmo evento numa linha), meta do mês (hh:mm), alvo, planejado no mês e anual.
 
 ### Relatório
@@ -117,13 +124,19 @@ Funções principais: `can_read`, `is_mutual`, `link_partner`, `unlink_partner`,
 ### Login e cadastro
 - **Entrar** ou **Pedir cadastro**. O cadastro fica "Aguardando aprovação" até o administrador aprovar; o Painel do administrador avisa quantos aguardam.
 
-## 6. Publicação e operação
+## 6. Identidade visual
+
+- **Fonte Ruda**, empacotada no app (funciona sem internet, sem depender do Google Fonts).
+- **Cores com significado**: verde = feito · amarelo = parcial · vermelho = falta/feriado · roxo = evento/ideal · azul = plano · **turquesa = hoje**.
+- Horas sempre em **hh:mm**; semana de **segunda a domingo**; números do dia no canto superior esquerdo e contorno nos dias lançados.
+
+## 7. Publicação e operação
 
 - **Push em `main`** → GitHub Actions aplica o banco (se `supabase/` mudou) e publica o app.
-- **Segredo**: `SUPABASE_DB_PASSWORD` (só a senha). O log nunca exibe a senha (máscara + diagnóstico só de tamanho/tipos).
+- **Segredo**: `SUPABASE_DB_PASSWORD` (só a senha). O log nunca exibe a senha (máscara); permissões mínimas no workflow.
 - **PWA**: atualiza sozinho ao abrir (verifica a cada 30 min e ao voltar ao app); a versão aparece em Configurações.
 
-## 7. Desenvolvimento
+## 8. Desenvolvimento
 
 ```bash
 npm install
@@ -132,11 +145,11 @@ npm test        # regras de negócio
 npm run build
 ```
 
-## 8. Segurança
+## 9. Segurança
 
 Ver [SEGURANCA.md](SEGURANCA.md) — modelo de ameaças, revisão e pendências.
 
-## 9. Revisão de fluxos (outubro/2026)
+## 10. Revisão de fluxos (outubro/2026)
 
 **Corrigido**
 - "Fiz diferente" deixava a atividade do plano pendente e "Cumpri" depois somava horas em dobro: dia passado lançado não tem mais pendências, e o "Cumpri" verifica conflito de horário.
