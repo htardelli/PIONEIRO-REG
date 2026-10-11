@@ -97,8 +97,8 @@ export function Config({ data, reload, toast, onBack }: {
         {p?.is_admin && <PendingUsers toast={toast} />}
         {p?.is_admin && <AdminCreateUser toast={toast} />}
 
-        <button className="btn danger" onClick={() => api.signOut()}>Sair da conta</button>
-        {api.demo && <div className="sub" style={{ textAlign: 'center' }}>Modo demonstração: "Sair" restaura os dados de exemplo.</div>}
+        <button className="btn danger" onClick={() => api.signOut()}>{api.demo ? 'Sair da demonstração' : 'Sair da conta'}</button>
+        {api.demo && <div className="sub" style={{ textAlign: 'center' }}>Modo demonstração: "Sair" encerra a demonstração e volta para o login da sua conta.</div>}
         <div className="sub" style={{ textAlign: 'center' }}>Versão {__APP_VERSION__}</div>
       </div>
     </>

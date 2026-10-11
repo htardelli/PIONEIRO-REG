@@ -38,7 +38,7 @@ export function Mais({ data, name, color, partnerName, pendingCount, go }: {
             badge={pendingCount} />
           <Row icon="help" title="Ajuda" sub="Como o app conta as horas" onClick={() => go('ajuda')} />
         </div>
-        <button className="btn danger" onClick={() => api.signOut()}>Sair da conta</button>
+        <button className="btn danger" onClick={() => api.signOut()}>{api.demo ? 'Sair da demonstração' : 'Sair da conta'}</button>
         <div className="sub" style={{ textAlign: 'center' }}>Pioneiro-REG · versão {__APP_VERSION__}</div>
       </div>
     </>

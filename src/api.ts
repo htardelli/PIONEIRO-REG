@@ -158,6 +158,8 @@ function localApi(): Api {
     async updatePassword() { /* demonstração: nada a fazer */ },
     async signOut() {
       localStorage.removeItem(LS_KEY)
+      // Sair da demonstração volta para o app de verdade (sem "?demo" no endereço): o próximo login é na conta real
+      if (isConfigured) { location.replace(import.meta.env.BASE_URL); return }
       db = buildDemoData(new Date()) as unknown as Db
       save()
       logged = false

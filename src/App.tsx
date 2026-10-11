@@ -167,7 +167,12 @@ function Main({ user }: { user: AuthUser }) {
 
   return (
     <div className="app">
-      {api.demo && <div className="banner">MODO DEMONSTRAÇÃO · dados de exemplo, salvos só neste aparelho</div>}
+      {api.demo && (
+        <div className="banner">
+          MODO DEMONSTRAÇÃO · dados de exemplo, salvos só neste aparelho
+          <button onClick={() => api.signOut()}>Sair da demonstração ›</button>
+        </div>
+      )}
       {body}
       <TabBar tab={tab} onTab={go} badge={pendingCount} />
       {toast.node}

@@ -290,3 +290,5 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .auth-tag { font-size: 13px; color: #D4A54A; font-weight: 700; letter-spacing: .04em; }
 .auth-card { width: 100%; max-width: 380px; box-shadow: 0 10px 30px rgba(15, 27, 45, .18); }
 .auth-demo { font-size: 14px; font-weight: 700; color: var(--brand); text-decoration: none; }
+
+.banner button { display: block; margin: 4px auto 0; font-weight: 800; color: #7A5200; text-decoration: underline; font-size: 13px; }
