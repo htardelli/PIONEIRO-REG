@@ -292,3 +292,8 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .auth-demo { font-size: 14px; font-weight: 700; color: var(--brand); text-decoration: none; }
 
 .banner button { display: block; margin: 4px auto 0; font-weight: 800; color: #7A5200; text-decoration: underline; font-size: 13px; }
+
+/* Realizado × plano: planejado pequeno e claro acima do realizado */
+.cal.cmp .d { height: 58px; }
+.cal .d .pl { position: absolute; bottom: 21px; right: 5px; font-size: 10px; font-weight: 600; color: var(--muted); opacity: .85; }
+.cal .d.msel .pl { color: #fff; }

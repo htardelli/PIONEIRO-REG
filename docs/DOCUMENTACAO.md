@@ -106,7 +106,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - Atividade conjunta: "Jessika também participou?" / "também faltou?" — lança para o cônjuge só o que ele(a) ainda não lançou.
 
 ### Plano → "Realizado × plano"
-- Chave no topo da aba Plano (o app lembra a última escolha). Calendário do realizado (cores por situação, contorno nos dias lançados, feriados/eventos) e detalhe do dia com **Plano | Realizado** lado a lado.
+- Chave no topo da aba Plano (o app lembra a última escolha). Calendário com o **planejado** (pequeno, em cinza) acima do **realizado** em cada dia; calendário do realizado (cores por situação, contorno nos dias lançados, feriados/eventos) e detalhe do dia com **Plano | Realizado** lado a lado.
 
 ### Plano → "Planejar"
 - Calendário (semana começa na segunda) mostrando **só as horas planejadas** de cada dia (a cor indica a situação; dia de falta com o plano riscado), grade dos 12 meses ao tocar no nome do mês.

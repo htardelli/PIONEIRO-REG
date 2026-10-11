@@ -45,7 +45,7 @@ export function Mes({ data, today, onEdit, month, setMonth, top }: {
         </div>
 
         <div className="card" style={{ padding: 12 }}>
-          <div className="cal">
+          <div className="cal cmp">
             {WEEK_HEAD.map((h, i) => <div className="h" key={i}>{h}</div>)}
             {Array.from({ length: firstDow }, (_, i) => <div className="d x" key={'x' + i} />)}
             {days.map((date, i) => {
@@ -59,6 +59,8 @@ export function Mes({ data, today, onEdit, month, setMonth, top }: {
                   className={`d ${cls} ${date === todayIso ? 'today' : ''} ${sel === date ? 'sel' : ''} ${hol ? 'holday' : ''} ${data.entries.some((e) => e.date === date) || data.notes.some((n) => n.date === date) ? 'lanc' : ''} ${ev ? 'evday' : ''}`}>
                   {i + 1}
                   {(hol || ev) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{ev && <i className="ev" />}</span>}
+                  {/* planejado (menor e mais claro) em cima do realizado, para comparar */}
+                  {st.rawPlanned > 0 && <small className="pl">{st.faltou ? <s>{fmtH(st.rawPlanned)}</s> : fmtH(st.rawPlanned)}</small>}
                   {st.done > 0 ? <em>{fmtH(st.done)}</em> : st.absentMin > 0 && <em className="off">✕</em>}
                 </button>
               )
