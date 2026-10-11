@@ -86,6 +86,10 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
   const events = data.events.filter((e) => e.date === date)
   const d = new Date(Number(date.slice(0, 4)), Number(date.slice(5, 7)) - 1, Number(date.slice(8)))
   const future = date > isoDate(today)
+  const isToday = date === isoDate(today)
+  // Hoje ainda dá tempo: atividade não lançada aparece como "em andamento"/"a lançar", nunca como atraso (vermelho)
+  const now = new Date(); const nowMin = now.getHours() * 60 + now.getMinutes()
+  const running = (end?: string | null) => !!end && Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5)) > nowMin
   const rows = pairDay(plan, entries)
   const off = cancelledPlan(data)
   return (
@@ -93,8 +97,8 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
       <div className="card-head">
         <h3>{WEEKDAY[d.getDay()]}, {date.slice(8)}/{date.slice(5, 7)}</h3>
         {!future && st.faltou ? <span className="pill bad">✕ Faltou</span> : !future && (st.done > 0 || st.planned > 0) && (
-          <span className={`pill ${st.planned === 0 || st.done >= st.planned ? 'ok' : st.done > 0 ? 'warn' : 'bad'}`}>
-            {st.planned > 0 ? `${fmtH(st.done)} de ${fmtH(st.planned)}` : fmtH(st.done)}
+          <span className={`pill ${st.planned === 0 || st.done >= st.planned ? 'ok' : isToday ? 'now' : st.done > 0 ? 'warn' : 'bad'}`}>
+            {st.planned > 0 ? `${fmtH(st.done)} de ${fmtH(st.planned)}` : fmtH(st.done)}{isToday && st.planned > st.done ? ' · em andamento' : ''}
           </span>
         )}
       </div>
@@ -116,7 +120,9 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
                 <span className="n"><i className="dot" style={{ background: m?.color }} />
                   <span>{m?.name}{it.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}{t && <span className="sub"><br />{t}</span>}</span></span>
                 <span className="pl">{!r.plan ? '—' : off.has(r.plan.id) ? <s title="Falta: não conta no planejado">{fmtH(r.plan.minutes)}</s> : fmtH(r.plan.minutes)}</span>
-                <span className="dn">{r.done?.absent ? <span className="pill bad">✕ falta</span> : r.done ? fmtH(r.done.minutes) : future ? '' : <span className="miss">—</span>}</span>
+                <span className="dn">{r.done?.absent ? <span className="pill bad">✕ falta</span> : r.done ? fmtH(r.done.minutes) : future ? ''
+                  : isToday ? <span className="wait">{running(r.plan?.end_time) ? `até ${r.plan!.end_time!.slice(0, 5)}` : 'a lançar'}</span>
+                  : <span className="miss">—</span>}</span>
               </div>
             )
           })}

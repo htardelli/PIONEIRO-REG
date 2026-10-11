@@ -297,3 +297,7 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .cal.cmp .d { height: 58px; }
 .cal .d .pl { position: absolute; bottom: 21px; right: 5px; font-size: 10px; font-weight: 600; color: var(--muted); opacity: .85; }
 .cal .d.msel .pl { color: #fff; }
+
+/* Hoje: ainda em andamento (não é atraso) */
+.pill.now { color: var(--today); background: var(--today-soft); }
+.drow .wait { color: var(--today); font-size: 13px; font-weight: 700; }

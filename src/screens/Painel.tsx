@@ -20,7 +20,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
   const [todayStatus, todayColor] = td.faltou ? ['✕ faltou', 'var(--bad)']
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
-    : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, td.done > 0 ? 'var(--warn)' : 'var(--today)']
+    : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, 'var(--today)'] // hoje ainda está em andamento
     : td.logged ? ['lançado', 'var(--muted)']
     : ['', '']
   // Tudo de hoje já lançado (feito ou falta)? Então o botão Lançar fica inativo
