@@ -325,7 +325,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner, to
             {Array.from({ length: nDays }, (_, i) => {
               const date = `${month}-${String(i + 1).padStart(2, '0')}`
               const st = dayState(data, date, today)
-              const shown = st.done > 0 ? st.done : st.planned
+              const shown = st.rawPlanned // Planejar mostra só o planejado (o realizado fica em "Realizado × plano"); falta = plano riscado
               const hol = holidayOf(date)
               const evs = eventsOn(date)
               return (
@@ -334,7 +334,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner, to
                   onClick={() => (multi ? togglePick(date) : setSel(date))}>
                   {i + 1}
                   {(hol || evs.length > 0) && <span className="dmk">{hol && <i className={`hol ${hol.kind}`} />}{evs.length > 0 && <i className="ev" />}</span>}
-                  {shown > 0 ? <em>{fmtHours(shown)}</em> : st.faltou && <em className="off">✕</em>}
+                  {shown > 0 && <em className={st.faltou ? 'off' : ''}>{st.faltou ? <s>{fmtHours(shown)}</s> : fmtHours(shown)}</em>}
                 </button>
               )
             })}

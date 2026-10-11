@@ -109,7 +109,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - Chave no topo da aba Plano (o app lembra a última escolha). Calendário do realizado (cores por situação, contorno nos dias lançados, feriados/eventos) e detalhe do dia com **Plano | Realizado** lado a lado.
 
 ### Plano → "Planejar"
-- Calendário (semana começa na segunda), grade dos 12 meses ao tocar no nome do mês.
+- Calendário (semana começa na segunda) mostrando **só as horas planejadas** de cada dia (a cor indica a situação; dia de falta com o plano riscado), grade dos 12 meses ao tocar no nome do mês.
 - Editor de blocos com horário, sem conflito; repetir no mês/ano (avisa e pergunta antes de substituir); excluir por dia/semana/mês/ano.
 - **Selecionar vários dias**: excluir plano ou marcar evento. **Marcar evento** com datas (De/Até), tipo, detalhe e **duração** (dia inteiro ou manhã/tarde/noite).
 - **Editar** e **Remover** evento (a sequência inteira de dias; vale também para o cônjuge quando o evento é do casal).
