@@ -93,7 +93,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 
 ### Início (ordem: dia → semana → mês → ano)
 1. **Alertas**: cadastros aguardando aprovação (administrador) e plano abaixo do ritmo (com ✕ e "Ajustar plano ›").
-2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição, situação, botões **Lançar** e **Agenda** (.ics dos próximos 30 dias). Com tudo do dia lançado, o botão fica inativo (**Lançado ✓**).
+2. **Hoje** (destaque turquesa): feito / planejado, barra, atividades com horário e descrição — cada uma com sua situação (✓ feita, com fundo verde · ◐ em parte · ✕ falta · tracejado = a fazer), botões **Lançar** e **Agenda** (.ics dos próximos 30 dias). Com tudo do dia lançado, o botão fica inativo (**Lançado ✓**).
 3. **Esta semana**: feito / meta, ponto ideal, barras por dia (plano tracejado × feito) com horas planejadas; "Meta ideal | Seu plano" e "Sugestão".
 4. **Mês | Realizado × planejado** até hoje (inclui o plano de hoje; planejado em cinza, realizado em destaque), com contagem por atividade e atalho para dias pendentes.
 5. **Mês atual**: feito / alvo e quanto falta.

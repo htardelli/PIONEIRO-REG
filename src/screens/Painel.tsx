@@ -18,6 +18,15 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
   const todayIso = isoDate(today)
   const td = dayState(data, todayIso, today)
   const todayPlan = data.plan.filter((p) => p.date === todayIso).sort((a, b) => (a.start_time ?? '').localeCompare(b.start_time ?? ''))
+  // Situação de cada atividade de hoje: feita ✓, parcial ◐, falta ✕ ou ainda pendente (tracejado)
+  const todayRows = new Map(pairDay(todayPlan, data.entries.filter((e) => e.date === todayIso)).filter((r) => r.plan).map((r) => [r.plan!.id, r.done]))
+  const todayRowState = (p: (typeof todayPlan)[number]): { cls: string; icon: 'checkCircle' | 'halfCircle' | 'xCircle' | 'dashCircle'; label: string } => {
+    const d = todayRows.get(p.id)
+    if (d?.absent) return { cls: 'miss', icon: 'xCircle', label: 'falta' }
+    if (d && d.minutes >= p.minutes) return { cls: 'ok', icon: 'checkCircle', label: 'feita' }
+    if (d && d.minutes > 0) return { cls: 'part', icon: 'halfCircle', label: 'feita em parte' }
+    return { cls: 'pend', icon: 'dashCircle', label: 'a fazer' }
+  }
   const [todayStatus, todayColor] = td.faltou ? ['✕ faltou', 'var(--bad)']
     : td.done > 0 && td.done >= td.planned ? ['✓ cumprido', 'var(--ok)']
     : td.planned > 0 ? [`faltam ${fmtH(td.planned - td.done)}`, 'var(--today)'] // hoje ainda está em andamento
@@ -88,11 +97,15 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="big">{fmtHours(td.done)}<small> / {td.rawPlanned ? fmtHours(td.planned) : '—'}</small></div>
             {td.planned > 0 && <div className="bar" style={{ margin: '6px 0 8px', height: 8 }}><i style={{ width: `${Math.min(100, (td.done / td.planned) * 100)}%`, background: td.done >= td.planned ? 'var(--ok)' : 'var(--today)' }} /></div>}
-            {todayPlan.length ? todayPlan.map((p) => (
-              <div className="sub" key={p.id}>
-                {p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b style={{ color: 'var(--ink)' }}>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}
-              </div>
-            )) : <div className="sub">Sem plano para hoje</div>}
+            {todayPlan.length ? todayPlan.map((p) => {
+              const st = todayRowState(p)
+              return (
+                <div className={`sub trow ${st.cls}`} key={p.id}>
+                  <Icon name={st.icon} size={15} label={st.label} />
+                  <span>{p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b>{data.modalities.find((m) => m.id === p.modality_id)?.name ?? ''}</b>{p.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}</span>
+                </div>
+              )
+            }) : <div className="sub">Sem plano para hoje</div>}
             <div className="sub">{todayPlan.length > 0 && `${todayPlan.length} atividade${todayPlan.length > 1 ? 's' : ''}`}{todayStatus && <>{todayPlan.length > 0 && ' · '}<b style={{ color: todayColor }}>{todayStatus}</b></>}</div>
           </div>
           {onLaunch && <button className="btn brand small" style={{ width: 'auto', padding: '10px 18px', flexShrink: 0 }} onClick={onLaunch} disabled={allLaunched}
@@ -213,7 +226,7 @@ function WeekCard({ week, today, color }: { week: WeekStats; today: string; colo
             <div key={x.date} className={`wday ${x.date === today ? 'today' : ''}`}>
               <div className="wcol">
                 {x.planned > 0 && <span className="wplan" style={{ height: `${(x.planned / max) * 100}%` }} />}
-                {x.done > 0 && <span className="wdone" style={{ height: `${(x.done / max) * 100}%`, background: fill[x.state] ?? 'var(--brand-2)' }} />}
+                {x.done > 0 && <span className="wdone" style={{ height: `${(x.done / max) * 100}%`, background: x.date === today && x.state !== 'done' ? 'var(--today)' : fill[x.state] ?? 'var(--brand-2)' }} />}
                 {x.absent && <span className="wx">✕</span>}
               </div>
               <span className="wlbl">{WEEKDAY_SHORT[d.getDay()][0].toUpperCase()} {x.date.slice(8)}</span>

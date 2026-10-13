@@ -301,3 +301,13 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 /* Hoje: ainda em andamento (não é atraso) */
 .pill.now { color: var(--today); background: var(--today-soft); }
 .drow .wait { color: var(--today); font-size: 13px; font-weight: 700; }
+
+/* Card Hoje: situação de cada atividade */
+.trow { display: flex; align-items: center; gap: 6px; padding: 3px 6px; margin: 2px 0 2px -6px; border-radius: 8px; }
+.trow b { color: var(--ink); }
+.trow.ok { background: var(--ok-soft); color: var(--ok); }
+.trow.ok svg { color: var(--ok); }
+.trow.part svg { color: var(--warn); }
+.trow.miss { color: var(--bad); }
+.trow.miss b { text-decoration: line-through; color: var(--bad); }
+.trow.pend svg { color: var(--muted); }
