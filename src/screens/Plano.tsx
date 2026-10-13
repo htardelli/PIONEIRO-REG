@@ -264,7 +264,7 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner, to
   function startEdit(run: DayEvent[]) {
     setSel(null); setMulti(false); setPicked([])
     setEditRun([...run].sort((a, b) => a.date.localeCompare(b.date))); setEvRange(true); setEvDates([])
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    document.querySelector('.scroll')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function removeEvent(evOrRun: DayEvent | DayEvent[]) {

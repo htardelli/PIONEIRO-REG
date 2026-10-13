@@ -45,6 +45,7 @@ function Main({ user }: { user: AuthUser }) {
   const [sharedOut, setSharedOut] = useState(false)
   const partner = useYear(partnerId, sy)
   const [tab, setTab] = useState<Tab>('painel')
+  const scrollRef = useRef<HTMLDivElement>(null) // área que rola (a barra de abas fica fora dela)
   // Aba Plano: "Realizado" (calendário do que foi feito) ou "Planejar"; lembra a última escolha neste aparelho
   const [planoMode, setPlanoModeRaw] = useState<'realizado' | 'planejar'>(() => {
     try { return localStorage.getItem('plano-modo') === 'realizado' ? 'realizado' : 'planejar' } catch { return 'planejar' }
@@ -109,7 +110,7 @@ function Main({ user }: { user: AuthUser }) {
     setTab(t)
     // cada aba mostra o ano de serviço do que ela exibe: Lançar → data; Plano/Relatório → mês; demais → ano atual
     setSy(t === 'lancar' ? serviceYearOf(parseIso(date)) : t === 'plano' || t === 'relatorio' ? serviceYearOf(parseIso(`${month}-01`)) : curSy)
-    window.scrollTo(0, 0)
+    scrollRef.current?.scrollTo(0, 0)
   }
   const d = me.data
   // Participante para atividades conjuntas: só com compartilhamento mútuo e dados dele(a) carregados
@@ -180,6 +181,7 @@ function Main({ user }: { user: AuthUser }) {
 
   return (
     <div className="app">
+      <div className="scroll" ref={scrollRef}>
       {api.demo && (
         <div className="banner">
           MODO DEMONSTRAÇÃO · dados de exemplo, salvos só neste aparelho
@@ -187,6 +189,7 @@ function Main({ user }: { user: AuthUser }) {
         </div>
       )}
       {body}
+      </div>
       <TabBar tab={tab} onTab={go} badge={pendingCount} />
       {toast.node}
     </div>
