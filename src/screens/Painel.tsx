@@ -140,7 +140,7 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             <div className="chips acts" style={{ marginTop: 10 }}>
               <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>{actsTotal} plano</span>
               <span className="pill ok">✓ {pvd.acts.done} feita{pvd.acts.done === 1 ? '' : 's'}</span>
-              <span className="pill warn">◐ {pvd.acts.part} parcia{pvd.acts.part === 1 ? 'l' : 'is'}</span>
+              <span className="pill warn">◐ {pvd.acts.part} parcial</span>
               <span className="pill bad">✕ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
               {pvd.acts.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>{pvd.acts.pending} n/lanç</span>}
             </div>
