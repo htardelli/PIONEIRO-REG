@@ -311,3 +311,7 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .trow.miss { color: var(--bad); }
 .trow.miss b { text-decoration: line-through; color: var(--bad); }
 .trow.pend svg { color: var(--muted); }
+
+/* Contagem por atividade (Início): cabe numa linha */
+.chips.acts { gap: 3px; justify-content: space-between; } /* em telas muito estreitas quebra a linha */
+.chips.acts .pill { padding: 3px 5px; font-size: 11px; letter-spacing: -.01em; }

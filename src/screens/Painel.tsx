@@ -137,12 +137,12 @@ export function PainelBody({ data, today, onLaunch, onPickMonth, onPickDate, onP
             <div className="bar" style={{ marginTop: 12, height: 12 }}>
               <i style={{ width: `${Math.min(100, (pvd.done / Math.max(pvd.planned, pvd.done, 1)) * 100)}%`, background: color }} />
             </div>
-            <div className="chips" style={{ marginTop: 10 }}>
-              <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}><Icon name="list" size={13} /> {actsTotal} planejada{actsTotal === 1 ? '' : 's'}</span>
-              <span className="pill ok">✓ {pvd.acts.done} cumprida{pvd.acts.done === 1 ? '' : 's'}</span>
+            <div className="chips acts" style={{ marginTop: 10 }}>
+              <span className="pill" style={{ background: 'var(--brand-soft)', color: 'var(--brand)' }}>{actsTotal} plano</span>
+              <span className="pill ok">✓ {pvd.acts.done} feita{pvd.acts.done === 1 ? '' : 's'}</span>
               <span className="pill warn">◐ {pvd.acts.part} parcia{pvd.acts.part === 1 ? 'l' : 'is'}</span>
               <span className="pill bad">✕ {pvd.acts.miss} falta{pvd.acts.miss === 1 ? '' : 's'}</span>
-              {pvd.acts.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>? {pvd.acts.pending} não lançada{pvd.acts.pending === 1 ? '' : 's'}</span>}
+              {pvd.acts.pending > 0 && <span className="pill" style={{ background: 'var(--future)', color: '#3D4A5C' }}>{pvd.acts.pending} n/lanç</span>}
             </div>
             {pvd.acts.pending > 0 && (
               <div className="sub" style={{ marginTop: 8 }}>
