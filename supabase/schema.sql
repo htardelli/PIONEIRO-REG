@@ -706,3 +706,18 @@ begin
     on conflict (user_id, date, kind, title) do update set group_id = excluded.group_id, periods = excluded.periods;
   end loop;
 end $$;
+
+-- ============ v0.18: atualização em tempo real (Supabase Realtime) ============
+-- O app escuta mudanças nestas tabelas; o Realtime aplica o RLS, então cada um só recebe o que já poderia ler.
+do $$
+declare t text;
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime; -- no Supabase ela já existe; aqui só para bancos de teste
+  end if;
+  foreach t in array array['entries','plan_items','day_notes','day_events','month_records','credits'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end $$;

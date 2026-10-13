@@ -12,7 +12,7 @@ export function Config({ data, reload, toast, onBack }: {
   const [goal, setGoal] = useState(String((p?.annual_goal_min ?? 36000) / 60))
   const [minGoal, setMinGoal] = useState(String((p?.min_goal_min ?? 33600) / 60))
   const [newMod, setNewMod] = useState('')
-  useEffect(() => { setName(p?.name ?? ''); setColor(p?.color ?? '#2E75B6') }, [p])
+  useEffect(() => { setName(p?.name ?? ''); setColor(p?.color ?? '#2E75B6') }, [p?.name, p?.color])
 
   async function saveProfile() {
     const g = Number(goal), mg = Number(minGoal)

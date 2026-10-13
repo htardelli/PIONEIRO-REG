@@ -41,7 +41,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/screens/` | Telas: `Painel` (Início), `Lancar`, `Mes` e `Plano` (as duas visões da aba Plano), `Relatorio` (mensal e anual), `Mais` (e Ajuda), `Casal`, `Config`, `Auth`, `ChangePassword` |
 | `src/*.test.ts` | Testes (vitest) das regras de negócio e da consistência dos indicadores |
 | `supabase/tests/` | Testes do banco (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico), rodados no CI |
-| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.17, idempotente) |
+| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.18, idempotente) |
 | `.github/workflows/deploy.yml` | Testes do banco + atualização do banco + publicação |
 | `.github/workflows/backup.yml` | Backup semanal criptografado do banco |
 | `docs/` | Esta documentação e os protótipos de layout |
@@ -150,6 +150,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - **Push em `main`** → GitHub Actions aplica o banco (se `supabase/` mudou) e publica o app.
 - **Segredo**: `SUPABASE_DB_PASSWORD` (só a senha). O log nunca exibe a senha (máscara); permissões mínimas no workflow.
 - **PWA**: atualiza sozinho ao abrir (verifica a cada 30 min e ao voltar ao app); a versão aparece em Configurações.
+- **Tempo real (v0.18)**: lançamentos, planos, faltas, eventos, metas e créditos de um aparelho aparecem sozinhos nos outros (Supabase Realtime, respeitando o RLS) e o app recarrega ao voltar do segundo plano. Uma atualização que chega não apaga o que está sendo editado.
 - **Salvamento atômico (v0.15)**: lançar o dia (`save_day`) e salvar o plano (`save_plan`) rodam numa única transação no banco — ou grava tudo, ou nada muda. Se falhar (sem internet), o que foi digitado fica como **rascunho neste aparelho**; ao abrir o dia aparece "Lançamento não salvo · Recuperar / Descartar".
 
 ### Backup e restauração

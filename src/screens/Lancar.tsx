@@ -64,13 +64,18 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
   const [draft, setDraft] = useState<Draft | null>(readDraft)
   useEffect(() => setDraft(readDraft()), [draftKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Troca de dia: fecha edição e formulário de falta
   useEffect(() => {
     setEditing(false); setExtra(null)
     setAbsent(false); setReason(''); setAbsText('')
+  }, [date])
+  // Dados novos (inclusive vindos do cônjuge em tempo real) só substituem a tela se nada estiver sendo editado
+  useEffect(() => {
+    if (editing || absent) return
     setBlocks(done.length ? toBlocks(done) : withPartner(toBlocks(plan)))
     setText(note?.note ?? '')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [date, data])
+  }, [date, data, editing, absent])
 
   /** "+ Atividade não planejada": abre o lançamento do dia com uma atividade nova no fim. */
   function addExtra() {
@@ -145,6 +150,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
         })),
       })
       clearDraft()
+      setEditing(false); setExtra(null); setAbsent(false); setReason(''); setAbsText('')
       await reload()
       toast(shared ? `Dia lançado ✓ · também para ${pFirst}` : 'Dia lançado ✓')
     } catch (e) {
@@ -175,7 +181,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
     try {
       await api.remove('entries', { eq: { user_id: data.userId, date, absent: false } })
       await api.remove('day_notes', { eq: { user_id: data.userId, date } })
-      clearDraft(); await reload(); toast('Lançamento apagado')
+      clearDraft(); setEditing(false); setExtra(null); await reload(); toast('Lançamento apagado')
     } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
   }
 

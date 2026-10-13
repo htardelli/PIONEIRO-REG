@@ -125,6 +125,19 @@ function Main({ user }: { user: AuthUser }) {
 
   const reloadBoth = async () => { await Promise.all([me.reload(), joint ? partner.reload() : Promise.resolve()]) }
 
+  // Tempo real: quando o cônjuge (ou o outro aparelho) lança, planeja ou marca evento, os dados se atualizam sozinhos.
+  // Ao voltar para o app também recarrega (o celular corta a conexão em segundo plano).
+  const reloadRef = useRef(reloadBoth)
+  reloadRef.current = reloadBoth
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const soon = () => { clearTimeout(timer); timer = setTimeout(() => { void reloadRef.current().catch(() => {}) }, 600) }
+    const unsub = api.subscribe(soon)
+    const onVisible = () => { if (document.visibilityState === 'visible') soon() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { clearTimeout(timer); unsub(); document.removeEventListener('visibilitychange', onVisible) }
+  }, [user.id])
+
   let body
   if (d?.profile?.approved === false) return <Pending name={name} />
   if (d?.profile?.must_change_password) {

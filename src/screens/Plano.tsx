@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { api } from '../api'
 import { Icon } from '../icons'
 import {
@@ -41,8 +41,12 @@ export function Plano({ data, today, month, setMonth, reload, toast, partner, to
 
   useEffect(() => { setGoalH(ms.goal ? fmtH(ms.goal) : ''); setSel(null) }, [month, ms.goal])
   useEffect(() => { setPicked([]); setEvDates(null) }, [month])
+  const lastSel = useRef<string | null>(null)
   useEffect(() => {
-    if (!sel) return
+    if (!sel) { lastSel.current = null; return }
+    // mesmo dia e com alterações não salvas: dados novos (ex.: do cônjuge) não apagam o que está sendo editado
+    if (lastSel.current === sel && blocksSignature(blocks) !== blocksSignature(original)) return
+    lastSel.current = sel
     const loaded = toBlocks(data.plan.filter((x) => x.date === sel)).map((b) =>
       partner && partnerHasGroup(partner.data.plan, sel, b.group_id) ? { ...b, with: [partner.id] } : b)
     setBlocks(loaded)

@@ -29,7 +29,12 @@ export interface Api {
   update(table: Table, match: Row, patch: Row): Promise<void>
   remove(table: Table, q: Query): Promise<void>
   rpc<T>(fn: string, args: Row): Promise<T>
+  /** Avisa quando qualquer dado visível para mim mudar (meu ou do cônjuge). Devolve a função para cancelar. */
+  subscribe(onChange: () => void): () => void
 }
+
+/** Tabelas acompanhadas em tempo real (lançamentos, planos, faltas, eventos, metas e créditos). */
+const LIVE_TABLES = ['entries', 'plan_items', 'day_notes', 'day_events', 'month_records', 'credits'] as const
 
 // ---------- Supabase ----------
 function translate(msg: string): string {
@@ -113,6 +118,13 @@ function supabaseApi(): Api {
       const { error } = await apply(sb.from(table).delete(), q)
       check(error)
     },
+    subscribe(onChange) {
+      // Supabase Realtime: o servidor só envia linhas que o RLS deixa este usuário ler
+      let ch = sb.channel('dados-' + crypto.randomUUID())
+      for (const t of LIVE_TABLES) ch = ch.on('postgres_changes', { event: '*', schema: 'public', table: t }, () => onChange())
+      ch.subscribe()
+      return () => { void sb.removeChannel(ch) }
+    },
     async rpc<T>(fn: string, args: Row) {
       const { data, error } = await sb.rpc(fn, args)
       check(error)
@@ -188,6 +200,15 @@ function localApi(): Api {
     async remove(table, q) {
       db[table] = db[table].filter((r) => !match(r, q))
       save()
+    },
+    subscribe(onChange) {
+      // demonstração: outra aba deste aparelho alterou os dados de exemplo
+      const h = (e: StorageEvent) => {
+        if (e.key !== LS_KEY || !e.newValue) return
+        try { db = JSON.parse(e.newValue) as Db; onChange() } catch { /* ignora */ }
+      }
+      addEventListener('storage', h)
+      return () => removeEventListener('storage', h)
     },
     async rpc<T>(fn: string, args: Row) {
       // Simulação das funções do banco usadas por atividades conjuntas
