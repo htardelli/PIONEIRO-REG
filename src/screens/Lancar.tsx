@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
 import { blockErrors, blockMinutes, toMinutes, eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, MONTH_NAME, parseIso, toBlocks, WEEKDAY, mondayIndex, WEEK_HEAD, type TimeBlock } from '../domain'
-import { dayState, pairDay, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
+import { absenceOf, dayState, isJoint, pairDay, partnerHasGroup, yearRange, type JointPartner, type YearData } from '../data'
 import { BlocksEditor, CalLegend, newBlockAfter, useChoice } from '../ui'
 import type { DayItem } from '../types'
 import { Icon } from '../icons'
@@ -13,7 +13,7 @@ export function ItemRow({ item, data }: { item: DayItem; data: YearData }) {
   return (
     <div className="mod">
       <i className="dot" style={{ background: m?.color }} />
-      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{item.group_id && <span className="sub"> · <Icon name="users" size={14} label="atividade conjunta" /></span>}</span>
+      <span className="n">{m?.name}{item.start_time && <span className="sub"> · {item.start_time.slice(0, 5)}–{item.end_time?.slice(0, 5)}</span>}{isJoint(data, item) && <span className="sub"> · <Icon name="users" size={14} label="atividade conjunta" /></span>}</span>
       {item.absent ? <span className="pill bad">✕ falta</span> : <b>{fmtH(item.minutes)}</b>}
     </div>
   )
@@ -38,10 +38,10 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
       ? { ...b, with: [partner.id] } : b)
   const planAll = data.plan.filter((p) => p.date === date).sort(byStart)
   const dayEntries = data.entries.filter((e) => e.date === date).sort(byStart)
-  const absences = dayEntries.filter((e) => e.absent) // faltas por atividade (conjunta)
+  const absences = dayEntries.filter((e) => e.absent) // faltas por atividade (cada uma ligada à sua atividade)
   const done = dayEntries.filter((e) => !e.absent)
   const absentGroups = new Set(absences.map((e) => e.group_id))
-  const plan = planAll.filter((p) => !(p.group_id && absentGroups.has(p.group_id))) // o que ainda falta lançar
+  const plan = planAll.filter((p) => !absences.some((a) => absenceOf(p, a.group_id))) // o que ainda falta lançar
   const note = data.notes.find((n) => n.date === date)
   const logged = done.length > 0 || !!note || (absences.length > 0 && plan.length === 0)
   const [editing, setEditing] = useState(false)
@@ -56,6 +56,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
   const [absent, setAbsent] = useState(false)
   const [reason, setReason] = useState('')
   const [absText, setAbsText] = useState('')
+  const [absSel, setAbsSel] = useState<string[]>([]) // atividades marcadas como falta (ids do plano)
   // Rascunho local: se o salvamento falhar (sem internet), o que foi digitado fica neste aparelho
   const draftKey = `pioneiro-rascunho-${data.userId}-${date}`
   const readDraft = (): Draft | null => { try { return JSON.parse(localStorage.getItem(draftKey) ?? 'null') } catch { return null } }
@@ -93,38 +94,74 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
     setDate(isoDate(x))
   }
 
-  /** Falta: se houver atividade conjunta que o participante ainda não lançou, pergunta se ele(a) também faltou. */
+  /** Linha de uma falta: atividade, motivo e "Desfazer" (para falta lançada por engano). */
+  const AbsentRow = ({ item }: { item: DayItem }) => (
+    <div className="absrow">
+      <ItemRow item={item} data={data} />
+      <div className="absrow-foot">
+        {item.note && <span className="sub">{item.note}</span>}
+        <button className="link" disabled={busy} onClick={() => undoAbsence(item.id)}>Desfazer falta</button>
+      </div>
+    </div>
+  )
+
+  /** Grava a falta de cada atividade escolhida (só dela — as outras do dia continuam pendentes). */
+  async function insertAbsences(items: DayItem[], noteText: string) {
+    await api.insert('entries', items.map((p) => ({
+      user_id: data.userId, date, modality_id: p.modality_id, minutes: 0, start_time: p.start_time, end_time: p.end_time,
+      group_id: p.group_id ?? p.id, absent: true, note: noteText,
+    })))
+  }
+
+  /** Falta nas atividades marcadas. Se alguma for conjunta e o participante ainda não lançou, pergunta se ele(a) também faltou. */
   async function confirmAbsence() {
     const note = absenceNote()
-    // só as atividades conjuntas que o participante ainda não lançou
-    const joint = partner ? toBlocks(plan).filter((b) => b.group_id && partnerHasGroup(partner.data.plan, date, b.group_id)
-      && !partnerHasGroup(partner.data.entries, date, b.group_id)) : []
+    const chosen = pending.filter((p) => absSel.includes(p.id))
+    if (!chosen.length) return toast('Marque em qual atividade você faltou.')
+    const joint = partner ? chosen.filter((p) => p.group_id && partnerHasGroup(partner.data.plan, date, p.group_id)
+      && !partnerHasGroup(partner.data.entries, date, p.group_id)) : []
+    let both = false
     if (partner && joint.length) {
-      const desc = joint.map((b) => `${data.modalities.find((m) => m.id === b.modality_id)?.name ?? ''} ${b.start}–${b.end}`).join('\n')
+      const desc = joint.map((p) => `${nameOf(p.modality_id)} ${p.start_time?.slice(0, 5)}–${p.end_time?.slice(0, 5)}`).join('\n')
       const r = await choice.ask<'both' | 'me'>(
         `${pFirst} também faltou?`,
         [{ label: 'Sim, os dois faltamos', value: 'both', kind: 'danger' }, { label: 'Só eu faltei', value: 'me', kind: 'outline' }],
-        `Atividade conjunta neste dia:\n${desc}\n\nSe sim, a falta (com o mesmo motivo) é lançada para ${pFirst} só nessa atividade — as outras atividades dele(a) no dia continuam para ele(a) lançar.`,
+        `Atividade conjunta:\n${desc}\n\nSe sim, a falta (com o mesmo motivo) é lançada para ${pFirst} só nessa atividade.`,
       )
       if (!r) return
-      if (r === 'both') {
-        try {
-          await api.rpc('partner_absence_add', { p_partner: partner.id, p_date: date, p_groups: joint.map((b) => b.group_id), p_note: `${note} — atividade conjunta` })
-        } catch (e) {
-          return toast((e as Error).message)
-        }
-        await save([], note)
-        return toast(`Falta lançada para você e ${pFirst}`)
-      }
+      both = r === 'both'
     }
-    await save([], note)
+    setBusy(true)
+    try {
+      if (both && partner) await api.rpc('partner_absence_add', { p_partner: partner.id, p_date: date, p_groups: joint.map((p) => p.group_id), p_note: `${note} — atividade conjunta` })
+      await insertAbsences(chosen, note)
+      setAbsent(false); setReason(''); setAbsText(''); setAbsSel([])
+      await reload()
+      toast(`Falta lançada${chosen.length > 1 ? ` em ${chosen.length} atividades` : ''}${both ? ` · também para ${pFirst}` : ''}`)
+    } catch (e) {
+      toast((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
-  async function undoAbsences() {
-    if (!confirm('Desfazer a falta registrada? A atividade volta a ficar pendente para lançar.')) return
-    await api.remove('entries', { eq: { user_id: data.userId, date, absent: true } })
-    await reload()
-    toast('Falta desfeita')
+  /** Desfaz a falta de UMA atividade (lançada por engano): ela volta a ficar pendente. Sem id: falta antiga do dia inteiro. */
+  async function undoAbsence(entryId?: string) {
+    if (!confirm('Desfazer esta falta? A atividade volta a ficar pendente para lançar.')) return
+    setBusy(true)
+    try {
+      if (entryId) await api.remove('entries', { eq: { id: entryId, user_id: data.userId } })
+      // dia sem horas que ficou só com a observação de falta (ou vazia): o dia volta a ficar sem lançamento
+      const left = absences.filter((a) => a.id !== entryId)
+      if (done.length === 0 && note && (!entryId || left.length === 0) && (note.note === '' || note.note.startsWith(ABSENCE_PREFIX)))
+        await api.remove('day_notes', { eq: { user_id: data.userId, date } })
+      await reload()
+      toast('Falta desfeita')
+    } catch (e) {
+      toast((e as Error).message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function save(items: TimeBlock[], noteText: string) {
@@ -173,7 +210,16 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
         ABSENCE_REASONS.map((x) => ({ label: `Faltei · ${x}`, value: x, kind: 'outline' as const })),
         'Escolha o motivo para registrar a falta. Para lançar horas, toque em Cancelar e adicione as atividades.')
       if (!r) return
-      return save([], [`${ABSENCE_PREFIX} (${r.toLowerCase()})`, text.trim()].filter(Boolean).join(': '))
+      // falta em cada atividade planejada do dia (individual); o que tinha sido lançado sai
+      setBusy(true)
+      try {
+        await api.remove('entries', { eq: { user_id: data.userId, date, absent: false } })
+        await api.remove('day_notes', { eq: { user_id: data.userId, date } })
+        await insertAbsences(plan, [`${ABSENCE_PREFIX} (${r.toLowerCase()})`, text.trim()].filter(Boolean).join(': '))
+        clearDraft(); setEditing(false); setExtra(null)
+        await reload(); toast('Falta lançada')
+      } catch (e) { toast((e as Error).message) } finally { setBusy(false) }
+      return
     }
     if (!logged) return toast('Nada para salvar: adicione uma atividade com horário.')
     if (!confirm('Apagar o lançamento deste dia? Ele volta a ficar sem lançamento.')) return
@@ -207,7 +253,8 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
     await save(all, note?.note ?? '')
   }
 
-  const isAbsence = logged && done.length === 0 && (note?.note ?? '').startsWith(ABSENCE_PREFIX)
+  const isAbsence = logged && done.length === 0 && ((note?.note ?? '').startsWith(ABSENCE_PREFIX) || (absences.length > 0 && plan.length === 0))
+  const legacyAbsence = isAbsence && absences.length === 0 // falta antiga (dia inteiro, gravada na observação)
   const absenceNote = () => [ABSENCE_PREFIX + (reason ? ` (${reason.toLowerCase()})` : ''), absText.trim()].filter(Boolean).join(': ')
 
   const nameOf = (id: string) => data.modalities.find((m) => m.id === id)?.name ?? ''
@@ -268,9 +315,9 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
                 : <span className={`pill ${doneTotal >= planTotal ? 'ok' : 'warn'}`}>{planTotal ? `plano ${fmtH(planTotal)}` : 'sem plano'}</span>}
             </div>
             {done.length === 0 && !isAbsence && <div className="empty">Nenhuma hora neste dia.</div>}
-            {[...done, ...absences].sort(byStart).map((e) => <ItemRow key={e.id} item={e} data={data} />)}
-            {absences.length > 0 && <button className="link" style={{ marginTop: 6 }} onClick={undoAbsences}>Desfazer falta da atividade conjunta</button>}
-            {note?.note && <div className="sub" style={{ marginTop: 8, fontSize: 14 }}>{isAbsence ? note.note : `Obs.: ${note.note}`}</div>}
+            {[...done, ...absences].sort(byStart).map((e) => e.absent ? <AbsentRow key={e.id} item={e} /> : <ItemRow key={e.id} item={e} data={data} />)}
+            {note?.note && <div className="sub" style={{ marginTop: 8, fontSize: 14 }}>{legacyAbsence ? note.note : `Obs.: ${note.note}`}</div>}
+            {legacyAbsence && <button className="link" style={{ marginTop: 6 }} disabled={busy} onClick={() => undoAbsence()}>Desfazer falta</button>}
             <button className="btn outline small" style={{ marginTop: 12 }} onClick={() => setEditing(true)}>Editar lançamento</button>
           </div>
         )}
@@ -278,9 +325,7 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
         {!logged && absences.length > 0 && (
           <div className="card">
             <h3>Falta registrada</h3>
-            {absences.map((e) => <ItemRow key={e.id} item={e} data={data} />)}
-            {absences[0]?.note && <div className="sub" style={{ marginTop: 6 }}>{absences[0].note}</div>}
-            <button className="link" style={{ marginTop: 8 }} onClick={undoAbsences}>Desfazer falta</button>
+            {absences.map((e) => <AbsentRow key={e.id} item={e} />)}
           </div>
         )}
 
@@ -302,23 +347,34 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
                     : later.length ? `✓ Cumpri as que já terminaram (${ready.length})` : '✓ Cumpri o planejado'}
                 </button>
                 <button className="btn outline" onClick={() => { setBlocks([...toBlocks(done), ...withPartner(toBlocks(pending))]); setEditing(true) }}>Fiz diferente ▾</button>
-                {done.length === 0 && <button className="btn danger" onClick={() => setAbsent(true)}>✕ Faltei</button>}
+                <button className="btn danger" onClick={() => { setAbsSel(pending.length === 1 ? [pending[0].id] : []); setAbsent(true) }}>✕ Faltei</button>
               </>
             )}
             {absent && (
               <div className="card form">
-                <h3 style={{ margin: 0 }}>Faltei · motivo</h3>
+                <h3 style={{ margin: 0 }}>Faltei · em qual atividade?</h3>
+                <div className="abs-pick">
+                  {pending.map((p) => (
+                    <label key={p.id} className={`abs-opt ${absSel.includes(p.id) ? 'on' : ''}`}>
+                      <input type="checkbox" checked={absSel.includes(p.id)}
+                        onChange={() => setAbsSel((xs) => (xs.includes(p.id) ? xs.filter((x) => x !== p.id) : [...xs, p.id]))} />
+                      <span>{p.start_time?.slice(0, 5)}–{p.end_time?.slice(0, 5)} · <b>{nameOf(p.modality_id)}</b></span>
+                      <span className="sub">{fmtH(p.minutes)}</span>
+                    </label>
+                  ))}
+                </div>
+                <h3 style={{ margin: '4px 0 0' }}>Motivo</h3>
                 <div className="chips">
                   {ABSENCE_REASONS.map((r) => (
                     <button key={r} className={`chip ${reason === r ? 'on' : ''}`} onClick={() => setReason(reason === r ? '' : r)}>{r}</button>
                   ))}
                 </div>
                 <input className="input" placeholder="Detalhe (opcional)" value={absText} onChange={(e) => setAbsText(e.target.value)} />
-                <div className="sub">O dia fica como não realizado (0 h). Você pode editar depois.</div>
+                <div className="sub">Só as atividades marcadas ficam como falta (0 h); as outras do dia continuam para lançar. Dá para desfazer depois.</div>
                 <div className="row" style={{ gap: 10 }}>
                   <button className="btn ghost small" onClick={() => setAbsent(false)}>Cancelar</button>
                   <button className="btn small" style={{ background: 'var(--bad)', color: '#fff' }} disabled={busy}
-                    onClick={confirmAbsence}>Confirmar falta</button>
+                    onClick={confirmAbsence}>Confirmar falta{absSel.length > 1 ? ` (${absSel.length})` : ''}</button>
                 </div>
               </div>
             )}

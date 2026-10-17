@@ -103,6 +103,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 ### Lançar
 - Seletor de data (calendário). Dias futuros bloqueados.
 - **✓ Cumpri o planejado** (ou "as que já terminaram"), **Fiz diferente**, **✗ Faltei** (motivo), **+ Atividade não planejada**, **Editar lançamento**.
+- **Falta por atividade**: em "✕ Faltei" você marca **em qual atividade** faltou (motivo + detalhe); só ela fica 0 h, as outras do dia continuam para lançar. Cada falta tem **"Desfazer falta"** (lançada por engano → a atividade volta a ficar pendente). Faltas antigas do dia inteiro também podem ser desfeitas.
 - Atividade conjunta: "Jessika também participou?" / "também faltou?" — lança para o cônjuge só o que ele(a) ainda não lançou.
 
 ### Plano → "Realizado × plano"

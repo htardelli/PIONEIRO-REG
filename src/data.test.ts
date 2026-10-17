@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { monthCard, planDelta, yearStats, type YearData } from './data'
+import { cancelledPlan, isJoint, monthCard, planDelta, yearStats, type YearData } from './data'
 import type { DayItem, MonthRecord } from './types'
 
 const H = 60
@@ -186,5 +186,29 @@ describe('modelo A: semana, alerta do plano e agenda', () => {
     expect(ics).toContain('DTEND:20261009T093000')
     expect(ics).toContain('SUMMARY:Serviço · Casa em Casa')
     expect(ics).toContain('UID:p1@pioneiro-reg')
+  })
+})
+
+describe('falta por atividade', () => {
+  const plan = [
+    { id: 'a', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 45, start_time: '07:15', end_time: '08:00', group_id: null },
+    { id: 'b', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 120, start_time: '08:00', end_time: '10:00', group_id: null },
+  ]
+  const absentB = { id: 'x', user_id: 'u', date: '2026-10-05', modality_id: 'm', minutes: 0, start_time: '08:00', end_time: '10:00', group_id: 'b', absent: true, note: 'Faltei' }
+  it('zera só a atividade faltada; a outra continua no plano', () => {
+    const d = data({ plan, entries: [absentB] })
+    expect([...cancelledPlan(d)]).toEqual(['b'])
+    expect(dayState(d, '2026-10-05', today)).toMatchObject({ planned: 45, rawPlanned: 165, logged: false })
+  })
+  it('falta nas duas = dia de falta', () => {
+    const d = data({ plan, entries: [absentB, { ...absentB, id: 'y', group_id: 'a' }] })
+    expect(dayState(d, '2026-10-05', today)).toMatchObject({ planned: 0, logged: true, faltou: true })
+  })
+  it('falta individual não aparece como atividade conjunta', () => {
+    expect(isJoint(data({ plan }), absentB)).toBe(false)
+  })
+  it('observação comum num dia sem horas não zera o plano (só "Faltei…" antigo)', () => {
+    const d = data({ plan, notes: [{ user_id: 'u', date: '2026-10-05', note: 'chuva forte' }] })
+    expect(cancelledPlan(d).size).toBe(0)
   })
 })

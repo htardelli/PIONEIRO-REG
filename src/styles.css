@@ -318,3 +318,12 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .acts span { white-space: nowrap; }
 .acts span + span::before { content: '|'; margin: 0 5px; color: #B6C0CE; font-weight: 400; }
 .acts b { color: var(--ink); font-weight: 800; }
+
+/* Lançar: falta por atividade */
+.abs-pick { display: flex; flex-direction: column; gap: 6px; }
+.abs-opt { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; font-size: 14px; }
+.abs-opt input { width: 20px; height: 20px; accent-color: var(--bad); flex-shrink: 0; }
+.abs-opt > span:first-of-type { flex: 1; }
+.abs-opt.on { border-color: var(--bad); background: var(--bad-soft); }
+.absrow-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: -2px 0 8px; }
+.absrow-foot .link { font-size: 13px; flex-shrink: 0; }

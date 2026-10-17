@@ -67,9 +67,16 @@ const sum = (xs: { minutes: number }[]) => xs.reduce((a, x) => a + x.minutes, 0)
 
 /**
  * Atividades planejadas que viraram FALTA: contam 00:00 no planejamento (a justificativa fica no histórico).
- * - dia lançado sem nenhuma hora (botão "Faltei"): todo o plano do dia;
- * - falta por atividade (conjunta): só a atividade faltada.
+ * - falta por atividade: lançamento "absent" ligado à atividade pelo group_id (conjunta) ou pelo id do plano (individual);
+ * - registros antigos: dia sem nenhuma hora com observação "Faltei…" zera todo o plano do dia.
  */
+/** Atividade conjunta? (falta individual também usa group_id, mas com o id do próprio plano) */
+export const isJoint = (d: YearData, item: { group_id?: string | null; absent?: boolean }) =>
+  !!item.group_id && (!item.absent || d.plan.some((p) => p.group_id === item.group_id))
+
+/** A falta (lançamento "absent") é desta atividade planejada? */
+export const absenceOf = (p: { id: string; group_id?: string | null }, groupId?: string | null) =>
+  !!groupId && (groupId === p.id || groupId === p.group_id)
 const cancelCache = new WeakMap<YearData, Set<string>>()
 export function cancelledPlan(d: YearData): Set<string> {
   const hit = cancelCache.get(d)
@@ -80,11 +87,11 @@ export function cancelledPlan(d: YearData): Set<string> {
     if (e.absent) { if (e.group_id) absent.add(`${e.date}|${e.group_id}`) }
     else done.set(e.date, (done.get(e.date) ?? 0) + e.minutes)
   }
-  const noted = new Set(d.notes.map((n) => n.date))
+  const noted = new Set(d.notes.filter((n) => n.note.startsWith('Faltei')).map((n) => n.date))
   const out = new Set<string>()
   for (const p of d.plan) {
     const dayOff = noted.has(p.date) && !(done.get(p.date) ?? 0)
-    if (dayOff || (p.group_id && absent.has(`${p.date}|${p.group_id}`))) out.add(p.id)
+    if (dayOff || absent.has(`${p.date}|${p.id}`) || (p.group_id && absent.has(`${p.date}|${p.group_id}`))) out.add(p.id)
   }
   cancelCache.set(d, out)
   return out
@@ -195,7 +202,7 @@ export function dayState(d: YearData, date: string, today: Date) {
   const done = sum(dayEntries)
   // Faltas por atividade (conjunta): o dia só conta como lançado se TODAS as atividades planejadas foram cobertas
   const absentGroups = new Set(dayEntries.filter((e) => e.absent && e.group_id).map((e) => e.group_id))
-  const allAbsent = absentGroups.size > 0 && dayPlan.every((p) => p.group_id && absentGroups.has(p.group_id))
+  const allAbsent = absentGroups.size > 0 && dayPlan.every((p) => absentGroups.has(p.id) || (!!p.group_id && absentGroups.has(p.group_id)))
   const logged = done > 0 || allAbsent || d.notes.some((n) => n.date === date)
   const past = date < isoDate(today)
   let state: DayState = 'none'
@@ -309,7 +316,7 @@ export function pairDay(plan: DayItem[], entries: DayItem[]): DayRow[] {
   const take = (f: (p: DayItem) => boolean) => { const i = left.findIndex(f); return i < 0 ? undefined : left.splice(i, 1)[0] }
   const pending: DayItem[] = []
   for (const e of entries) {
-    const p = e.group_id ? take((x) => x.group_id === e.group_id) : undefined
+    const p = e.group_id ? take((x) => absenceOf(x, e.group_id)) : undefined
     if (p) rows.push({ plan: p, done: e })
     else pending.push(e)
   }
@@ -332,8 +339,9 @@ export function absencesOf(d: YearData): AbsenceRow[] {
   }
   for (const r of byDate.values()) {
     const ab = d.entries.find((e) => e.date === r.date && e.absent && e.note)
-    r.joint = !!ab && !d.notes.some((n) => n.date === r.date && n.note)
-    r.reason = d.notes.find((n) => n.date === r.date)?.note || ab?.note || ''
+    r.joint = d.plan.some((p) => p.date === r.date && off.has(p.id) && !!p.group_id)
+    const dayNote = d.notes.find((n) => n.date === r.date)?.note ?? ''
+    r.reason = (dayNote.startsWith('Faltei') ? dayNote : '') || ab?.note || ''
   }
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date))
 }

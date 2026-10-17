@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { eventName, fmtH, HOLIDAY_LABEL, holidayOf, isoDate, monthKey, monthLabel, mondayIndex, serviceYearMonths, WEEK_HEAD, WEEKDAY } from '../domain'
-import { cancelledPlan, dayState, pairDay, planDelta, yearStats, type YearData } from '../data'
+import { cancelledPlan, dayState, isJoint, pairDay, planDelta, yearStats, type YearData } from '../data'
 import { CalLegend, Header, MonthNav } from '../ui'
 import { byStart } from './Lancar'
 import { Icon } from '../icons'
@@ -118,7 +118,7 @@ function DayDetail({ data, date, today, onEdit }: { data: YearData; date: string
             return (
               <div className="drow" key={i}>
                 <span className="n"><i className="dot" style={{ background: m?.color }} />
-                  <span>{m?.name}{it.group_id && <> <Icon name="users" size={14} label="atividade conjunta" /></>}{t && <span className="sub"><br />{t}</span>}</span></span>
+                  <span>{m?.name}{isJoint(data, it) && <> <Icon name="users" size={14} label="atividade conjunta" /></>}{t && <span className="sub"><br />{t}</span>}</span></span>
                 <span className="pl">{!r.plan ? '—' : off.has(r.plan.id) ? <s title="Falta: não conta no planejado">{fmtH(r.plan.minutes)}</s> : fmtH(r.plan.minutes)}</span>
                 <span className="dn">{r.done?.absent ? <span className="pill bad">✕ falta</span> : r.done ? fmtH(r.done.minutes) : future ? ''
                   : isToday ? <span className="wait">{running(r.plan?.end_time) ? `até ${r.plan!.end_time!.slice(0, 5)}` : 'a lançar'}</span>
