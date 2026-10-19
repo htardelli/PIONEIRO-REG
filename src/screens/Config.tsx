@@ -92,7 +92,12 @@ export function Config({ data, reload, toast, onBack }: {
           <div className="sub" style={{ marginTop: 8 }}>Modalidades desativadas somem do lançamento, mas o histórico é mantido.</div>
         </div>
 
-        <EventTypes data={data} reload={reload} toast={toast} />
+        <TypesEditor data={data} reload={reload} toast={toast} table="event_types" title="Tipos de evento" items={data.eventTypes} color="var(--event)"
+          placeholder="Novo tipo (ex.: Escola de pioneiros)" removeNote="Os eventos já marcados continuam no calendário."
+          hint={'Aparecem em "Marcar evento" no Plano. "Outro" fica sempre disponível para casos avulsos.'} />
+        <TypesEditor data={data} reload={reload} toast={toast} table="credit_types" title="Tipos de crédito" items={data.creditTypes} color="var(--credit)"
+          placeholder="Novo tipo de crédito" removeNote="Os créditos já lançados continuam no relatório."
+          hint="Aparecem em Relatório → Mensal → Lançar crédito de horas. O crédito soma com o ministério até o teto de 55 h no mês." />
 
         {p?.is_admin && <PendingUsers toast={toast} />}
         {p?.is_admin && <AdminCreateUser toast={toast} />}
@@ -105,40 +110,42 @@ export function Config({ data, reload, toast, onBack }: {
   )
 }
 
-/** Cadastro dos tipos de evento (Congresso, Assembleia…) usados em "Marcar evento". */
-function EventTypes({ data, reload, toast }: { data: YearData; reload: () => Promise<void>; toast: (m: string) => void }) {
+/** Cadastro de tipos (de evento ou de crédito): adicionar, renomear e excluir. */
+function TypesEditor({ data, reload, toast, table, title, items, color, placeholder, hint, removeNote }: {
+  data: YearData; reload: () => Promise<void>; toast: (m: string) => void
+  table: 'event_types' | 'credit_types'; title: string; items: { id: string; name: string }[]; color: string; placeholder: string; hint: string; removeNote: string
+}) {
   const [novo, setNovo] = useState('')
-  const types = data.eventTypes
   async function add() {
     const name = novo.trim()
     if (!name) return
-    if (types.some((t) => t.name.toLowerCase() === name.toLowerCase())) return toast('Esse tipo já existe')
-    await api.insert('event_types', [{ user_id: data.userId, name, sort: types.length }])
+    if (items.some((t) => t.name.toLowerCase() === name.toLowerCase())) return toast('Esse tipo já existe')
+    await api.insert(table, [{ user_id: data.userId, name: name.slice(0, 60), sort: items.length }])
     setNovo('')
     await reload()
   }
   async function remove(id: string, name: string) {
-    if (types.length <= 1) return toast('Mantenha pelo menos um tipo')
-    if (!confirm(`Excluir o tipo "${name}"? Os eventos já marcados continuam no calendário.`)) return
-    await api.remove('event_types', { eq: { id } })
+    if (items.length <= 1) return toast('Mantenha pelo menos um tipo')
+    if (!confirm(`Excluir o tipo "${name}"? ${removeNote}`)) return
+    await api.remove(table, { eq: { id } })
     await reload()
   }
   return (
     <div className="card">
-      <h3>Tipos de evento</h3>
-      {types.map((t) => (
+      <h3>{title}</h3>
+      {items.map((t) => (
         <div className="mod" key={t.id}>
-          <i className="dot" style={{ background: 'var(--event)' }} />
-          <input className="n input" style={{ padding: 8, border: 0 }} defaultValue={t.name}
-            onBlur={async (e) => { const v = e.target.value.trim(); if (v && v !== t.name) { await api.update('event_types', { id: t.id }, { name: v }); await reload(); toast('Tipo renomeado') } }} />
+          <i className="dot" style={{ background: color }} />
+          <input className="n input" style={{ padding: 8, border: 0 }} defaultValue={t.name} maxLength={60}
+            onBlur={async (e) => { const v = e.target.value.trim(); if (v && v !== t.name) { await api.update(table, { id: t.id }, { name: v }); await reload(); toast('Tipo renomeado') } }} />
           <button className="link" style={{ color: 'var(--bad)' }} onClick={() => remove(t.id, t.name)} aria-label={`Excluir ${t.name}`}>✕</button>
         </div>
       ))}
       <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-        <input className="input" placeholder="Novo tipo (ex.: Escola de pioneiros)" value={novo} onChange={(e) => setNovo(e.target.value)} />
+        <input className="input" placeholder={placeholder} value={novo} onChange={(e) => setNovo(e.target.value)} maxLength={60} />
         <button className="btn brand small" style={{ width: 'auto', padding: '0 16px' }} onClick={add}>+</button>
       </div>
-      <div className="sub" style={{ marginTop: 8 }}>Aparecem em "Marcar evento" no Plano. "Outro" fica sempre disponível para casos avulsos.</div>
+      <div className="sub" style={{ marginTop: 8 }}>{hint}</div>
     </div>
   )
 }

@@ -14,7 +14,7 @@ function yearData(today: Date): YearData {
     userId: DEMO_ME, sy, profile: (db.profiles.find((p) => p.id === DEMO_ME) ?? null) as never,
     modalities: mine('modalities') as never, records: mine('month_records') as never, plan: inYear('plan_items') as never,
     entries: inYear('entries') as never, notes: inYear('day_notes') as never, events: inYear('day_events') as never,
-    eventTypes: mine('event_types') as never, credits: mine('credits') as never,
+    eventTypes: mine('event_types') as never, credits: mine('credits') as never, creditTypes: [],
   }
 }
 const datesOf = (month: string) => Array.from({ length: daysInMonth(month) }, (_, i) => `${month}-${String(i + 1).padStart(2, '0')}`)

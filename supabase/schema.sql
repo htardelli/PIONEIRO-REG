@@ -721,3 +721,18 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ============ v0.19: tipos de crédito (cadastro em Configurações) ============
+create table if not exists public.credit_types (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  name text not null check (length(name) between 1 and 60),
+  sort int not null default 0
+);
+create index if not exists credit_types_user on public.credit_types (user_id);
+grant select, insert, update, delete on public.credit_types to authenticated;
+alter table public.credit_types enable row level security;
+drop policy if exists read_own_or_shared on public.credit_types;
+drop policy if exists write_own on public.credit_types;
+create policy read_own_or_shared on public.credit_types for select using (public.is_approved() and public.can_read(user_id));
+create policy write_own on public.credit_types for all using (user_id = auth.uid() and public.is_approved()) with check (user_id = auth.uid() and public.is_approved());

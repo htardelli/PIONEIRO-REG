@@ -41,7 +41,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/screens/` | Telas: `Painel` (Início), `Lancar`, `Mes` e `Plano` (as duas visões da aba Plano), `Relatorio` (mensal e anual), `Mais` (e Ajuda), `Casal`, `Config`, `Auth`, `ChangePassword` |
 | `src/*.test.ts` | Testes (vitest) das regras de negócio e da consistência dos indicadores |
 | `supabase/tests/` | Testes do banco (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico), rodados no CI |
-| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.18, idempotente) |
+| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.19, idempotente) |
 | `.github/workflows/deploy.yml` | Testes do banco + atualização do banco + publicação |
 | `.github/workflows/backup.yml` | Backup semanal criptografado do banco |
 | `docs/` | Esta documentação e os protótipos de layout |
@@ -127,7 +127,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - Compartilhar os **meus** dados (consentimento de cada um), comparativo, semana do casal e painel do cônjuge.
 
 ### Configurações
-- Foto do perfil (recortada e reduzida no aparelho), nome, metas, cor, modalidades, **tipos de evento**,
+- Foto do perfil (recortada e reduzida no aparelho), nome, metas, cor, modalidades, **tipos de evento**, **tipos de crédito** (usados em Relatório → Lançar crédito),
   **cadastros pendentes** (aprovar/recusar) e criação de conta com senha provisória (somente administrador), sair, versão.
 
 ### Abertura, login e cadastro

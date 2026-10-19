@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from './api'
-import { DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, parseIso, serviceYearOf } from './domain'
+import { CREDIT_TYPES, DEFAULT_EVENT_TYPES, DEFAULT_MODALITIES, isoDate, monthKey, parseIso, serviceYearOf } from './domain'
 import { useYear, yearRange, type JointPartner } from './data'
 import type { AuthUser, Share } from './types'
 import { Avatar, Header, Loading, Seg, TabBar, useToast, type Tab } from './ui'
@@ -92,6 +92,15 @@ function Main({ user }: { user: AuthUser }) {
       seeded.current = true
       void api.insert('modalities', DEFAULT_MODALITIES.map((m, i) => ({ user_id: user.id, name: m.name, color: m.color, active: true, sort: i })))
         .then(me.reload)
+    }
+  }, [me.data, me.reload, user.id])
+  // Primeiro acesso: tipos de crédito padrão (editáveis em Configurações)
+  const seededCr = useRef(false)
+  useEffect(() => {
+    if (me.data && me.data.profile?.approved !== false && me.data.creditTypes.length === 0 && !seededCr.current) {
+      seededCr.current = true
+      void api.insert('credit_types', CREDIT_TYPES.map((name, i) => ({ user_id: user.id, name, sort: i })))
+        .then(me.reload).catch(() => {})
     }
   }, [me.data, me.reload, user.id])
   // Primeiro acesso: tipos de evento padrão (editáveis em Configurações)

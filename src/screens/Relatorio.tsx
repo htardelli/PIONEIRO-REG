@@ -22,7 +22,8 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
   const [view, setViewRaw] = useState<'mes' | 'ano'>(() => { try { return localStorage.getItem('relatorio-visao') === 'ano' ? 'ano' : 'mes' } catch { return 'mes' } })
   const setView = (v: 'mes' | 'ano') => { setViewRaw(v); try { localStorage.setItem('relatorio-visao', v) } catch { /* sem armazenamento */ } }
   const [adding, setAdding] = useState(false)
-  const [cType, setCType] = useState(CREDIT_TYPES[0])
+  const creditTypes = data.creditTypes.length ? data.creditTypes.map((t) => t.name) : CREDIT_TYPES
+  const [cType, setCType] = useState(creditTypes[0])
   const [cMin, setCMin] = useState(240)
   const [cNote, setCNote] = useState('')
   const [just, setJust] = useState(ms.justification)
@@ -117,7 +118,7 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
           ))}
           {adding ? (
             <div className="form" style={{ marginTop: 12 }}>
-              <div className="chips">{CREDIT_TYPES.map((t) => <button key={t} className={`chip ${t === cType ? 'on' : ''}`} onClick={() => setCType(t)}>{t}</button>)}</div>
+              <div className="chips">{creditTypes.map((t) => <button key={t} className={`chip ${t === cType ? 'on' : ''}`} onClick={() => setCType(t)}>{t}</button>)}</div>
               <div className="kv" style={{ borderBottom: 0 }}><span>Horas</span><Stepper value={cMin} onChange={setCMin} step={30} /></div>
               <input className="input" placeholder="Observação (ex.: datas)" value={cNote} onChange={(e) => setCNote(e.target.value)} />
               <div className="row" style={{ gap: 10 }}>

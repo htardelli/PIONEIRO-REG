@@ -59,6 +59,9 @@ export interface DayEvent {
   periods?: string // 'dia' (dia inteiro) ou 'manha,tarde,noite' (combinação)
 }
 
+/** Tipo de crédito de horas (LDC, Betel…): mesmo formato do tipo de evento. */
+export type CreditType = EventType
+
 export interface EventType {
   id: string
   user_id: string
