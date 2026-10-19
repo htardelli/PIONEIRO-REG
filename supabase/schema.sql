@@ -736,3 +736,8 @@ drop policy if exists read_own_or_shared on public.credit_types;
 drop policy if exists write_own on public.credit_types;
 create policy read_own_or_shared on public.credit_types for select using (public.is_approved() and public.can_read(user_id));
 create policy write_own on public.credit_types for all using (user_id = auth.uid() and public.is_approved()) with check (user_id = auth.uid() and public.is_approved());
+
+-- ============ v0.20: data do crédito (opcional; sempre dentro do mês do crédito) ============
+alter table public.credits add column if not exists date date;
+alter table public.credits drop constraint if exists credits_date_in_month;
+alter table public.credits add constraint credits_date_in_month check (date is null or to_char(date, 'YYYY-MM') = month);

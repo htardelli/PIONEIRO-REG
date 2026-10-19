@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../api'
-import { CREDIT_TYPES, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
+import { CREDIT_TYPES, daysInMonth, fmtH, isoDate, fmtHours, MONTH_NAME, monthLabel, MONTHLY_CAP_MIN, serviceYearMonths } from '../domain'
 import { absencesOf, byModality, closedMonthPace, monthStats, yearStats, type YearData } from '../data'
 import { Header, MonthGrid, MonthNav, Seg, Stepper } from '../ui'
 import type { MonthStats } from '../data'
@@ -14,7 +14,7 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
   const ms = monthStats(data, month, today)
   const ys = yearStats(data, today)
   const mods = byModality(data, data.entries.filter((e) => e.date.startsWith(month)))
-  const credits = data.credits.filter((c) => c.month === month)
+  const credits = data.credits.filter((c) => c.month === month).sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''))
   const faltas = absencesOf(data)
   const pace = closedMonthPace(data, month, today)
   const behind = !!pace && pace.cum < pace.ideal
@@ -26,6 +26,11 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
   const [cType, setCType] = useState(creditTypes[0])
   const [cMin, setCMin] = useState(240)
   const [cNote, setCNote] = useState('')
+  // data do crédito: hoje se estiver no mês do relatório, senão o 1º dia do mês
+  const monthFirst = `${month}-01`, monthLast = `${month}-${String(daysInMonth(month)).padStart(2, '0')}`
+  const defaultDate = () => (isoDate(today).startsWith(month) ? isoDate(today) : monthFirst)
+  const [cDate, setCDate] = useState(defaultDate)
+  useEffect(() => setCDate(defaultDate()), [month]) // eslint-disable-line react-hooks/exhaustive-deps
   const [just, setJust] = useState(ms.justification)
   useEffect(() => setJust(ms.justification), [month, ms.justification])
 
@@ -35,7 +40,8 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
   }
 
   async function addCredit() {
-    await api.insert('credits', [{ user_id: data.userId, month, type: cType, minutes: cMin, note: cNote }])
+    if (cDate && (cDate < monthFirst || cDate > monthLast)) return toast(`Escolha uma data de ${monthLabel(month).toLowerCase()}.`)
+    await api.insert('credits', [{ user_id: data.userId, month, type: cType, minutes: cMin, note: cNote, date: cDate || null }])
     setAdding(false); setCNote('')
     await reload()
     toast('Crédito lançado')
@@ -111,7 +117,7 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
           {credits.map((c) => (
             <div className="mod" key={c.id}>
               <i className="dot" style={{ background: 'var(--credit)' }} />
-              <span className="n">{c.type}{c.note && <span className="sub"> · {c.note}</span>}</span>
+              <span className="n">{c.date && <b style={{ marginRight: 6 }}>{c.date.slice(8)}/{c.date.slice(5, 7)}</b>}{c.type}{c.note && <span className="sub"> · {c.note}</span>}</span>
               <b>{fmtH(c.minutes)}</b>
               <button className="link" style={{ color: 'var(--bad)' }} onClick={async () => { await api.remove('credits', { eq: { id: c.id } }); await reload() }}>✕</button>
             </div>
@@ -120,7 +126,8 @@ export function Relatorio({ data, today, curSy, month, setMonth, reload, toast, 
             <div className="form" style={{ marginTop: 12 }}>
               <div className="chips">{creditTypes.map((t) => <button key={t} className={`chip ${t === cType ? 'on' : ''}`} onClick={() => setCType(t)}>{t}</button>)}</div>
               <div className="kv" style={{ borderBottom: 0 }}><span>Horas</span><Stepper value={cMin} onChange={setCMin} step={30} /></div>
-              <input className="input" placeholder="Observação (ex.: datas)" value={cNote} onChange={(e) => setCNote(e.target.value)} />
+              <label className="field">Data<input type="date" value={cDate} min={monthFirst} max={monthLast} onChange={(e) => setCDate(e.target.value)} /></label>
+              <input className="input" placeholder="Observação (opcional)" value={cNote} onChange={(e) => setCNote(e.target.value)} />
               <div className="row" style={{ gap: 10 }}>
                 <button className="btn ghost small" onClick={() => setAdding(false)}>Cancelar</button>
                 <button className="btn brand small" onClick={addCredit} disabled={cMin <= 0}>Lançar crédito</button>

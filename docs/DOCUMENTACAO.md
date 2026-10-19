@@ -41,7 +41,7 @@ com meta anual de **600 h** (mínimo tolerável de **560 h**, com justificativa)
 | `src/screens/` | Telas: `Painel` (Início), `Lancar`, `Mes` e `Plano` (as duas visões da aba Plano), `Relatorio` (mensal e anual), `Mais` (e Ajuda), `Casal`, `Config`, `Auth`, `ChangePassword` |
 | `src/*.test.ts` | Testes (vitest) das regras de negócio e da consistência dos indicadores |
 | `supabase/tests/` | Testes do banco (permissões do casal, RLS, aprovação, senha provisória, salvamento atômico), rodados no CI |
-| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.19, idempotente) |
+| `supabase/schema.sql` | Esquema completo: tabelas, RLS, gatilhos e funções (versões v0.2 → v0.20, idempotente) |
 | `.github/workflows/deploy.yml` | Testes do banco + atualização do banco + publicação |
 | `.github/workflows/backup.yml` | Backup semanal criptografado do banco |
 | `docs/` | Esta documentação e os protótipos de layout |
@@ -117,7 +117,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 - Feriados e eventos do mês (dias seguidos do mesmo evento numa linha), meta do mês (hh:mm), alvo, planejado no mês e anual.
 
 ### Relatório
-- **Mensal**: texto do relatório (S-4), estudos, créditos com teto de 55 h, por modalidade, justificativa e alerta de mês fechado abaixo do ritmo.
+- **Mensal**: texto do relatório (S-4), estudos, créditos (tipo, **data**, horas e observação) com teto de 55 h, por modalidade, justificativa e alerta de mês fechado abaixo do ritmo.
 - **Anual**: total, média mensal, ritmo ideal, quanto falta e projeção do ano; **gráfico mês a mês** (realizado × alvo, linha de 50:00/mês); meses do ano de serviço (tocar abre o mês); **Faltas do ano**; exportar Excel (CSV).
 
 ### Mais

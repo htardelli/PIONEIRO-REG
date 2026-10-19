@@ -76,6 +76,7 @@ export interface Credit {
   type: string
   minutes: number
   note: string
+  date?: string | null // dia em que o crédito foi obtido (opcional)
 }
 
 export interface Share {
