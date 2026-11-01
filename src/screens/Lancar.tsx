@@ -263,7 +263,9 @@ export function Lancar({ data, today, minDate, date, setDate, reload, toast, par
   const errors: Record<number, string> = { ...blockErrors(blocks, nameOf) }
   blocks.forEach((b, i) => { if (!errors[i] && notYet(b.end)) errors[i] = `Termina às ${b.end.slice(0, 5)}: só pode ser lançada depois desse horário.` })
   // Atividades do plano ainda não lançadas: as que já terminaram podem ser lançadas agora; as demais, depois do horário
-  const pending = !logged || date === todayIso ? pairDay(plan, done).filter((r) => r.plan && !r.done).map((r) => r.plan!) : []
+  // Atividades do plano ainda sem lançamento (também em dia passado já lançado em parte: dá para lançar ou marcar falta);
+  // "Cumpri" verifica conflito de horário com o já lançado, então não soma em dobro
+  const pending = pairDay(plan, done).filter((r) => r.plan && !r.done).map((r) => r.plan!)
   const ready = pending.filter((p) => !notYet(p.end_time))
   const later = pending.filter((p) => notYet(p.end_time))
   const hasErrors = Object.keys(errors).length > 0
