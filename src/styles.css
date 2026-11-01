@@ -325,7 +325,11 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .abs-opt input { width: 20px; height: 20px; accent-color: var(--bad); flex-shrink: 0; }
 .abs-opt > span:first-of-type { flex: 1; }
 .abs-opt.on { border-color: var(--bad); background: var(--bad-soft); }
-.absrow-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: -2px 0 8px; }
+.absrow { border-bottom: 1px solid var(--line); padding-bottom: 12px; margin-bottom: 2px; }
+.absrow:last-of-type { border-bottom: 0; }
+.absrow .mod { border-bottom: 0; padding-bottom: 6px; }
+.absrow-foot { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding-left: 22px; }
+.absrow-foot .sub { margin-top: 0; line-height: 1.35; }
 .absrow-foot .link { font-size: 13px; flex-shrink: 0; }
 
 /* Relatório anual: linhas de detalhe (ministério / crédito) */
