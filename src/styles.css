@@ -327,3 +327,7 @@ input[type=color] { width: 34px; height: 34px; border: 0; background: none; padd
 .abs-opt.on { border-color: var(--bad); background: var(--bad-soft); }
 .absrow-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: -2px 0 8px; }
 .absrow-foot .link { font-size: 13px; flex-shrink: 0; }
+
+/* Relatório anual: linhas de detalhe (ministério / crédito) */
+.kv.sub-kv span { padding-left: 14px; font-size: 14px; color: var(--muted); }
+.kv.sub-kv b { font-size: 15px; }

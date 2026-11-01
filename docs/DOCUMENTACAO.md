@@ -118,7 +118,7 @@ disponíveis para o papel anônimo; as internas (`is_mutual`, `partner_modality`
 
 ### Relatório
 - **Mensal**: texto do relatório (S-4), estudos, créditos (tipo, **data**, horas e observação) com teto de 55 h, por modalidade, justificativa e alerta de mês fechado abaixo do ritmo.
-- **Anual**: total, média mensal, ritmo ideal, quanto falta e projeção do ano; **gráfico mês a mês** (realizado × alvo, linha de 50:00/mês); meses do ano de serviço (tocar abre o mês); **Faltas do ano**; exportar Excel (CSV).
+- **Anual**: total (ministério + crédito, separados), média mensal e média de crédito por mês, ritmo ideal, quanto falta e projeção do ano; **gráfico mês a mês** (ministério + crédito empilhados × alvo, linha de 50:00/mês); meses do ano de serviço (tocar abre o mês); **Faltas do ano**; exportar Excel (CSV).
 
 ### Mais
 - Perfil (abre Configurações), **Casal**, **Configurações**, **Ajuda** (perguntas frequentes sobre as regras de contagem), sair e versão.

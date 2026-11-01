@@ -179,11 +179,18 @@ function Anual({ data, today, ys, faltas, exportCsv, onPick }: {
   const elapsed = ys.months.filter((m) => m.month <= cur).length || 1
   const avg = ys.total / elapsed
   const left = Math.max(0, ys.goal - ys.total)
+  // Crédito de horas no ano: considerado (dentro do teto de 55 h/mês) e lançado
+  const ministry = ys.months.reduce((a, m) => a + m.ministry, 0)
+  const credUsed = ys.months.reduce((a, m) => a + m.creditUsed, 0)
+  const credLost = ys.months.reduce((a, m) => a + m.creditLost, 0)
   return (
     <>
       <div className="card">
         <div className="kv"><span>Total no ano</span><b>{fmtHours(ys.total)} <span className="muted">/ {fmtHours(ys.goal)}</span></b></div>
+        <div className="kv sub-kv"><span>Ministério</span><b>{fmtHours(ministry)}</b></div>
+        <div className="kv sub-kv"><span>Crédito{credLost > 0 ? ` (${fmtHours(credLost)} acima do teto, não conta)` : ''}</span><b style={{ color: 'var(--credit)' }}>{fmtHours(credUsed)}</b></div>
         <div className="kv"><span>Média mensal ({elapsed} {elapsed === 1 ? 'mês' : 'meses'})</span><b>{fmtHours(avg)}</b></div>
+        <div className="kv sub-kv"><span>Média de crédito por mês</span><b style={{ color: 'var(--credit)' }}>{fmtHours(credUsed / elapsed)}</b></div>
         <div className="kv"><span>Ritmo ideal até hoje</span><b>{fmtHours(ys.pace)}</b></div>
         <div className="kv"><span>Faltam para a meta</span><b style={{ color: left > 0 ? 'var(--bad)' : 'var(--ok)' }}>{left > 0 ? fmtHours(left) : 'meta atingida ✓'}</b></div>
         <div className="kv" style={{ borderBottom: 0 }}><span>Com os planos atuais, o ano fecha em</span><b>{fmtHours(ys.committed)}</b></div>
@@ -192,7 +199,8 @@ function Anual({ data, today, ys, faltas, exportCsv, onPick }: {
         <h3>Mês a mês</h3>
         <YearChart months={ys.months} cur={cur} monthlyIdeal={ys.goal / 12} onPick={onPick} />
         <div className="legend" style={{ justifyContent: 'space-between' }}>
-          <span><i style={{ background: 'var(--brand-2)' }} />Realizado</span>
+          <span><i style={{ background: 'var(--brand-2)' }} />Ministério</span>
+          <span><i style={{ background: 'var(--credit)' }} />Crédito</span>
           <span><i style={{ background: '#fff', border: '1.5px dashed #8A96A8' }} />Alvo do mês</span>
           <span><i style={{ background: 'var(--ink)', height: 2, width: 12 }} />{fmtHours(ys.goal / 12)} por mês</span>
         </div>
@@ -233,6 +241,7 @@ function YearChart({ months, cur, monthlyIdeal, onPick }: { months: MonthStats[]
             <rect x={i * slot} y={0} width={slot} height={H + 22} fill="transparent" />
             {m.target > 0 && <rect x={x - 1} y={y(m.target)} width={bw + 2} height={H - y(m.target)} rx="4" fill="none" stroke="#8A96A8" strokeWidth="1.2" strokeDasharray="3 2" />}
             {m.counted > 0 && <rect x={x + 1} y={y(m.counted)} width={bw - 2} height={H - y(m.counted)} rx="3" fill="var(--brand-2)" />}
+            {m.creditUsed > 0 && <rect x={x + 1} y={y(m.counted)} width={bw - 2} height={H - y(m.creditUsed)} rx="3" fill="var(--credit)" />}
             <text x={i * slot + slot / 2} y={H + 15} textAnchor="middle" fontSize="11" fontWeight={isCur ? 800 : 600}
               fill={isCur ? 'var(--today)' : 'var(--muted)'}>{INITIALS[Number(m.month.slice(5)) - 1]}</text>
           </g>
